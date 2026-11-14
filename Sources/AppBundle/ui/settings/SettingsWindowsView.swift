@@ -104,18 +104,20 @@ struct ShortcutBehaviorSettingsView: View {
 
     private var scrollingSettingsSection: some View {
         Group {
+            columnsSection
+            navigationSection
+            minimapSection
+        }
+    }
+
+    // Separate properties keep each body small enough for the type checker.
+    private var columnsSection: some View {
             SettingsSection("Columns") {
                 SettingsColumnWidthPicker(value: $scrollingColumnWidth) {
                     persistConfig(section: "scrolling", key: "column-width",
                                   value: String(Double(scrollingColumnWidth) / 100))
                 }
-                SettingsColumnPresetPicker(values: Binding(
-                    get: { scrollingPresetValues(scrollingWidthPresets) ?? config.scrolling.widthPresets },
-                    set: { values in
-                        scrollingWidthPresets = values.map { String($0 * 100) }.joined(separator: ", ")
-                        persistConfig(section: "scrolling", key: "width-presets",
-                                      value: "[" + values.map(String.init).joined(separator: ", ") + "]")
-                    }))
+                SettingsColumnPresetPicker(values: presetValuesBinding)
                 DisclosureGroup("Custom column sizes", isExpanded: $showsCustomColumnSizes) {
                     SettingsStepper("Exact default width", id: "scrolling.column-width.custom",
                                     value: $scrollingColumnWidth, range: 10...100,
@@ -127,13 +129,27 @@ struct ShortcutBehaviorSettingsView: View {
                                       text: $scrollingWidthPresets,
                                       help: "Ascending percentages from 10 to 100; keeps custom sizes.",
                                       validate: scrollingPresetError) {
-                        if let values = scrollingPresetValues(scrollingWidthPresets) {
-                            persistConfig(section: "scrolling", key: "width-presets",
-                                          value: "[" + values.map(String.init).joined(separator: ", ") + "]")
-                        }
+                        if let values = scrollingPresetValues(scrollingWidthPresets) { persistWidthPresets(values) }
                     }
                 }
             }
+    }
+
+    private var presetValuesBinding: Binding<[Double]> {
+        Binding<[Double]>(
+            get: { scrollingPresetValues(scrollingWidthPresets) ?? config.scrolling.widthPresets },
+            set: { (values: [Double]) in
+                scrollingWidthPresets = values.map { (value: Double) in String(value * 100) }.joined(separator: ", ")
+                persistWidthPresets(values)
+            })
+    }
+
+    private func persistWidthPresets(_ values: [Double]) {
+        let rendered: String = "[" + values.map { (value: Double) in String(value) }.joined(separator: ", ") + "]"
+        persistConfig(section: "scrolling", key: "width-presets", value: rendered)
+    }
+
+    private var navigationSection: some View {
             SettingsSection("Navigation") {
                 SettingsToggle("Option + two-finger pan", id: "scrolling.gesture-enabled",
                                isOn: $scrollingGestureEnabled,
@@ -174,6 +190,9 @@ struct ShortcutBehaviorSettingsView: View {
                     }
                 }
             }
+    }
+
+    private var minimapSection: some View {
             SettingsSection("Minimap") {
                 SettingsToggle("Show scrolling minimap", id: "scrolling.minimap-enabled",
                                isOn: $scrollingMinimapEnabled,
@@ -197,7 +216,6 @@ struct ShortcutBehaviorSettingsView: View {
                 }
                 .disabled(!scrollingMinimapEnabled)
             }
-        }
     }
 
     private func persistRootBool(_ key: String, _ value: Bool) {
