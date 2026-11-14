@@ -153,12 +153,15 @@ struct FrozenStrip: Codable, Equatable, Sendable {
     /// A window of the pinned column, and its side.
     var pinnedWindowID: UInt32? = nil
     var pinSide: ScrollingPinCmdArgs.Side? = nil
+    /// Optional for backwards compatibility with existing v1 native layout files.
+    var scrollingOffset: CGFloat? = nil
 
     @MainActor init(_ workspace: Workspace) {
         root = FrozenContainer(workspace.rootTilingContainer)
         floating = workspace.floatingWindows.map(FrozenWindow.init)
         pinnedWindowID = workspace.pinnedScrollingColumn?.mostRecentWindowRecursive?.windowId
         pinSide = pinnedWindowID == nil ? nil : workspace.scrollingPinSide
+        scrollingOffset = workspace.scrollingOffset.isFinite ? workspace.scrollingOffset : nil
     }
 
     var windows: [FrozenWindow] { root.windows + floating }
@@ -200,6 +203,9 @@ func restoreStrip(_ frozen: FrozenStrip, to workspace: Workspace, windowsById: [
     workspace.scrollingPinnedNode = frozen.pinnedWindowID.flatMap { windowsById[$0] }?.topLevelWorkspaceGroup
     workspace.scrollingPinSide = frozen.pinSide ?? .left
     workspace.normalizeContainers()
+    // Restore the viewport with its desktop rather than restarting at the first column.
+    // The next layout pass clamps this value against the current display geometry.
+    workspace.scrollingOffset = frozen.scrollingOffset.flatMap { $0.isFinite ? $0 : nil } ?? 0
 }
 
 @MainActor
