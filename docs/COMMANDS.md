@@ -10,7 +10,10 @@ recognized in configuration and skipped; `doctor` lists it.
 and `macos-native-minimize`. These use the focused window unless a command's help
 documents an explicit target such as `--window-id`.
 
-**The strip:** `scrolling-width next|previous|full` changes the focused column's
+**The strip:** `scrolling-pan left|right|focus` moves the viewport without switching
+window focus; left/right pan by half a viewport, focus reveals the active column.
+`scrolling-width-pixels N` sets a fixed column width in points (persisted across
+restarts and changes of display size). `scrolling-width next|previous|full` changes the focused column's
 width; `scrolling-center` centers it. `scrolling-focus 1-9|first|last` focuses a
 column by place (9 is the last), `scrolling-move 1-9|first|last` moves the focused
 column there, and `scrolling-pin left|right` pins it to an edge of the display (again

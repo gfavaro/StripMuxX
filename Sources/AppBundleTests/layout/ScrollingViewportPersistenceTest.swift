@@ -19,6 +19,7 @@ final class ScrollingViewportPersistenceTest: WorkspaceTestCase {
         workspace.scrollingOffset = 0
         restoreStrip(restored, to: workspace, windowsById: [73001: first, 73002: second])
         XCTAssertEqual(workspace.scrollingOffset, 145)
+        XCTAssertTrue(workspace.scrollingRestoredViewportPending)
     }
 
     func testOldSnapshotWithoutViewportStillDecodes() throws {
@@ -34,5 +35,6 @@ final class ScrollingViewportPersistenceTest: WorkspaceTestCase {
         workspace.scrollingOffset = 99
         restoreStrip(restored, to: workspace, windowsById: [73003: window])
         XCTAssertEqual(workspace.scrollingOffset, 0)
+        XCTAssertFalse(workspace.scrollingRestoredViewportPending)
     }
 }

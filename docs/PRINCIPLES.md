@@ -48,6 +48,21 @@ owner and cancellation or generation checks so old completions cannot affect a n
 interaction. Keep geometry and policy testable separately from native side effects.
 See [HACKING](../HACKING.md).
 
+## Product inspiration hierarchy
+
+Interaction design priority is **Spear (R. Clayton Miller / 10/GUI)** first and
+**ChainYourMac** second. Niri defines the scrolling geometry and focus semantics;
+OmniWM and Paneru are macOS engineering references for offscreen windows and
+multiple displays. Priorities describe what to research, not permission to copy
+implementation, artwork, branding or proprietary behavior.
+
+Spear's current overlapping-window model must not be silently introduced into this
+project: StripMuxX remains a scrolling-only manager with an explicit floating escape
+hatch. Its spatial manipulation ideas should inform how scrolling columns are
+selected, dragged, focused and moved, using native macOS gestures and accessibility.
+
+Review references and experiments in [interaction research](INTERACTION_RESEARCH.md).
+
 ## Evidence matters
 
 Automated tests establish model and command behavior. Physical gestures, real

@@ -40,6 +40,13 @@ private func layoutStrip(in rect: Rect, _ context: LayoutContext) async throws {
     let workspace = context.workspace
     workspace.rebaseScrollingViewportIfNeeded(using: workspace.scrollingMetrics)
     let metrics = workspace.scrollingMetrics
+    // A restored camera position is user state, not a focus transition. Associate
+    // the current focus with it once, without re-centering the freshly restored strip.
+    if workspace.scrollingRestoredViewportPending, let focused = focus.windowOrNil,
+       focused.nodeWorkspace === workspace {
+        workspace.lastScrollingFocusWindowId = focused.windowId
+        workspace.scrollingRestoredViewportPending = false
+    }
     if !workspace.scrollingGestureMotionActive, let focused = focus.windowOrNil,
        workspace.lastScrollingFocusWindowId != focused.windowId,
        let column = metrics.columns.first(where: { $0.node === focused.topLevelWorkspaceGroup })

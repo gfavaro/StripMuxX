@@ -11,8 +11,13 @@ column-width` wide (a share of the display, gaps included: 0.49 shows two). When
 columns are wider than the display, the strip scrolls: focusing a column brings it
 into view, and `[scrolling] center-focused-column` chooses whether it also centers
 (`never`, `on-overflow` or `always`). Option with a two-finger horizontal trackpad
-scroll pans the strip by hand.
+scroll pans the strip by hand. `scrolling-pan left|right` moves the viewport by
+half its visible width without changing keyboard focus; `scrolling-pan focus`
+reveals the focused column. Default shortcuts: Option-Control-H/L and
+Option-Control-C, respectively.
 
+`scrolling-width-pixels N` sets a column to a persistent width of N macOS points,
+independent of display size. Relative width presets reset this absolute-width mode.
 `scrolling-width next|previous` steps a column through `[scrolling] width-presets`,
 `scrolling-width full` fills the display, and `resize width ±N` changes it in points.
 `scrolling-center` centers the focused column. `scrolling-pin left|right` pins it to

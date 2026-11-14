@@ -98,6 +98,10 @@ automatically-tile-new-windows = true
     alt-r = 'scrolling-width next'
     alt-shift-r = 'scrolling-width full'
     alt-c = 'scrolling-center'
+    # Camera pan without moving keyboard focus; the focused window stays active.
+    alt-ctrl-h = 'scrolling-pan left'
+    alt-ctrl-l = 'scrolling-pan right'
+    alt-ctrl-c = 'scrolling-pan focus'
     alt-minus = 'resize width -50'
     alt-equal = 'resize width +50'
     cmd-shift-i = 'balance-sizes'

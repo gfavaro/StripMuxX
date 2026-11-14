@@ -213,6 +213,8 @@ func restoreStrip(_ frozen: FrozenStrip, to workspace: Workspace, windowsById: [
     // Restore the viewport with its desktop rather than restarting at the first column.
     // The next layout pass clamps this value against the current display geometry.
     workspace.scrollingOffset = frozen.scrollingOffset.flatMap { $0.isFinite ? $0 : nil } ?? 0
+    workspace.scrollingRestoredViewportPending = frozen.scrollingOffset?.isFinite == true
+    workspace.lastScrollingFocusWindowId = nil
 }
 
 @MainActor
