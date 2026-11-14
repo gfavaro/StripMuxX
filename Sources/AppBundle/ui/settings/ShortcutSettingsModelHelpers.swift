@@ -57,7 +57,8 @@ func buildShortcutSections() -> [ShortcutSettingsModel.Section] {
                 ),
                 shortcutAction(
                     id: "fullscreen",
-                    title: "Toggle Fullscreen",
+                    title: "Maximize in This Desktop",
+                    subtitle: "Resize the focused window without entering native macOS fullscreen.",
                     command: "fullscreen"
                 ),
                 shortcutAction(id: "balance", title: "Balance Sizes", command: "balance-sizes"),
@@ -71,7 +72,7 @@ func buildShortcutSections() -> [ShortcutSettingsModel.Section] {
             title: "Strip",
             summary: "Columns on the strip: jump, reorder, pin and size them.",
             actions: [
-                shortcutAction(id: "scrolling-minimap", title: "Show Minimap", command: "scrolling-minimap"),
+                shortcutAction(id: "scrolling-minimap", title: "Show Minimap", subtitle: "Reveal the entire column strip without switching desktops.", command: "scrolling-minimap"),
                 shortcutAction(id: "scrolling-first", title: "Focus First Column", command: "scrolling-focus first"),
                 shortcutAction(id: "scrolling-last", title: "Focus Last Column", command: "scrolling-focus last"),
             ] + (1...4).map {
@@ -83,7 +84,8 @@ func buildShortcutSections() -> [ShortcutSettingsModel.Section] {
                 shortcutAction(id: "scrolling-pin-right", title: "Pin Column Right", command: "scrolling-pin right"),
                 shortcutAction(id: "scrolling-center", title: "Centre Column", command: "scrolling-center"),
                 shortcutAction(id: "scrolling-width-next", title: "Next Column Width", command: "scrolling-width next"),
-                shortcutAction(id: "scrolling-width-full", title: "Full Width", command: "scrolling-width full"),
+                shortcutAction(id: "scrolling-width-previous", title: "Previous Column Width", command: "scrolling-width prev"),
+                shortcutAction(id: "scrolling-width-full", title: "Full Column Width", subtitle: "Expand the column; this is not macOS fullscreen.", command: "scrolling-width full"),
             ],
         ),
         .init(id: "managed-swap", category: .managed, title: "Swap", summary: nil,

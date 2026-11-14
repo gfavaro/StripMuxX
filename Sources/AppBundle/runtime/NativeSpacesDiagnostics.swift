@@ -48,6 +48,8 @@ func nativeSpacesDiagnosticReport() -> String {
     lines.append("Scrolling pan: last \(NativeScrollingPan.shared.lastDecision)")
     lines.append("Chrome refreshes after observations: \(NativeObservationChrome.shared.refreshes) for \(NativeObservationChrome.shared.requests) completed reads")
     lines.append("Scrolling pan layouts: \(runtime.native.tiling.scrollingLayoutTiming)")
+    let frameRequests = NativeFrameWriteMetrics.shared
+    lines.append("Frame requests since launch: \(frameRequests.requests) total, \(frameRequests.gestureRequests) gesture, \(frameRequests.normalRequests) normal; \(frameRequests.repeatedTargets) repeated normal targets. These count requests, not confirmed AX writes.")
     for monitor in sortedMonitors {
         let shown = nativeActiveDesktop(on: monitor)
         lines.append("  \(monitor.name): \(shown.map { "desktop \(userFacingWorkspaceName($0)), \($0.workspaceLayoutUnits.count) columns" } ?? "no desktop bound")")

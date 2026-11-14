@@ -175,16 +175,22 @@ final class MacWindow: Window {
 
     @MainActor
     override func setAxFrame(_ topLeft: CGPoint?, _ size: CGSize?) {
+        NativeFrameWriteMetrics.shared.requests &+= 1
         if nodeWorkspace?.scrollingGestureMotionActive == true, let session = nodeWorkspace?.scrollingGestureSessionID,
            let topLeft, let size {
+            NativeFrameWriteMetrics.shared.gestureRequests &+= 1
             setScrollingGestureFrame(CGRect(origin: topLeft, size: size), session: session)
             return
         }
+        NativeFrameWriteMetrics.shared.normalRequests &+= 1
         NativeOriginalFrames.shared.recordBeforeWrite(self)
         macApp.setAxFrame(windowId, topLeft, size)
         // Reasserting an unchanged layout must neither flood AX with observations nor
         // continually cancel the confirmation already waiting for that same request.
-        if let previous = minimumRequest, previous.point == topLeft, previous.size == size { return }
+        if let previous = minimumRequest, previous.point == topLeft, previous.size == size {
+            NativeFrameWriteMetrics.shared.repeatedTargets &+= 1
+            return
+        }
         minimumRequest = (topLeft, size)
         frameRequestGeneration &+= 1
         minimumObservation?.cancel()

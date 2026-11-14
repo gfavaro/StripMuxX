@@ -30,6 +30,17 @@ final class ConfigTest: XCTestCase {
         assertEquals(i3Config.modes[mainModeId]?.bindings.count, 5)
     }
 
+    func testDefaultStripWidthShortcutFamily() {
+        let bindings = defaultConfig.modes[mainModeId]?.bindings
+        XCTAssertTrue(bindings?["alt-r"]?.commands.first is ScrollingWidthCommand)
+        XCTAssertTrue(bindings?["alt-shift-r"]?.commands.first is ScrollingWidthCommand)
+        XCTAssertTrue(bindings?["alt-cmd-r"]?.commands.first is ScrollingWidthCommand)
+        let sections = buildShortcutSections()
+        let actions = sections.flatMap(\.actions)
+        XCTAssertTrue(actions.contains(where: { $0.id == "scrolling-width-previous" && $0.commandScript == "scrolling-width prev" }))
+        XCTAssertTrue(actions.contains(where: { $0.id == "fullscreen" && $0.commandScript == "fullscreen" }))
+    }
+
     func testParseDefaultConfig() throws {
         let toml = try String(contentsOf: projectRoot.appending(component: "resources/default-config.toml"), encoding: .utf8)
         let (config, errors) = parseConfig(toml)

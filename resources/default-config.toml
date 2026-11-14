@@ -101,8 +101,10 @@ automatically-tile-new-windows = true
     cmd-shift-l = 'join-with right'
     alt-cmd-j = 'swap down'
     alt-cmd-k = 'swap up'
+    # A single key family: next size, previous size, full-width column.
     alt-r = 'scrolling-width next'
-    alt-shift-r = 'scrolling-width full'
+    alt-shift-r = 'scrolling-width prev'
+    alt-cmd-r = 'scrolling-width full'
     alt-c = 'scrolling-center'
     # Camera pan without moving keyboard focus; the focused window stays active.
     alt-ctrl-h = 'scrolling-pan left'
