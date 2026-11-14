@@ -115,7 +115,7 @@ final class NativeScrollingPan {
         if next != current { lastDirection = next > current ? 1 : -1 }
         workspace.scrollingOffset = next
         nativePanTiming.measure("minimap show") { _ = WorkspaceScrollingMinimap.shared.show(workspace, duringGesture: true) }
-        nativePanTiming.measure("relayout request") { runtime.native.tiling.relayoutVisibleScrolling() }
+        nativePanTiming.measure("relayout request") { runtime.native.tiling.relayoutVisibleScrolling(target: workspace) }
     }
 
     /// Devices without scroll phases end a pan after a pause.
@@ -157,14 +157,14 @@ final class NativeScrollingPan {
         }
         let metrics = workspace.scrollingMetrics
         guard let column = nearestScrollingColumn(in: metrics, offset: workspace.scrollingOffset, direction: lastDirection) else {
-            return runtime.native.tiling.relayoutVisibleScrolling()
+            return runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
         }
         workspace.scrollingOffset = metrics.focusedOffset(for: column, current: workspace.scrollingOffset)
         if let window = column.node.mostRecentWindowRecursive, window.focusWindow() {
             workspace.lastScrollingFocusWindowId = window.windowId
             window.nativeFocus()
         }
-        runtime.native.tiling.relayoutVisibleScrolling()
+        runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
         _ = WorkspaceScrollingMinimap.shared.show(workspace)
     }
 }

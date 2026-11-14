@@ -167,11 +167,12 @@ final class NativeTilingCoordinator {
 
     private var scrollingLayoutTask: Task<Void, Never>?
     private var scrollingLayoutPending = false
+    private var scrollingLayoutRequests = ScrollingRelayoutSelection()
 
-    /// Scrolling viewport changes (panning, settling, minimap, commands) re-lay out the
-    /// visible scrolling desktops at once under the current write permits; waiting for
-    /// an observation read would make panning lag. Requests coalesce into one pass.
-    func relayoutVisibleScrolling() {
+    /// A gesture on one display should not issue AX writes to every other display.
+    /// No target requests every visible desktop (e.g. after a fresh observation).
+    /// Requests made while a layout is running are coalesced, not discarded.
+    func relayoutVisibleScrolling(target: Workspace? = nil) {
         nativePanTiming.count("relayout requested")
         guard ready else {
             nativePanTiming.count("relayout skipped: not ready")
@@ -181,14 +182,16 @@ final class NativeTilingCoordinator {
             scrollingReadRequestedAt = .now
             return runtime.native.observation?.requestRead(event: "nativeScrolling") ?? ()
         }
+        scrollingLayoutRequests.request(target)
         if scrollingLayoutTask != nil { scrollingLayoutPending = true; return }
         scrollingLayoutTask = Task { @MainActor [weak self] in
             guard let self else { return }
             repeat {
                 scrollingLayoutPending = false
+                let selection = scrollingLayoutRequests.drain()
                 let version = generation
                 for workspace in runtime.native.layouts.currentBySpaceID.values
-                    where workspace.isVisible {
+                    where workspace.isVisible && selection.includes(workspace) {
                     guard ready, generation == version, !holdsForMouseRelease else {
                         nativePanTiming.count("relayout aborted: \(!ready ? "not ready" : generation != version ? "generation" : "mouse")")
                         break
@@ -340,5 +343,32 @@ final class NativeTilingCoordinator {
             }
         }
         return result
+    }
+}
+
+/// Coalesces per-workspace scrolling requests; an unscoped refresh supersedes
+/// narrower requests. IDs do not retain Workspaces across Space reconciliation.
+struct ScrollingRelayoutSelection {
+    private var all = false
+    private var targets = Set<ObjectIdentifier>()
+
+    mutating func request(_ workspace: Workspace?) {
+        guard let workspace else { all = true; targets.removeAll(); return }
+        if !all { targets.insert(ObjectIdentifier(workspace)) }
+    }
+
+    mutating func drain() -> Batch {
+        let batch = Batch(all: all, targets: targets)
+        all = false
+        targets.removeAll()
+        return batch
+    }
+
+    struct Batch {
+        let all: Bool
+        let targets: Set<ObjectIdentifier>
+        func includes(_ workspace: Workspace) -> Bool {
+            all || targets.contains(ObjectIdentifier(workspace))
+        }
     }
 }

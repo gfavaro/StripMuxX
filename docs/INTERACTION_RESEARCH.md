@@ -61,6 +61,7 @@ behavior, record a source link and version/date when possible.
 | P1 | Pinned column while panning nearby columns | Pinned frame stays stable; no window appears on another display |
 | P1 | Gesture reversal and trackpad momentum | Gesture follows fingers; cancellation and settling predictable |
 | P1 | Wake with two side-by-side displays | Layout stays on the correct display; no relocation loop |
+| P1 | Coalesce display-scoped scroll relayouts | A gesture on display A never unnecessarily relayouts display B; unscoped refresh still covers all |
 | P2 | Animate motion when Reduce Motion is off | Animation may be interrupted; no per-frame AX storm |
 | P2 | Spatial interaction prototype inspired by Spear | Opt-in, scrolling-only, evidence-backed, accessible |
 

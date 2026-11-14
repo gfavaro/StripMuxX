@@ -158,7 +158,7 @@ struct ScrollingPanCommand: Command {
         }
         guard abs(next - original) >= 0.5 else { return true }
         workspace.scrollingOffset = next
-        runtime.native.tiling.relayoutVisibleScrolling()
+        runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
         // A keyboard pan should survive restart even without another Space event.
         Task { @MainActor in await runtime.native.persistence.save(runtime.native.layouts) }
         return true
