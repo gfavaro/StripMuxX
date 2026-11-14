@@ -31,6 +31,7 @@ final class ScrollingMinimapView: NSView {
     private var keyboardNavigation = false
     private var hovered = false
     private var previousOffset: CGFloat?
+    private var previousViewportMidX: CGFloat?
     private var heading = ""
     private var focusedTitle = ""
 
@@ -102,13 +103,22 @@ final class ScrollingMinimapView: NSView {
             let tile = map.tiles[index]
             button.frame = CGRect(x: tile.minX, y: tile.minY, width: tile.width, height: tile.height)
         }
-        if (previousOffset != offset || previousOffset == nil), !hovered, !keyboardNavigation {
+        // The minimap's scale can change when columns are inserted/resized even
+        // if the workspace offset stays the same. Track mapped geometry too.
+        let viewportChanged = previousViewportMidX.map { abs($0 - map.viewport.midX) > 0.5 } ?? true
+        if (previousOffset != offset || viewportChanged), !hovered, !keyboardNavigation {
             let visibleWidth = scrollView.contentView.bounds.width
             let x = min(max(map.viewport.midX - visibleWidth / 2, 0), max(contentWidth - visibleWidth, 0))
             scrollView.contentView.scroll(to: CGPoint(x: x, y: 0))
             scrollView.reflectScrolledClipView(scrollView.contentView)
         }
+        if keyboardNavigation, buttons.indices.contains(selectedIndex) {
+            // Asynchronous title/model updates must not strand the keyboard
+            // selection outside the scroll view's visible portion.
+            tileCanvas.scrollToVisible(buttons[selectedIndex].frame)
+        }
         previousOffset = offset
+        previousViewportMidX = map.viewport.midX
         updateViewportFrame()
         viewport.needsDisplay = true
         needsDisplay = true
@@ -165,6 +175,7 @@ final class ScrollingMinimapView: NSView {
         endKeyboardNavigation()
         hovered = false
         previousOffset = nil
+        previousViewportMidX = nil
     }
     override func keyDown(with event: NSEvent) {
         guard !buttons.isEmpty else { return }

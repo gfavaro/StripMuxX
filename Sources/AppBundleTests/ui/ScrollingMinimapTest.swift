@@ -201,6 +201,26 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertTrue(dismissed)
     }
 
+    func testIconArrivalRefreshesExistingTileWithoutRebuildingIt() throws {
+        let (workspace, windows) = fixture()
+        let models = windows.map {
+            ScrollingMinimapTile(id: ObjectIdentifier($0), title: "Window", applications: [99], count: 1)
+        }
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 640, height: 120))
+        let metrics = workspace.scrollingMetrics
+        view.update(workspaceName: "Desktop", models: models, icons: [:], metrics: metrics,
+                    offset: 0, focused: models[0].id)
+        let scroll = try XCTUnwrap(minimapDescendants(of: view).compactMap { $0 as? NSScrollView }.first)
+        let tile = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? NSButton }.first)
+        tile.needsDisplay = false
+        let image = try XCTUnwrap(NSImage(systemSymbolName: "star.fill", accessibilityDescription: nil))
+        view.update(workspaceName: "Desktop", models: models, icons: [99: image], metrics: metrics,
+                    offset: 0, focused: models[0].id)
+        let refreshed = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? NSButton }.first)
+        XCTAssertTrue(tile === refreshed, "Updated icons should reuse the original button")
+        XCTAssertTrue(refreshed.needsDisplay, "A late-arriving icon must redraw its tile")
+    }
+
     func testRenderAccessibleTilesInLightAndDarkLayouts() throws {
         let (workspace, windows) = fixture()
         windows[0].scrollingColumnWidth = 0.25

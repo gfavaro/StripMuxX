@@ -47,3 +47,32 @@ Verification before defaulting on:
 
 Do not call this production-proven until tested with a real trackpad, multiple
 displays and a new app bundle. The Swift tests cover logic, not Dock event delivery.
+
+## Minimap audit
+
+Current strengths: proportional strip geometry, pinned-column placement, accessible
+tiles with keyboard navigation, docked scroll canvas for 40+ columns, native Space
+validation on selection/reorder, a non-activating overlay and reduced-motion-aware
+dismissal.
+
+Completed this round:
+- Redraw an existing tile when its app icon arrives after its initial render.
+- Follow a viewport whose mapped position changed after a strip topology/scale change,
+  even if the absolute offset did not change.
+- Keep the selected tile in view during model refresh while keyboard navigation is active.
+- Constrain panel width by actual screen visible-frame width, including narrow screens.
+- Expose the minimap and the experimental three-finger setting through Settings search.
+
+Further work, in priority order:
+1. Auto-scroll the minimap horizontally when dragging a column near its edges;
+   this is essential for reordering across a long strip without dropping.
+2. Test minimap drag-and-drop against a Space switch or monitor disconnect
+   mid-drag, including the full native window event loop.
+3. Reduce title/icon refresh work on large (50+) column strips by prioritizing
+   visible tiles and invalidating only modified models.
+4. Add an optional explicit "reveal without focusing" interaction for the viewport,
+   backed by the existing scrolling-pan command.
+5. Physical test of keyboard focus, VoiceOver, hover persistence, high contrast
+   and Reduced Motion on light/dark desktop backgrounds.
+
+Keep the minimap a viewport for native Spaces, not a project/sidebar navigator.
