@@ -206,7 +206,7 @@ final class ScrollingMinimapView: NSView {
                         font: .systemFont(ofSize: 11, weight: .semibold), color: .labelColor)
         drawMinimapText(focusedTitle, in: CGRect(x: 16, y: bounds.height - 23, width: bounds.width * 0.48, height: 16),
                         font: .systemFont(ofSize: 10), color: .secondaryLabelColor)
-        drawMinimapText("Click to reveal · ⌥ + 3 fingers to pan", in: CGRect(x: bounds.width * 0.5, y: bounds.height - 23,
+        drawMinimapText("Click to reveal · ⌥ + two-finger scroll", in: CGRect(x: bounds.width * 0.5, y: bounds.height - 23,
                         width: bounds.width * 0.5 - 16, height: 16), font: .systemFont(ofSize: 10),
                         color: .secondaryLabelColor, alignment: .right)
     }

@@ -74,6 +74,34 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
             "mode switches bindings even while tiling is paused")
     }
 
+    func testUnrelatedScrollCancelsWithoutStealingFocus() {
+        let (workspace, windows) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        _ = windows[0].focusWindow()
+        XCTAssertTrue(pan.handle(scroll(-160, phase: 1, at: point)))
+        let moved = workspace.scrollingOffset
+        XCTAssertFalse(pan.handle(scroll(0, dy: -30, option: false, phase: 1, at: point)))
+        XCTAssertEqual(workspace.scrollingOffset, moved, accuracy: 1)
+        XCTAssertTrue(focus.windowOrNil === windows[0])
+        XCTAssertFalse(workspace.scrollingGestureMotionActive)
+        XCTAssertNil(workspace.scrollingGestureSessionID)
+    }
+
+    func testNativeDesktopSwitchCancelsGestureWithoutConsumingScroll() {
+        let (workspace, windows) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        _ = windows[0].focusWindow()
+        XCTAssertTrue(pan.handle(scroll(-150, phase: 1, at: point)))
+        workspace.scrollingSessionEpoch &+= 1
+        XCTAssertFalse(pan.handle(scroll(-60, phase: 2, at: point)))
+        XCTAssertFalse(pan.isPanning)
+        XCTAssertFalse(workspace.scrollingGestureMotionActive)
+        XCTAssertTrue(focus.windowOrNil === windows[0])
+        XCTAssertEqual(pan.lastDecision, "gesture cancelled: desktop or session changed")
+    }
+
     func testADisplayShowingAFullscreenSpaceHasNoDesktopAndCreatesNone() {
         let desktop = nativeDesktop()
         var inventory = NativeWorkspaceInventory()

@@ -12,6 +12,9 @@ final class NativeScrollingPan {
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     private weak var workspace: Workspace?
+    /// The topology/Space identity under which a gesture began.
+    private var gestureEpoch: UInt64?
+    private var gestureMonitor: String?
     var isPanning: Bool { workspace != nil }
     private var lastDirection: CGFloat = 0
     private var idleTask: Task<Void, Never>?
@@ -59,12 +62,22 @@ final class NativeScrollingPan {
     /// Returns whether the event belongs to a pan and must not reach the app.
     func handle(_ scroll: Scroll) -> Bool {
         if let workspace {
-            // A new gesture that is not an Option pan ends the pan rather than being swallowed.
-            if scroll.momentumPhase == 0, scroll.phase == 1, !scroll.optionOnly {
-                settle()
+            // A stale Space, display or session cannot own any further scroll events.
+            // Do not focus another column while cancelling a superseded interaction.
+            guard workspace.isVisible, workspace.scrollingSessionEpoch == gestureEpoch,
+                  workspace.workspaceMonitor.displayUUID == gestureMonitor,
+                  config.scrolling.gestureEnabled, TrayMenuModel.shared.isEnabled,
+                  nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else {
+                cancel()
+                lastDecision = "gesture cancelled: desktop or session changed"
                 return false
             }
-            // Otherwise the pan owns its events until macOS's momentum ends.
+            // A new non-Option gesture belongs to the foreground app. Never snap
+            // focus to another window as a side effect of that unrelated gesture.
+            if scroll.momentumPhase == 0, scroll.phase == 1, !scroll.optionOnly {
+                cancel()
+                return false
+            }
             pan(workspace, by: scroll.deltaX)
             if scroll.momentumPhase == 3 { settle() } else { settleWhenIdle() }
             return true
@@ -79,6 +92,8 @@ final class NativeScrollingPan {
             lastDecision = "no desktop under the pointer"; return false
         }
         workspace = target
+        gestureEpoch = target.scrollingSessionEpoch
+        gestureMonitor = target.workspaceMonitor.displayUUID
         lastDirection = 0
         lastDecision = "panning"
         target.scrollingGestureMotionActive = true
@@ -110,15 +125,33 @@ final class NativeScrollingPan {
         }
     }
 
+    /// Abandon a gesture when another desktop or user interaction takes ownership.
+    /// No focus transfer, no snap: the user explicitly changed the interaction.
+    func cancel() {
+        finishGesture(focusNearest: false)
+    }
+
     func settle() {
+        finishGesture(focusNearest: true)
+    }
+
+    private func finishGesture(focusNearest: Bool) {
         idleTask?.cancel()
         idleTask = nil
         guard let workspace else { return }
         self.workspace = nil
-        // Move notifications were ignored while panning; observe the result once.
-        defer { runtime.native.observation?.requestRead(event: "nativeScrollingSettled") }
+        gestureEpoch = nil
+        gestureMonitor = nil
         workspace.scrollingGestureMotionActive = false
+        workspace.scrollingGestureSessionID = nil
         WorkspaceScrollingMinimap.shared.endGesture()
+        // One fresh native read after the gesture is complete. Never retain
+        // stale write authority from a previous Space while finishing.
+        defer { runtime.native.observation?.requestRead(event: "nativeScrollingSettled") }
+        guard focusNearest, workspace.isVisible,
+              nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else {
+            return
+        }
         let metrics = workspace.scrollingMetrics
         guard let column = nearestScrollingColumn(in: metrics, offset: workspace.scrollingOffset, direction: lastDirection) else {
             return runtime.native.tiling.relayoutVisibleScrolling()

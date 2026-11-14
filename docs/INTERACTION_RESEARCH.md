@@ -54,7 +54,7 @@ behavior, record a source link and version/date when possible.
 
 | Priority | Experiment | Acceptance |
 | --- | --- | --- |
-| P0 | Drag a minimap column to a new location | No focus theft or unrelated size change |
+| P0 | Drag a minimap column to a new location | No focus theft or unrelated size change; reject stale drag targets after Space/topology changes |
 | P0 | Pan independently of focus (keyboard) | Focus does not change; position is clamped and persisted |
 | P0 | Restore camera position per native Space | Restart does not immediately recenter the saved viewport |
 | P1 | Pinned column while panning nearby columns | Pinned frame stays stable; no window appears on another display |

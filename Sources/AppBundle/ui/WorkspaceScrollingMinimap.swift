@@ -147,7 +147,10 @@ final class WorkspaceScrollingMinimap: NSObject {
             self.selectGroup(id)
         }
         view.reordered = { [weak self, weak workspace] id, index in
-            guard let self, let workspace, self.workspace === workspace, workspace.isVisible else { return }
+            guard let self, let workspace, self.workspace === workspace,
+                  workspace.scrollingSessionEpoch == expectedEpoch,
+                  workspace.scrollingTopologySignature == expectedTopology,
+                  workspace.isVisible else { return }
             workspace.moveScrollingColumn(id, toStripIndex: index)
             self.modelDidChange()
         }
