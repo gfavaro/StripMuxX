@@ -102,6 +102,13 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertEqual(pan.lastDecision, "gesture cancelled: desktop or session changed")
     }
 
+    func testExperimentalThreeFingerSwipeConfigDefaultsOffAndCanBeEnabled() {
+        XCTAssertFalse(parseConfig("[scrolling]\ngesture-enabled = true").config.scrolling.threeFingerSwipe)
+        let enabled = parseConfig("[scrolling]\nthree-finger-swipe = true")
+        XCTAssertTrue(enabled.errors.isEmpty, "\(enabled.errors)")
+        XCTAssertTrue(enabled.config.scrolling.threeFingerSwipe)
+    }
+
     func testADisplayShowingAFullscreenSpaceHasNoDesktopAndCreatesNone() {
         let desktop = nativeDesktop()
         var inventory = NativeWorkspaceInventory()

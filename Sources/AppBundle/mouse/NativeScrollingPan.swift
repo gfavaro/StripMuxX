@@ -15,6 +15,8 @@ final class NativeScrollingPan {
     /// The topology/Space identity under which a gesture began.
     private var gestureEpoch: UInt64?
     private var gestureMonitor: String?
+    private var dockSwipeProgress: Double = 0
+    private var dockSwipeSign: Double = 1
     var isPanning: Bool { workspace != nil }
     private var lastDirection: CGFloat = 0
     private var idleTask: Task<Void, Never>?
@@ -118,6 +120,40 @@ final class NativeScrollingPan {
         nativePanTiming.measure("relayout request") { runtime.native.tiling.relayoutVisibleScrolling(target: workspace) }
     }
 
+    /// A macOS-recognized three-finger Dock swipe drives the same viewport and
+    /// layout engine as Option-scroll. The source owns event arbitration.
+    func beginDockSwipe(positive: Bool, progress: Double) -> Bool {
+        guard !isPanning, config.scrolling.gestureEnabled, config.scrolling.threeFingerSwipe,
+              TrayMenuModel.shared.isEnabled,
+              let monitor = sortedMonitors.first(where: { $0.rect.contains(mouseLocation) }),
+              let target = nativeActiveDesktop(on: monitor), target.isVisible else { return false }
+        workspace = target
+        gestureEpoch = target.scrollingSessionEpoch
+        gestureMonitor = target.workspaceMonitor.displayUUID
+        dockSwipeSign = positive ? 1 : -1
+        dockSwipeProgress = 0
+        lastDirection = 0
+        target.scrollingGestureMotionActive = true
+        target.scrollingGestureSessionID = UUID()
+        updateDockSwipe(progress)
+        return true
+    }
+
+    func updateDockSwipe(_ progress: Double) {
+        guard let workspace, workspace.isVisible, workspace.scrollingSessionEpoch == gestureEpoch,
+              workspace.workspaceMonitor.displayUUID == gestureMonitor,
+              nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else { cancel(); return }
+        let next = max(0, min(1, progress))
+        let delta = next - dockSwipeProgress
+        dockSwipeProgress = next
+        if abs(delta) > 0.00001 {
+            // Positive Dock progress corresponds to fingers moving left.
+            pan(workspace, by: -CGFloat(delta * dockSwipeSign) * workspace.scrollingMetrics.areaWidth)
+        }
+    }
+
+    func endDockSwipe() { settle() }
+
     /// Devices without scroll phases end a pan after a pause.
     private func settleWhenIdle() {
         idleTask?.cancel()
@@ -145,6 +181,7 @@ final class NativeScrollingPan {
         self.workspace = nil
         gestureEpoch = nil
         gestureMonitor = nil
+        dockSwipeProgress = 0
         workspace.scrollingGestureMotionActive = false
         workspace.scrollingGestureSessionID = nil
         WorkspaceScrollingMinimap.shared.endGesture()

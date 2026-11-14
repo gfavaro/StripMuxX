@@ -16,6 +16,8 @@ struct ScrollingConfig: ConvenienceCopyable, Equatable {
     var columnWidth = 0.49
     var widthPresets = [0.25, 0.3333, 0.5, 0.6667, 0.75, 1.0]
     var gestureEnabled = true
+    /// Experimental: intercept macOS's recognized three-finger horizontal Dock swipe.
+    var threeFingerSwipe = false
     var gestureSensitivity = 1.0
     var minimapEnabled = true
     var centerFocusedColumn = ScrollingCenterMode.never
@@ -36,6 +38,7 @@ func parseScrolling(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace, _ error
             }
         },
         "gesture-enabled": Parser(\.gestureEnabled, parseBool),
+        "three-finger-swipe": Parser(\.threeFingerSwipe, parseBool),
         "gesture-sensitivity": Parser(\.gestureSensitivity) { raw, trace in
             parseDouble(raw, trace).filter(.semantic(trace, "Must be finite and greater than zero")) { $0.isFinite && $0 > 0 }
         },

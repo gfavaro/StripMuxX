@@ -36,7 +36,10 @@ import Foundation
         }
         // Startup never prompts for permissions: tiling reports what it is missing.
         let owner = runtime
-        if !serverArgs.isReadOnly { NativeScrollingPan.shared.start() }
+        if !serverArgs.isReadOnly {
+            NativeScrollingPan.shared.start()
+            StripDockSwipeSource.shared.syncConfiguration()
+        }
         GlobalObserver.initObserver()
         // Rules that move windows apply only to windows opened from now on.
         owner.native.windowsPresentAtLaunch = Set(
