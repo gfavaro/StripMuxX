@@ -29,14 +29,14 @@ struct ShortcutBehaviorSettingsView: View {
             SettingsSection("New windows") {
                 SettingsToggle("Tile new windows automatically", id: "automatically-tile-new-windows", isOn: $automaticallyTileNewWindows, help: "A new window becomes a column right of the focused one. Off leaves new windows floating.") { persistRootBool("automatically-tile-new-windows", automaticallyTileNewWindows) }
             }
-            SettingsSection("Lone windows and managed fullscreen") {
-                SettingsStepper("Single window / managed fullscreen width", id: "fullscreen-width", value: Binding(
+            SettingsSection("Single window and managed fullscreen") {
+                SettingsStepper("Single-window width", id: "fullscreen-width", value: Binding(
                     get: { Int((fullscreenWidth * 100).rounded()) },
                     set: { fullscreenWidth = Double($0) / 100 }), range: 10...100,
                     help: "Share of the available width for a lone tiled window or StripMuxX fullscreen. Display overrides take priority.", unit: "%") {
                     persistConfig(section: nil, key: "fullscreen-width", value: String(fullscreenWidth))
                 }
-                Text("This width affects both a lone tiled window and the managed fullscreen command. Native macOS fullscreen is separate. Values below 100% deliberately leave space at the sides.")
+                Text("Also used by managed fullscreen. Choose 100% to maximize within the usable display area; native macOS fullscreen is separate.")
                     .font(.callout).foregroundStyle(.secondary)
                 if let width = focus.workspace.windowWidthSettings.fullscreenWidth {
                     Text("Current desktop: \(Int((width * 100).rounded()))% · \(focus.workspace.windowWidthSettings.singleWindowAlignment?.rawValue ?? "center") · \(focus.workspace.workspaceMonitor.name)")

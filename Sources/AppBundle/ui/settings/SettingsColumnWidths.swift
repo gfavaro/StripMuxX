@@ -23,13 +23,22 @@ struct SettingsColumnIllustration: View {
 struct SettingsColumnWidthPicker: View {
     @Binding var value: Int
     let save: () -> Void
-    private let choices: [(Int, String)] = [(33, "Compact"), (50, "Balanced"),
-                                           (67, "Wide"), (100, "Full")]
+    private struct Choice: Identifiable {
+        let percent: Int
+        let name: String
+        var id: Int { percent }
+    }
+    private let choices: [Choice] = [.init(percent: 33, name: "Compact"),
+                                      .init(percent: 50, name: "Balanced"),
+                                      .init(percent: 67, name: "Wide"),
+                                      .init(percent: 100, name: "Full")]
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Default width for new columns")
             HStack(spacing: 8) {
-                ForEach(choices, id: \.0) { percent, name in
+                ForEach(choices) { choice in
+                    let percent = choice.percent
+                    let name = choice.name
                     let selected = abs(value - percent) <= 1
                     Button {
                         guard value != percent else { return }

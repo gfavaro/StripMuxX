@@ -12,8 +12,8 @@ struct ShortcutAppearanceSettingsView: View {
     @SettingsDraft("gaps.outer.top", load: { settingsConstantValue(config.gaps.outer.top) }) private var outerTopGap: Int
     @SettingsDraft("gaps.outer.bottom", load: { settingsConstantValue(config.gaps.outer.bottom) }) private var outerBottomGap: Int
 
-    @State private var showsInnerSpacing = true
-    @State private var showsOuterSpacing = true
+    @State private var showsInnerSpacing = false
+    @State private var showsOuterSpacing = false
 
     var body: some View {
         SettingsScrollView {

@@ -4,6 +4,7 @@ struct ShortcutGeneralSettingsView: View {
     @ObservedObject var model: ShortcutSettingsModel
     @SettingsDraft("start-at-login", load: { config.startAtLogin }) private var startAtLogin: Bool
     @SettingsDraft("auto-reload-config", load: { config.autoReloadConfig }) private var autoReloadConfig: Bool
+    @State private var advancedOpen = false
 
     @SettingsDraft("native-spaces.restore-layouts", load: { config.nativeSpaces.restoreLayouts }) private var restoreNativeLayouts: Bool
     @SettingsDraft("native-spaces.restore-frames-on-quit", load: { config.nativeSpaces.restoreFramesOnQuit }) private var restoreFramesOnQuit: Bool
@@ -22,12 +23,12 @@ struct ShortcutGeneralSettingsView: View {
                     persistSettingsConfig(section: "native-spaces", key: "restore-frames-on-quit", renderedValue: restoreFramesOnQuit ? "true" : "false", model: model)
                 }
             }
-            SettingsSection("Configuration") {
-                SettingsToggle("Reload config when it changes", id: "auto-reload-config", isOn: $autoReloadConfig, help: "Apply valid edits saved from another editor automatically.") {
+            DisclosureGroup("Advanced setup", isExpanded: $advancedOpen) {
+                SettingsToggle("Reload config automatically", id: "auto-reload-config",
+                               isOn: $autoReloadConfig,
+                               help: "Apply valid changes made in an external TOML editor.") {
                     persistRootBool("auto-reload-config", autoReloadConfig)
                 }
-            }
-            SettingsSection("Setup Check") {
                 SetupCheckView()
             }
             SettingsSection("Troubleshooting") {
