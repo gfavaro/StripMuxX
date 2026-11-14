@@ -1,0 +1,7 @@
+config-version = 2
+
+[scrolling]
+column-width = 0.4
+width-presets = [0.3, 0.5, 1.0]
+center-focused-column = 'on-overflow'
+minimap-hold-modifiers = ['ctrl', 'alt']

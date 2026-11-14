@@ -1,0 +1,63 @@
+# Xcode project configuration. Managed by https://github.com/yonaskolb/XcodeGen
+# Xcode is only used to build the release App Bundle. Debug builds only use Swift Package Manager
+
+name: WinMux
+
+packages:
+  WinMuxPackage:
+    path: .
+
+configs:
+  Debug: debug
+  Release: release
+
+targets:
+  WinMux:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    info:
+      path: resources/WinMux-Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSUIElement: true
+        SUEnableAutomaticChecks: false
+    sources:
+      - "Sources/WinMuxApp"
+      - path: "resources"
+        excludes:
+          - "marketing"
+          - "screenshots"
+    dependencies:
+      - package: WinMuxPackage
+        product: AppBundle
+      - package: WinMuxPackage
+        product: SparkleSupport
+    # https://developer.apple.com/documentation/xcode/build-settings-reference
+    settings:
+      base:
+        SWIFT_VERSION: 6.2 # Swift Language Version
+        MARKETING_VERSION: ${XCODEGEN_WINMUX_VERSION}
+        CURRENT_PROJECT_VERSION: ${XCODEGEN_WINMUX_BUILD_NUMBER}
+        SPARKLE_PUBLIC_KEY: ${XCODEGEN_WINMUX_SPARKLE_PUBLIC_KEY}
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: ${XCODEGEN_WINMUX_CODE_SIGN_IDENTITY}
+        DEVELOPMENT_TEAM: ${XCODEGEN_WINMUX_DEVELOPMENT_TEAM}
+        # Explicit, so the embedded Sparkle.framework loads whatever Xcode's defaults are.
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+      configs:
+        Debug:
+          PRODUCT_NAME: StripMuxX-Debug
+          PRODUCT_BUNDLE_IDENTIFIER: com.gfavaro.stripmuxx.debug
+        Release:
+          PRODUCT_NAME: StripMuxX
+          PRODUCT_BUNDLE_IDENTIFIER: com.gfavaro.stripmuxx
+          ENABLE_HARDENED_RUNTIME: YES
+          SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+          GCC_TREAT_WARNINGS_AS_ERRORS: YES
+    entitlements:
+      path: resources/WinMux.entitlements
+      properties:
+        # Accessibility API doesn't work in sandboxed apps
+        com.apple.security.app-sandbox: false

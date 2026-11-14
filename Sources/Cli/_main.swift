@@ -1,0 +1,164 @@
+import Common
+import Darwin
+import Foundation
+import Network
+
+private let descriptionsByCommand = Dictionary(uniqueKeysWithValues:
+    subcommandDescriptions.map { ($0[0].trimmingCharacters(in: .whitespaces), $0[1]) })
+
+let usage =
+    """
+    USAGE: \(CommandLine.arguments.first ?? "stripmuxx") [-h|--help] [-v|--version] <subcommand> [<args>...]
+
+    SUBCOMMANDS:
+    \(cliSubcommandNames.map { ["  " + $0, descriptionsByCommand[$0] ?? ""] }.toPaddingTable(columnSeparator: "   ").joined(separator: "\n"))
+
+    Run 'stripmuxx <subcommand> --help' for command details.
+    """
+
+@main
+struct Main {
+    static func main() async {
+        let args = CommandLine.arguments.slice(1...) ?? []
+
+        if args.isEmpty || args.first == "--help" || args.first == "-h" {
+            exit(0, out: usage)
+        }
+
+        if args.first == "--version" || args.first == "-v" {
+            let connection = NWConnection(to: NWEndpoint.unix(path: socketPath), using: .tcp)
+            let serverVersionAndHash: String?
+            if await connection.startBlocking().error == nil {
+                let ans = await run(connection, [], stdin: "", windowId: nil, workspace: nil)
+                serverVersionAndHash = ans.serverVersionAndHash
+            } else {
+                serverVersionAndHash = nil
+            }
+            print(
+                """
+                stripmuxx CLI client version: \(cliClientVersionAndHash)
+                StripMuxX.app server version: \(serverVersionAndHash ?? "Unknown. The server is not running")
+                """,
+            )
+            if serverVersionAndHash != nil && cliClientVersionAndHash != serverVersionAndHash {
+                eprint(
+                    """
+                    Warning: StripMuxX client/server versions don't match. Possible fixes:
+                      - Restart StripMuxX.app (server restart is required after each update)
+                      - Reinstall and restart StripMuxX (corrupted installation)
+                    """,
+                )
+            }
+            exit(0)
+        }
+
+        let parsedArgs: any CmdArgs
+        switch parseCmdArgs(args) {
+            case .cmd(let commandArgs):
+                parsedArgs = commandArgs
+            case .help(let help):
+                exit(0, out: help)
+            case .failure(let e):
+                exit(1, err: e)
+        }
+
+        let connection = NWConnection(to: NWEndpoint.unix(path: socketPath), using: .tcp)
+
+        if let e = await connection.startBlocking().error {
+            exit(1, err: "Can't connect to StripMuxX server. Is StripMuxX.app running?\n\(e.localizedDescription)")
+        }
+
+        var stdin = ""
+        if shouldReadRelativeWorkspaceStdin(parsedArgs), hasStdin() {
+            if !hasExplicitRelativeWorkspaceStdinFlag(parsedArgs) {
+                exit(
+                    1,
+                    err: """
+                        ERROR: Implicit stdin is detected (stdin is not TTY). Implicit stdin was forbidden in WinMux v0.20.0.
+                        1. Please supply '--stdin' flag to make stdin explicit and preserve the inherited behavior
+                        2. You can also use '--no-stdin' flag to behave as if no stdin was supplied
+                        Breaking change issue: https://github.com/nikitabobko/WinMux/issues/1683
+                        """,
+                )
+            }
+            if shouldUseRelativeWorkspaceStdin(parsedArgs) {
+                var lineCount = 0
+                while let line = readLine(strippingNewline: false) {
+                    stdin += line
+                    lineCount += 1
+                    if lineCount > 1000 {
+                        exit(1, err: "stdin number of lines limit is exceeded")
+                    }
+                }
+            }
+        }
+
+        let environment = ProcessInfo.processInfo.environment
+        let windowId = environment[WINMUX_WINDOW_ID].flatMap(UInt32.init)
+        let workspace = environment[WINMUX_WORKSPACE]
+
+        let ans = await run(connection, args, stdin: stdin, windowId: windowId, workspace: workspace)
+
+        if !ans.stdout.isEmpty { print(ans.stdout) }
+        if !ans.stderr.isEmpty { eprint(ans.stderr) }
+        if ans.exitCode != 0 && ans.serverVersionAndHash != cliClientVersionAndHash {
+            eprint(
+                """
+                Warning: StripMuxX client/server versions don't match
+                  - stripmuxx CLI client version: \(cliClientVersionAndHash)
+                  - StripMuxX.app server version: \(ans.serverVersionAndHash)
+                  Possible fixes:
+                  - Restart StripMuxX.app (server restart is required after each update)
+                  - Reinstall and restart StripMuxX (corrupted installation)
+                """,
+            )
+        }
+        exit(ans.exitCode)
+    }
+}
+
+private func shouldReadRelativeWorkspaceStdin(_ args: any CmdArgs) -> Bool {
+    switch args {
+        case let args as WorkspaceCmdArgs:
+            args.target.val.isRelative
+        case let args as MoveNodeToWorkspaceCmdArgs:
+            args.target.val.isRelative
+        default:
+            false
+    }
+}
+
+private func hasExplicitRelativeWorkspaceStdinFlag(_ args: any CmdArgs) -> Bool {
+    switch args {
+        case let args as WorkspaceCmdArgs:
+            args.explicitStdinFlag != nil
+        case let args as MoveNodeToWorkspaceCmdArgs:
+            args.explicitStdinFlag != nil
+        default:
+            true
+    }
+}
+
+private func shouldUseRelativeWorkspaceStdin(_ args: any CmdArgs) -> Bool {
+    switch args {
+        case let args as WorkspaceCmdArgs:
+            args.useStdin
+        case let args as MoveNodeToWorkspaceCmdArgs:
+            args.useStdin
+        default:
+            false
+    }
+}
+
+func run(_ connection: NWConnection, _ args: StrArrSlice, stdin: String, windowId: UInt32?, workspace: String?) async -> ServerAnswer {
+    if let e = await connection.writeAtomic(ClientRequest(args: args.toArray(), stdin: stdin, windowId: windowId, workspace: workspace)).error {
+        exit(1, err: "Failed to write to server socket: \(e)")
+    }
+
+    switch await connection.readNonAtomic() {
+        case .success(let answer):
+            return (try? JSONDecoder().decode(ServerAnswer.self, from: answer)) ?? exitT(1, err: "Failed to parse server response: \(String(data: answer, encoding: .utf8).prettyDescription)")
+        case .failure(let error):
+            exit(1, err: "Failed to read from server socket: \(error)")
+    }
+}

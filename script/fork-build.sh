@@ -1,0 +1,62 @@
+#!/bin/bash
+# Build a personal app without the upstream identity, update feed, or signing team.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+source ./script/setup.sh
+if /usr/bin/which swiftly &>/dev/null; then
+  fork_swift_compiler="$(swiftly run /usr/bin/which swiftc)"
+else
+  fork_swift_compiler="$(/usr/bin/xcrun --find swiftc)"
+fi
+./script/check-swift-version.sh "$("$fork_swift_compiler" --version)"
+fork_version="${VERSION:-$(tr -d '[:space:]' < VERSION)}"
+fork_build_number="${BUILD_NUMBER:-1}"
+fork_signing_identity="${CODESIGN_IDENTITY:-}"
+if [[ -z "$fork_signing_identity" ]]; then
+  # The first of these that exists; WinMux builds keep the identity in winmux-gf.
+  for fork_config_dir in stripmuxx winmux-gf; do
+    fork_identity_config="${XDG_CONFIG_HOME:-$HOME/.config}/$fork_config_dir/signing-identity"
+    if [[ -f "$fork_identity_config" ]]; then break; fi
+  done
+  if [[ -f "$fork_identity_config" ]]; then
+    IFS= read -r fork_signing_identity < "$fork_identity_config" || true
+  fi
+fi
+fork_signing_identity="${fork_signing_identity:--}"
+[[ "$fork_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'VERSION must be numeric major.minor.patch' >&2; exit 1; }
+[[ "$fork_build_number" =~ ^[1-9][0-9]*$ ]] || { echo 'BUILD_NUMBER must be a positive integer' >&2; exit 1; }
+make xcodeproj VERSION="$fork_version" BUILD_NUMBER="$fork_build_number" CODESIGN_IDENTITY="$fork_signing_identity" DEVELOPMENT_TEAM=
+mkdir -p .release
+fork_stage="$(mktemp -d "$PWD/.release/fork-build.XXXXXX")"
+trap 'echo "Build intermediates retained at: $fork_stage"' EXIT
+xcodebuild -project WinMux.xcodeproj -scheme WinMux -configuration Release \
+  -derivedDataPath "$PWD/.release/fork-derived" CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= SWIFT_EXEC="$fork_swift_compiler" build > "$fork_stage/xcodebuild.log" 2>&1 || {
+    tail -80 "$fork_stage/xcodebuild.log" >&2; exit 1;
+  }
+fork_app="$PWD/.release/fork-derived/Build/Products/Release/StripMuxX.app"
+test -d "$fork_app"
+swift build -c release --product stripmuxx
+fork_bin="$(swift build -c release --show-bin-path | tail -n 1)"
+test -d "$fork_bin"
+# macOS normally uses case-insensitive volumes: stripmuxx would overwrite StripMuxX.
+ditto "$fork_bin/stripmuxx" "$fork_app/Contents/MacOS/stripmuxx-cli"
+mkdir -p "$fork_app/Contents/Helpers"
+ln -sfn ../MacOS/stripmuxx-cli "$fork_app/Contents/Helpers/stripmuxx"
+codesign --force --deep --sign "$fork_signing_identity" "$fork_app"
+codesign --verify --deep --strict "$fork_app"
+"$fork_app/Contents/MacOS/StripMuxX" --help | grep -q -- '--config-path'
+fork_plist="$fork_app/Contents/Info.plist"
+test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$fork_plist")" = com.gfavaro.stripmuxx
+test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$fork_plist")" = "$fork_build_number"
+test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$fork_plist")" = "$fork_version"
+if /usr/libexec/PlistBuddy -c 'Print SUFeedURL' "$fork_plist" >/dev/null 2>&1; then
+  echo 'Refusing to package an app with an update feed' >&2; exit 1
+fi
+# ditto merges into an existing bundle: a resource removed since the last build would
+# stay behind, unsealed, and the copy would fail signature verification.
+rm -rf .release/StripMuxX.app
+ditto "$fork_app" .release/StripMuxX.app
+codesign --verify --deep --strict .release/StripMuxX.app
+ditto -c -k --sequesterRsrc --keepParent "$fork_app" ".release/StripMuxX-$fork_version-$fork_build_number.zip"
+echo "Built .release/StripMuxX.app (identity: $fork_signing_identity; not notarized)."

@@ -1,0 +1,5 @@
+config-version = 2
+
+[native-spaces]
+restore-layouts = true
+restore-frames-on-quit = false

@@ -1,0 +1,5 @@
+config-version = 2
+
+[workspace-to-monitor-force-assignment]
+'1' = ['Built-in', 'DELL U2720Q']
+'2' = ['secondary']

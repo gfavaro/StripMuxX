@@ -1,0 +1,17 @@
+{
+  "valid-defaults.toml": {"parser": true, "schema": true},
+  "valid-native-spaces.toml": {"parser": true, "schema": true},
+  "invalid-native-spaces-type.toml": {"parser": false, "schema": false},
+  "valid-scrolling.toml": {"parser": true, "schema": true},
+  "invalid-scrolling-enum.toml": {"parser": false, "schema": false},
+  "valid-removed-features.toml": {"parser": true, "schema": false},
+  "valid-quoted-names.toml": {"parser": true, "schema": true},
+  "valid-regex-rules.toml": {"parser": true, "schema": true},
+  "valid-monitor-arrays.toml": {"parser": true, "schema": true},
+  "invalid-wrong-type.toml": {"parser": false, "schema": false},
+  "invalid-enum.toml": {"parser": false, "schema": false},
+  "unknown-key-parser-rejected.toml": {"parser": false, "schema": false},
+  "semantic-command-schema-accepted.toml": {"parser": false, "schema": true},
+  "valid-window-width.toml": {"parser": true, "schema": true},
+  "invalid-window-width.toml": {"parser": false, "schema": false}
+}

@@ -1,0 +1,9 @@
+# Written for removed features: the parser skips these; the editor schema flags them.
+config-version = 2
+default-root-container-layout = 'dwindle'
+[workspace-backend]
+type = "native"
+[native-spaces]
+tiling-enabled = true
+[workspace-sidebar]
+enabled = true

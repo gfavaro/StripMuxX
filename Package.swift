@@ -1,0 +1,90 @@
+// swift-tools-version: 6.2
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+import PackageDescription
+
+let package = Package(
+    name: "WinMuxPackage",
+    // Runtime support for parameterized protocol types is only available in macOS 13.0.0 or newer
+    // And it specifies deploymentTarget for CLI
+    platforms: [.macOS(.v13)],
+    // Products define the executables and libraries a package produces, making them visible to other packages.
+    products: [
+        .executable(name: "stripmuxx", targets: ["Cli"]),
+        .executable(name: "stripmuxx-native-spaces-probe", targets: ["NativeSpacesProbe"]),
+        // Don't use this build for release, use xcode instead
+        .executable(name: "WinMuxApp", targets: ["WinMuxApp"]),
+        // We only need to expose this as a product for xcode
+        .library(name: "AppBundle", targets: ["AppBundle"]),
+        .library(name: "SparkleSupport", targets: ["SparkleSupport"]),
+    ],
+    dependencies: [
+        .package(path: "Vendor/TOMLKit"),
+        .package(url: "https://github.com/rxhanson/MASShortcut", revision: "2f9fbb3f959b7a683c6faaf9638d22afad37a235"),
+        .package(url: "https://github.com/apple/swift-collections.git", exact: "1.3.0"),
+        .package(url: "https://github.com/soffes/HotKey.git", exact: "0.2.1"),
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
+    ],
+    // Targets are the basic building blocks of a package, defining a module or a test suite.
+    // Targets can depend on other targets in this package and products from dependencies.
+    targets: [
+        .target(name: "NativeSpaces"),
+        .executableTarget(name: "NativeSpacesProbe", dependencies: ["NativeSpaces"]),
+        .testTarget(name: "NativeSpacesTests", dependencies: ["NativeSpaces"]),
+        // Exposes the private _AXUIElementGetWindow function to swift
+        .target(
+            name: "PrivateApi",
+            path: "Sources/PrivateApi",
+            publicHeadersPath: "include",
+            linkerSettings: [.linkedFramework("IOKit")],
+        ),
+        .target(
+            name: "Common",
+            dependencies: [
+                .product(name: "Collections", package: "swift-collections"),
+            ],
+        ),
+        .target(
+            name: "AppBundle",
+            dependencies: [
+                .target(name: "NativeSpaces"),
+                .product(name: "Collections", package: "swift-collections"),
+                .product(name: "HotKey", package: "HotKey"),
+                .product(name: "MASShortcut", package: "MASShortcut"),
+                .product(name: "TOMLKit", package: "TOMLKit"),
+                .target(name: "Common"),
+                .target(name: "PrivateApi"),
+            ],
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+            ],
+        ),
+        .executableTarget(
+            name: "WinMuxApp",
+            dependencies: [
+                .target(name: "AppBundle"),
+                .target(name: "SparkleSupport"),
+            ],
+        ),
+        .target(
+            name: "SparkleSupport",
+            dependencies: [
+                .product(name: "Sparkle", package: "Sparkle"),
+            ],
+        ),
+        .executableTarget(
+            name: "Cli",
+            dependencies: [
+                .target(name: "Common"),
+            ],
+        ),
+        .testTarget(
+            name: "AppBundleTests",
+            dependencies: [
+                .target(name: "AppBundle"),
+                .product(name: "TOMLKit", package: "TOMLKit"),
+            ],
+            path: "Sources/AppBundleTests",
+        ),
+    ],
+)

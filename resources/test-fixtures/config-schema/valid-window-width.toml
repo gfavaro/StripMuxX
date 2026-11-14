@@ -1,0 +1,6 @@
+fullscreen-width = 0.7
+single-window-alignment = 'center'
+[display.'Built-in']
+fullscreen-width = 0.8
+[display.main]
+single-window-alignment = 'right'

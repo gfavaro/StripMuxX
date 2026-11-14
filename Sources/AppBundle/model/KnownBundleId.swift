@@ -1,0 +1,60 @@
+enum KnownBundleId: String, Equatable {
+
+    case _1password = "com.1password.1password"
+    case activityMonitor = "com.apple.ActivityMonitor"
+    case alacritty = "org.alacritty"
+    case braveBrowser = "com.brave.Browser"
+    case chrome = "com.google.Chrome"
+    case safari = "com.apple.Safari"
+    case helium = "net.imput.helium"
+    case edge = "com.microsoft.edgemac"
+    case arc = "company.thebrowser.Browser"
+    case cleanshotx = "pl.maketheweb.cleanshotx"
+    case emacs = "org.gnu.Emacs"
+    case finder = "com.apple.finder"
+    case ghostty = "com.mitchellh.ghostty"
+    case gimp = "org.gimp.gimp-2.10"
+    case iphonesimulator = "com.apple.iphonesimulator"
+    case iterm2 = "com.googlecode.iterm2"
+    case kitty = "net.kovidgoyal.kitty"
+    case localAuthenticationUIAgent = "com.apple.LocalAuthentication.UIAgent"
+    case photoBooth = "com.apple.PhotoBooth"
+    case qutebrowser = "org.qutebrowser.qutebrowser"
+    case screenstudio = "com.timpler.screenstudio"
+    case securityAgent = "com.apple.SecurityAgent"
+    case slack = "com.tinyspeck.slackmacgap"
+    case steam = "com.valvesoftware.steam.helper"
+    case windowsApp = "com.microsoft.rdc.macos"
+    case wezterm = "com.github.wez.wezterm"
+    case xcode = "com.apple.dt.Xcode"
+    case zenBrowser = "app.zen-browser.zen"
+    case zoom = "us.zoom.xos"
+
+    case mozillaFirefox = "org.mozilla.firefox"
+    case mozillaFirefoxDeveloperEdition = "org.mozilla.firefoxdeveloperedition"
+    case mozillaFirefoxNightly = "org.mozilla.nightly"
+
+    case vscode = "com.microsoft.VSCode"
+    case vscodium = "com.vscodium"
+
+    var isFirefox: Bool {
+        self == .mozillaFirefox
+            || self == .mozillaFirefoxDeveloperEdition
+            || self == .mozillaFirefoxNightly
+            || self == .zenBrowser
+    }
+
+    var isBrowser: Bool {
+        isFirefox || self == .chrome || self == .braveBrowser || self == .safari || self == .helium ||
+            self == .edge || self == .arc || self == .qutebrowser
+    }
+
+    var isVscode: Bool {
+        self == .vscode || self == .vscodium
+    }
+
+    /// macOS password and Touch ID prompts. macOS places them above every window on its chosen display.
+    var isSystemAuthenticationAgent: Bool {
+        self == .securityAgent || self == .localAuthenticationUIAgent
+    }
+}

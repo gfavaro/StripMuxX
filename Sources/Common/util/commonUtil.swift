@@ -1,0 +1,310 @@
+import AppKit
+import Darwin
+import Foundation
+
+public let socketPath = "/tmp/\(winMuxAppId)-\(unixUserName).sock"
+public let unixUserName = NSUserName()
+public let mainModeId = "main"
+
+@TaskLocal
+public var refreshSessionEvent: RefreshSessionEvent? = nil
+
+@TaskLocal
+private var recursionDetectorDuringTermination = false
+
+public func dieT<T>(
+    _ __message: String = "",
+    file: StaticString = #fileID,
+    line: Int = #line,
+    column: Int = #column,
+    function: String = #function,
+) -> T {
+    let _message = __message.contains("\n") ? "\n" + __message.prefixLines(with: "    ") : __message
+    let thread = Thread.current
+    let message =
+        """
+        Please report to:
+            https://github.com/nikitabobko/WinMux/discussions/categories/potential-bugs
+            Please describe what you did to trigger this error
+
+        Message: \(_message)
+        Version: \(winMuxAppVersion)
+        Git hash: \(gitHash)
+        refreshSessionEvent: \(refreshSessionEvent.prettyDescription)
+        Date: \(Date.now)
+        Thread name: \(thread.name.prettyDescription)
+        Is main thread: \(thread.isMainThread)
+        axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken.prettyDescription)
+        macOS version: \(ProcessInfo().operatingSystemVersionString)
+        Coordinate: \(file):\(line):\(column) \(function)
+        recursionDetectorDuringTermination: \(recursionDetectorDuringTermination)
+        cli: \(isCli)
+        Monitor count: \(NSScreen.screens.count)
+        Displays have separate spaces: \(NSScreen.screensHaveSeparateSpaces)
+
+        Stacktrace:
+        \(getStringStacktrace())
+        """
+    if !isUnitTest && isServer {
+        showDiagnosticMessage(
+            filenameIfConsoleApp: recursionDetectorDuringTermination
+                ? "winmux-runtime-error-recursion.txt"
+                : "winmux-runtime-error.txt",
+            title: "StripMuxX Runtime Error",
+            message: message,
+        )
+    }
+    if !isUnitTest && !recursionDetectorDuringTermination {
+        runTerminationCleanupBlocking()
+    }
+    fatalError("\n" + message)
+}
+
+extension TerminationHandler {
+    /// Errors raised during cleanup must not recursively wait for that same cleanup.
+    public func performTerminationCleanup() async throws {
+        try await $recursionDetectorDuringTermination.withValue(true) {
+            try await beforeTermination()
+        }
+    }
+}
+
+// Shared by the fatal path and subprocess regression tests.
+func runTerminationCleanupBlocking() {
+    let semaphore = DispatchSemaphore(value: 0)
+    Task {
+        defer { semaphore.signal() }
+        do {
+            try await terminationHandler.performTerminationCleanup()
+        } catch {
+            NSLog("WinMux fatal-error cleanup: %@", String(describing: error))
+        }
+    }
+    if Thread.isMainThread {
+        // Cleanup runs on MainActor. Keep servicing it instead of deadlocking it.
+        while semaphore.wait(timeout: .now()) != .success {
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.01))
+        }
+    } else {
+        semaphore.wait()
+    }
+}
+
+public enum RefreshSessionEvent: Sendable, CustomStringConvertible {
+    case configAutoReload
+    case globalObserver(String)
+    case globalObserverLeftMouseUp
+    case menuBarButton
+    case hotkeyBinding
+    case startup
+    case workspaceRestoration
+    case socketServer(any CmdArgs)
+    case resetManipulatedWithMouse
+    case ax(String)
+    case onDisplayChanged
+    case onFocusedMonitorChanged
+    case onFocusChanged
+    case onModeChanged
+    /// Tab switch within a tab group: no new windows can appear, so skip the heavy window
+    /// refresh barrier — only relayout (which hides the previously active tab) is needed.
+    case onTabSwitched
+    /// Repair parked native windows without adopting focus or enumerating apps.
+    case onWindowParkingDrift
+
+    public var isStartup: Bool {
+        if case .startup = self { return true } else { return false }
+    }
+
+    /// A short code for event recording: the case and, for observers, the system notification
+    /// name. Command arguments are left out because they can carry user text.
+    public var eventCode: String {
+        switch self {
+            case .globalObserver(let name): "global:\(name)"
+            case .ax(let name): "ax:\(name)"
+            case .socketServer: "socketServer"
+            default: String(describing: self).components(separatedBy: "(").first ?? "event"
+        }
+    }
+
+    public var canReuseLastAppliedWindowFrames: Bool {
+        switch self {
+            case .ax(let notif):
+                notif == kAXFocusedWindowChangedNotification as String
+            case .globalObserver(let notif):
+                notif == NSWorkspace.didActivateApplicationNotification.rawValue || notif == "workspaceSwipe"
+            case .hotkeyBinding, .menuBarButton, .socketServer, .onModeChanged:
+                true
+            case .onDisplayChanged, .onFocusedMonitorChanged, .onFocusChanged, .onTabSwitched, .onWindowParkingDrift:
+                true
+            case .configAutoReload, .globalObserverLeftMouseUp, .startup, .workspaceRestoration,
+                 .resetManipulatedWithMouse:
+                false
+        }
+    }
+
+    public var requiresWindowRefreshBarrier: Bool {
+        switch self {
+            case .ax(let notif):
+                notif != kAXFocusedWindowChangedNotification as String
+            case .globalObserver(let notif):
+                notif != NSWorkspace.didActivateApplicationNotification.rawValue && notif != "workspaceSwipe"
+            case .onDisplayChanged, .onTabSwitched, .onWindowParkingDrift:
+                false
+            case .configAutoReload, .globalObserverLeftMouseUp, .menuBarButton, .hotkeyBinding,
+                 .startup, .workspaceRestoration, .socketServer, .resetManipulatedWithMouse, .onFocusedMonitorChanged,
+                 .onFocusChanged, .onModeChanged:
+                true
+        }
+    }
+
+    public var requiresLayoutReasonNormalization: Bool {
+        requiresWindowRefreshBarrier
+    }
+
+    /// Wake and startup force an AX parking write. Other events can skip that write
+    /// only after native geometry confirms the window is still at its parking point;
+    /// a cached hidden flag alone does not establish that the app stayed there.
+    public var requiresHiddenWindowsReassertion: Bool {
+        switch self {
+            case .startup:
+                true
+            case .globalObserver(let notif):
+                notif == NSWorkspace.didWakeNotification.rawValue ||
+                    notif == NSWorkspace.screensDidWakeNotification.rawValue
+            default:
+                false
+        }
+    }
+
+    public var description: String {
+        switch self {
+            case .ax(let str): "ax(\(str))"
+            case .configAutoReload: "configAutoReload"
+            case .globalObserver(let str): "globalObserver(\(str))"
+            case .globalObserverLeftMouseUp: "globalObserverLeftMouseUp"
+            case .hotkeyBinding: "hotkeyBinding"
+            case .menuBarButton: "menuBarButton"
+            case .resetManipulatedWithMouse: "resetManipulatedWithMouse"
+            case .socketServer(let args): "socketServer: \(args)"
+            case .startup: "startup"
+            case .workspaceRestoration: "workspaceRestoration"
+            case .onDisplayChanged: "onDisplayChanged"
+            case .onFocusedMonitorChanged: "onFocusedMonitorChanged"
+            case .onFocusChanged: "onFocusChanged"
+            case .onModeChanged: "onModeChanged"
+            case .onTabSwitched: "onTabSwitched"
+            case .onWindowParkingDrift: "onWindowParkingDrift"
+        }
+    }
+}
+
+public func getStringStacktrace() -> String { Thread.callStackSymbols.joined(separator: "\n") }
+
+@inlinable public func die(
+    _ message: String = "",
+    file: StaticString = #fileID,
+    line: Int = #line,
+    column: Int = #column,
+    function: String = #function,
+) -> Never {
+    dieT(message, file: file, line: line, column: column, function: function)
+}
+
+public func check(
+    _ condition: Bool,
+    _ message: @autoclosure () -> String = "",
+    file: StaticString = #fileID,
+    line: Int = #line,
+    column: Int = #column,
+    function: String = #function,
+) {
+    if !condition {
+        die(message(), file: file, line: line, column: column, function: function)
+    }
+}
+
+public var isUnitTest: Bool { NSClassFromString("XCTestCase") != nil }
+
+extension CaseIterable where Self: RawRepresentable, RawValue == String {
+    public static var cliArgsCases: [String] { allCases.map(\.rawValue) }
+    public static var unionLiteral: String { cliArgsCases.joinedCliArgs }
+}
+
+extension [String] {
+    public var joinedCliArgs: String { "(" + self.joined(separator: "|") + ")" }
+}
+
+extension Int {
+    public func toDouble() -> Double { Double(self) }
+}
+
+public func + <K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
+    lhs.merging(rhs) { _, r in r }
+}
+
+extension String {
+    public func removePrefix(_ prefix: String) -> String {
+        hasPrefix(prefix) ? String(dropFirst(prefix.count)) : self
+    }
+
+    public func prependLines(_ prefix: String) -> String {
+        split(separator: "\n").map { prefix + $0 }.joined(separator: "\n")
+    }
+}
+
+extension Bool {
+    /// Implication
+    /// | a     | b     | a.implies(b) |
+    /// |-------|-------|--------------|
+    /// | false | false | true         |
+    /// | false | true  | true         |
+    /// | true  | false | false        |
+    /// | true  | true  | true         |
+    public func implies(_ mustHold: @autoclosure () -> Bool) -> Bool { !self || mustHold() }
+}
+
+extension URL {
+    public func open(with url: URL) {
+        NSWorkspace.shared.open([self], withApplicationAt: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+}
+
+public func eprint(_ msg: String) {
+    fputs(msg + "\n", stderr)
+}
+
+public func exit(_ exitCode: Int32, out: String? = nil, err: String? = nil) -> Never {
+    exitT(exitCode, out: out, err: err)
+}
+
+public func exitT<T>(_ exitCode: Int32, out: String? = nil, err: String? = nil) -> T {
+    if let out { print(out) }
+    if let err { eprint(err) }
+    exit(exitCode)
+}
+
+@inlinable
+public func allowOnlyCancellationError<T>(_ block: () async throws -> sending T) async throws -> sending T {
+    do {
+        return try await block()
+    } catch let e as CancellationError {
+        throw e
+    } catch {
+        die("throws must only be used for CancellationError")
+    }
+}
+
+/// Tests may write only temporary files. A write to user data (the config, window
+/// state, recovery journal, native layouts) during tests stops the run loudly
+/// instead of silently changing the developer's own setup.
+public func assertTestWriteIsTemporary(_ url: URL) {
+    guard isUnitTest, !isTemporaryPath(url) else { return }
+    die("A test tried to write outside the temporary directory: \(url.path)")
+}
+
+public func isTemporaryPath(_ url: URL) -> Bool {
+    let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+    return [NSTemporaryDirectory(), "/tmp/", "/private/tmp/", "/private/var/folders/"]
+        .map { URL(filePath: $0).standardizedFileURL.resolvingSymlinksInPath().path }
+        .contains { path.hasPrefix($0.hasSuffix("/") ? $0 : $0 + "/") }
+}

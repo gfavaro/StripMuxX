@@ -1,0 +1,7 @@
+config-version = 2
+
+[workspace-to-monitor-force-assignment]
+'A quoted name' = ['main']
+
+[display.'Built-in Retina Display']
+fullscreen-width = 0.8

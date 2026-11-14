@@ -1,0 +1,215 @@
+import AppKit
+import Common
+import Foundation
+import os
+
+let signposter = OSSignposter(subsystem: winMuxAppId, category: .pointsOfInterest)
+
+let myPid = NSRunningApplication.current.processIdentifier
+let lockScreenAppBundleId = "com.apple.loginwindow"
+private let lockScreenExecutablePath = "/System/Library/CoreServices/loginwindow.app/Contents/MacOS/loginwindow"
+
+/// Answered from the process's executable path. `bundleIdentifier` is a synchronous
+/// LaunchServices request whenever AppKit has dropped its cached answer, which it does after
+/// every app activation, and these checks run on every refresh and app notification.
+/// The answer is kept on the app object: AppKit also fetches `processIdentifier` again
+/// after an activation, and the same objects are asked about on every refresh.
+func isLockScreenApp(_ app: NSRunningApplication?) -> Bool {
+    guard let app else { return false }
+    if let known = objc_getAssociatedObject(app, &lockScreenAnswerKey) as? Bool { return known }
+    var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+    guard proc_pidpath(app.processIdentifier, &path, UInt32(path.count)) > 0 else { return false }
+    let answer = String(cString: path) == lockScreenExecutablePath
+    objc_setAssociatedObject(app, &lockScreenAnswerKey, answer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    return answer
+}
+nonisolated(unsafe) private var lockScreenAnswerKey: UInt8 = 0
+
+@MainActor
+private var terminationSignals: [DispatchSourceSignal] = []
+
+@MainActor
+func interceptTermination(_ number: Int32, deadline: DispatchTimeInterval = .seconds(10)) {
+    signal(number, SIG_IGN)
+    let source = DispatchSource.makeSignalSource(signal: number, queue: DispatchQueue(label: "\(winMuxAppId).termination"))
+    source.setEventHandler(handler: terminationSignalHandler(number, deadline: deadline))
+    terminationSignals.append(source)
+    source.resume()
+}
+
+// Construct outside MainActor: Dispatch invokes this on the independent signal queue.
+private func terminationSignalHandler(_ number: Int32, deadline: DispatchTimeInterval) -> @Sendable () -> Void {
+    return {
+        let completed = DispatchSemaphore(value: 0)
+        Task { @MainActor in
+            defer { completed.signal() }
+            do { try await terminationHandler.performTerminationCleanup() }
+            catch { NSLog("WinMux termination: %@", String(describing: error)) }
+        }
+        if completed.wait(timeout: .now() + deadline) == .timedOut {
+            NSLog("StripMuxX: termination cleanup exceeded deadline; windows may be left where tiling put them")
+            _exit(number)
+        }
+        exit(number)
+    }
+}
+
+@MainActor
+func initTerminationHandler() {
+    terminationHandler = AppServerTerminationHandler()
+    interceptTermination(SIGINT)
+    interceptTermination(SIGTERM)
+}
+
+private struct AppServerTerminationHandler: TerminationHandler {
+    func beforeTermination() async throws {
+        // Tiled windows go back to where they started.
+        await stopNativeTilingAndRestoreFrames()
+        runtime.native.stop()
+    }
+}
+
+@MainActor
+public final class WinMuxApplicationDelegate: NSObject, NSApplicationDelegate {
+    public func applicationShouldRestoreState(_ app: NSApplication) -> Bool {
+        false
+    }
+
+    public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        SideFilteredHotkeys.shared.stopRecovery()
+        Task { @MainActor in
+            do { try await terminationHandler.performTerminationCleanup() }
+            catch { NSLog("WinMux termination: %@", String(describing: error)) }
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+}
+
+@MainActor
+func terminateApp() {
+    NSApplication.shared.terminate(nil)
+}
+
+/// Quits, then opens the same bundle with the same arguments once this process has
+/// exited, so termination cleanup finishes before the new instance starts.
+@MainActor
+func relaunchApp() {
+    let relaunch = Process()
+    relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
+    relaunch.arguments = ["-c", "pid=$0; app=$1; shift; while kill -0 \"$pid\" 2>/dev/null; do sleep 0.2; done; exec /usr/bin/open -n \"$app\" --args \"$@\"",
+                          String(ProcessInfo.processInfo.processIdentifier), Bundle.main.bundlePath] + CommandLine.arguments.dropFirst()
+    do { try relaunch.run() } catch { NSLog("WinMux relaunch: %@", String(describing: error)); return }
+    terminateApp()
+}
+
+extension String {
+    func copyToClipboard() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.declareTypes([.string], owner: nil)
+        pasteboard.setString(self, forType: .string)
+    }
+}
+
+func - (a: CGPoint, b: CGPoint) -> CGPoint {
+    CGPoint(x: a.x - b.x, y: a.y - b.y)
+}
+
+func + (a: CGPoint, b: CGPoint) -> CGPoint {
+    CGPoint(x: a.x + b.x, y: a.y + b.y)
+}
+
+extension CGPoint: ConvenienceCopyable {}
+
+extension CGPoint {
+    func distance(toOuterFrame rect: Rect) -> CGFloat {
+        if rect.contains(self) {
+            return 0
+        }
+        let list: [CGFloat] =
+            (rect.minY.until(excl: rect.maxY)?.contains(y) == true ? [abs(rect.minX - x), abs(rect.maxX - x)] : []) +
+            (rect.minX.until(excl: rect.maxX)?.contains(x) == true ? [abs(rect.minY - y), abs(rect.maxY - y)] : []) +
+            [
+                distance(to: rect.topLeftCorner),
+                distance(to: rect.bottomRightCorner),
+                distance(to: rect.topRightCorner),
+                distance(to: rect.bottomLeftCorner),
+            ]
+        return list.minOrDie()
+    }
+
+    func coerce(in rect: Rect) -> CGPoint? {
+        guard let xRange = rect.minX.until(incl: rect.maxX - 1) else { return nil }
+        guard let yRange = rect.minY.until(incl: rect.maxY - 1) else { return nil }
+        return CGPoint(x: x.coerce(in: xRange), y: y.coerce(in: yRange))
+    }
+
+    func getProjection(_ orientation: Orientation) -> Double { orientation == .h ? x : y }
+
+    var vectorLength: CGFloat { sqrt(x * x + y * y) }
+
+    func distance(to point: CGPoint) -> Double { (self - point).vectorLength }
+
+    var monitorApproximation: Monitor {
+        monitors.first { $0.rect.contains(self) } ?? monitors.minByOrDie { distance(toOuterFrame: $0.rect) }
+    }
+}
+
+extension CGFloat {
+    func div(_ denominator: Int) -> CGFloat? {
+        denominator == 0 ? nil : self / CGFloat(denominator)
+    }
+
+    func coerce(in range: ClosedRange<CGFloat>) -> CGFloat {
+        switch true {
+            case self > range.upperBound: range.upperBound
+            case self < range.lowerBound: range.lowerBound
+            default: self
+        }
+    }
+}
+
+extension CGPoint: @retroactive Hashable { // todo migrate to self written Point
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(x)
+        hasher.combine(y)
+    }
+}
+
+#if DEBUG
+    let isDebug = true
+#else
+    let isDebug = false
+#endif
+
+func debugFocusLog(_ message: @autoclosure () -> String) {
+    guard isDebug else { return }
+    fputs("[focus-debug] \(Date()) \(message())\n", stderr)
+}
+
+func debugWorkspaceSidebarRenameLog(_ message: @autoclosure () -> String) {
+    guard isDebug else { return }
+    fputs("[sidebar-rename-debug] \(Date()) \(message())\n", stderr)
+}
+
+func debugWorkspaceSidebarHoverLog(_ message: @autoclosure () -> String) {
+    guard isDebug, ProcessInfo.processInfo.environment["WINMUX_DEBUG_SIDEBAR_HOVER"] == "1" else { return }
+    fputs("[sidebar-hover-debug] \(Date()) \(message())\n", stderr)
+}
+
+func debugWorkspaceSidebarEdgeTrapLog(_ message: @autoclosure () -> String) {
+    guard isDebug, ProcessInfo.processInfo.environment["WINMUX_DEBUG_SIDEBAR_EDGE_TRAP"] == "1" else { return }
+    fputs("[sidebar-edge-trap-debug] \(Date()) \(message())\n", stderr)
+}
+
+func debugWorkspaceSidebarProjectLog(_ message: @autoclosure () -> String) {
+    guard isDebug, ProcessInfo.processInfo.environment["WINMUX_DEBUG_SIDEBAR_PROJECT"] == "1" else { return }
+    fputs("[sidebar-project-debug] \(Date()) \(message())\n", stderr)
+}
+
+@inlinable
+func checkCancellation() throws(CancellationError) {
+    if Task.isCancelled {
+        throw CancellationError()
+    }
+}

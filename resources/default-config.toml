@@ -1,0 +1,145 @@
+# This is the reference configuration, not your personal config.
+# Use the menu's Open Config / Diagnostics actions to locate the loaded file.
+# Menu actions display only shortcuts configured for the active mode.
+
+# Each macOS desktop (Space) holds one horizontal strip of columns. A column is one
+# window or a vertical stack of windows; columns that do not fit scroll off the edges.
+
+config-version = 2
+
+# Desktop numbers StripMuxX keeps: it adds macOS desktops until the highest one exists.
+# It never removes desktops; manage them in Mission Control.
+persistent-workspaces = []
+
+# Share of usable width for a lone tiled window and StripMuxX fullscreen (0.1 to 1).
+# [display.<pattern>] tables can override this value.
+fullscreen-width = 1.0
+# Alignment of a lone tiled window within the area remaining after gaps: center, left, right.
+single-window-alignment = 'center'
+
+# Theme for StripMuxX UI: system follows macOS, or choose light / dark.
+appearance = 'system'
+start-at-login = false
+after-startup-command = []
+auto-reload-config = true
+
+on-focus-changed = []
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+on-mode-changed = []
+
+# New windows become a column right of the focused one; false leaves them floating.
+automatically-tile-new-windows = true
+
+[key-mapping]
+    preset = 'qwerty'
+
+[gaps]
+    inner.horizontal = 8
+    inner.vertical = 8
+    outer.left = 12
+    outer.bottom = 12
+    outer.top = 12
+    outer.right = 12
+
+[scrolling]
+    # Preferred width of a new column, as a share of the display (gaps included).
+    column-width = 0.49
+    # scrolling-width next/prev steps through these.
+    width-presets = [0.25, 0.3333, 0.5, 0.6667, 0.75, 1.0]
+    # Where focusing a column scrolls the strip: never, on-overflow or always.
+    center-focused-column = 'never'
+    # Option + two-finger horizontal scroll pans the strip.
+    gesture-enabled = true
+    gesture-sensitivity = 1.0
+    minimap-enabled = true
+    # Holding exactly these keeps the minimap up (ctrl, alt, cmd, shift); empty turns it off.
+    minimap-hold-modifiers = []
+    # A lone window in a column keeps the height it opened with, aligned to the top.
+    keep-window-height = false
+
+[native-spaces]
+    # Remember each desktop's strip and restore it after StripMuxX or the Mac restarts.
+    restore-layouts = true
+    # Quitting or `enable off` puts tiled windows back where they were before tiling.
+    restore-frames-on-quit = true
+
+# Optional placement for desktops added for persistent-workspaces.
+# [workspace-to-monitor-force-assignment]
+#     "1" = 'main'
+#     "2" = 'secondary'
+
+[mode.main.binding]
+    # Columns left and right, windows of a stack up and down.
+    alt-h = 'focus left'
+    alt-j = 'focus down'
+    alt-k = 'focus up'
+    alt-l = 'focus right'
+    alt-n = 'focus dfs-next'
+    alt-p = 'focus dfs-prev'
+    alt-1 = 'scrolling-focus 1'
+    alt-2 = 'scrolling-focus 2'
+    alt-3 = 'scrolling-focus 3'
+    alt-4 = 'scrolling-focus 4'
+    alt-5 = 'scrolling-focus 5'
+    alt-6 = 'scrolling-focus 6'
+    alt-7 = 'scrolling-focus 7'
+    alt-8 = 'scrolling-focus 8'
+    alt-9 = 'scrolling-focus last'
+    # Move a column along the strip; left/right out of a stack makes it a column.
+    alt-shift-h = 'move left'
+    alt-shift-j = 'move down'
+    alt-shift-k = 'move up'
+    alt-shift-l = 'move right'
+    # Stack the focused window into the column beside it.
+    cmd-shift-h = 'join-with left'
+    cmd-shift-l = 'join-with right'
+    alt-cmd-j = 'swap down'
+    alt-cmd-k = 'swap up'
+    alt-r = 'scrolling-width next'
+    alt-shift-r = 'scrolling-width full'
+    alt-c = 'scrolling-center'
+    alt-minus = 'resize width -50'
+    alt-equal = 'resize width +50'
+    cmd-shift-i = 'balance-sizes'
+    alt-shift-t = 'layout floating tiling'
+    alt-shift-m = 'fullscreen'
+    alt-ctrl-m = 'scrolling-minimap'
+    # Desktops, numbered as Control-N in Mission Control.
+    ctrl-0 = 'workspace 10'
+    ctrl-1 = 'workspace 1'
+    ctrl-2 = 'workspace 2'
+    ctrl-3 = 'workspace 3'
+    ctrl-4 = 'workspace 4'
+    ctrl-5 = 'workspace 5'
+    ctrl-6 = 'workspace 6'
+    ctrl-7 = 'workspace 7'
+    ctrl-8 = 'workspace 8'
+    ctrl-9 = 'workspace 9'
+    ctrl-h = 'workspace prev'
+    ctrl-l = 'workspace next'
+    alt-shift-1 = 'move-node-to-workspace 1'
+    alt-shift-2 = 'move-node-to-workspace 2'
+    alt-shift-3 = 'move-node-to-workspace 3'
+    alt-shift-4 = 'move-node-to-workspace 4'
+    alt-shift-5 = 'move-node-to-workspace 5'
+    alt-shift-6 = 'move-node-to-workspace 6'
+    alt-shift-7 = 'move-node-to-workspace 7'
+    alt-shift-8 = 'move-node-to-workspace 8'
+    alt-shift-9 = 'move-node-to-workspace 9'
+    ctrl-shift-h = 'move-node-to-workspace --focus-follows-window prev'
+    ctrl-shift-l = 'move-node-to-workspace --focus-follows-window next'
+
+# Menu bar appearance. Settings edits these same values.
+[menu-bar]
+    indicator = 'icon' # icon or workspace (the desktop number)
+    icon-appearance = 'color' # color or monochrome
+
+# Optional leader layer (choose an entry binding in mode.main.binding).
+# [mode.leader]
+# timeout-ms = 1500          # 0 disables inactivity expiry; range 0–60000
+# exit-on-unbound-key = false # true exits to main and passes unassigned keys to the app
+# show-indicator = true     # Icon tint or desktop text suffix; default false
+# indicator-color = '#5E9EFF' # Optional; defaults to the system accent
+# [mode.leader.binding]
+# esc = 'mode main'
+# h = ['focus left', 'mode main']

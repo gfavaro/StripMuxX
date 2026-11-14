@@ -1,0 +1,122 @@
+@testable import AppBundle
+import Common
+import XCTest
+
+@MainActor
+final class ListWindowsTest: XCTestCase {
+    override func setUp() async throws { setUpWorkspacesForTests() }
+
+    func testParse() {
+        assertEquals(parseCommand("list-windows --pid 1").errorOrNil, "Mandatory option is not specified (--focused|--all|--monitor|--workspace)")
+        assertNil(parseCommand("list-windows --workspace M --pid 1").errorOrNil)
+        assertEquals(parseCommand("list-windows --pid 1 --focused").errorOrNil, "--focused conflicts with other \"filtering\" flags")
+        assertEquals(parseCommand("list-windows --pid 1 --all").errorOrNil, "--all conflicts with \"filtering\" flags. Please use '--monitor all' instead of '--all' alias")
+        assertNil(parseCommand("list-windows --all").errorOrNil)
+        assertEquals(parseCommand("list-windows --all --workspace M").errorOrNil, "ERROR: Conflicting options: --all, --workspace")
+        assertEquals(parseCommand("list-windows --all --focused").errorOrNil, "ERROR: Conflicting options: --all, --focused")
+        assertEquals(parseCommand("list-windows --all --count --format %{window-title}").errorOrNil, "ERROR: Conflicting options: --count, --format")
+        assertEquals(
+            parseCommand("list-windows --all --focused --monitor mouse").errorOrNil,
+            "ERROR: Conflicting options: --all, --focused")
+        assertEquals(
+            parseCommand("list-windows --all --focused --monitor mouse --workspace focused").errorOrNil,
+            "ERROR: Conflicting options: --all, --focused, --workspace")
+        assertEquals(
+            parseCommand("list-windows --all --workspace focused").errorOrNil,
+            "ERROR: Conflicting options: --all, --workspace")
+        assertNil(parseCommand("list-windows --monitor mouse").errorOrNil)
+
+        // --json
+        assertEquals(parseCommand("list-windows --all --count --json").errorOrNil, "ERROR: Conflicting options: --count, --json")
+        assertEquals(parseCommand("list-windows --all --format '%{right-padding}' --json").errorOrNil, "%{right-padding} interpolation variable is not allowed when --json is used")
+        assertEquals(parseCommand("list-windows --all --format '%{window-title} |' --json").errorOrNil, "Only interpolation variables and spaces are allowed in \'--format\' when \'--json\' is used")
+        assertNil(parseCommand("list-windows --all --format '%{window-title}' --json").errorOrNil)
+    }
+
+    func testInterpolationVariablesConsistency() {
+        for kind in FormatObjectKind.allCases {
+            switch kind {
+                case .window:
+                    assertTrue(FormatVar.WindowFormatVar.allCases.allSatisfy { $0.rawValue.starts(with: "window-") })
+                case .app:
+                    assertTrue(FormatVar.AppFormatVar.allCases.allSatisfy { $0.rawValue.starts(with: "app-") })
+                case .workspace:
+                    assertTrue(FormatVar.WorkspaceFormatVar.allCases.allSatisfy { $0.rawValue.starts(with: "workspace") })
+                case .monitor:
+                    assertTrue(FormatVar.MonitorFormatVar.allCases.allSatisfy { $0.rawValue.starts(with: "monitor-") })
+            }
+        }
+    }
+
+    func testFormat() {
+        focus.workspace.rootTilingContainer.apply {
+            let windows = [
+                FormatObject.window(window: TestWindow.new(id: 2, parent: $0), title: "non-empty"),
+                FormatObject.window(window: TestWindow.new(id: 1, parent: $0), title: ""),
+            ]
+            assertEquals(windows.format([.interVar("window-title")]), .success(["non-empty", ""]))
+        }
+
+        focus.workspace.rootTilingContainer.apply {
+            let windows = [
+                FormatObject.window(window: TestWindow.new(id: 2, parent: $0), title: "non-empty"),
+                FormatObject.window(window: TestWindow.new(id: 10, parent: $0), title: ""),
+            ]
+            assertEquals(windows.format([.interVar("window-id"), .interVar("right-padding"), .interVar("window-title")]), .success(["2 non-empty", "10"]))
+        }
+
+        focus.workspace.rootTilingContainer.apply {
+            let windows = [
+                FormatObject.window(window: TestWindow.new(id: 2, parent: $0), title: "title1"),
+                FormatObject.window(window: TestWindow.new(id: 10, parent: $0), title: "title2"),
+            ]
+            assertEquals(windows.format([.interVar("window-id"), .interVar("right-padding"), .literal(" | "), .interVar("window-title")]), .success(["2  | title1", "10 | title2"]))
+        }
+
+        focus.workspace.rootTilingContainer.apply {
+            let window = TestWindow.new(id: 42, parent: $0)
+            window.unbindFromParent()
+
+            let windows = [FormatObject.window(window: window, title: "detached")]
+
+            assertEquals(windows.format([.interVar("workspace")]), .success(["NULL-WORKSPACE"]))
+        }
+    }
+
+    func testIdOnlyFormatsSkipTitleQueriesAndUseStableOrder() async throws {
+        let parent = focus.workspace.rootTilingContainer
+        let second = TestWindow.new(id: 2, parent: parent)
+        let first = TestWindow.new(id: 1, parent: parent)
+        first.testTitle = "Z"
+        second.testTitle = "A"
+        for format in ["--format '%{window-id}'", "--format '%{window-id}' --json", "--count"] {
+            let command = try XCTUnwrap(parseCommand("list-windows --all \(format)").cmdOrNil as? ListWindowsCommand)
+            let result = try await command.run(.defaultEnv, .emptyStdin)
+            XCTAssertTrue(result.stderr.isEmpty)
+            if format == "--format '%{window-id}'" { XCTAssertEqual(result.stdout, ["1", "2"]) }
+        }
+        XCTAssertEqual(first.titleFetchCount, 0)
+        XCTAssertEqual(second.titleFetchCount, 0)
+    }
+
+    func testTitleFormatsFetchTitlesAndKeepTitleSorting() async throws {
+        let parent = focus.workspace.rootTilingContainer
+        let first = TestWindow.new(id: 1, parent: parent)
+        let second = TestWindow.new(id: 2, parent: parent)
+        first.testTitle = "Z"
+        second.testTitle = "A"
+        let command = try XCTUnwrap(parseCommand("list-windows --all --format '%{window-title}'").cmdOrNil as? ListWindowsCommand)
+        let result = try await command.run(.defaultEnv, .emptyStdin)
+        XCTAssertEqual(result.stdout, ["A", "Z"])
+        XCTAssertEqual(first.titleFetchCount, 1)
+        XCTAssertEqual(second.titleFetchCount, 1)
+
+        let defaultCommand = try XCTUnwrap(parseCommand("list-windows --all").cmdOrNil as? ListWindowsCommand)
+        let defaultResult = try await defaultCommand.run(.defaultEnv, .emptyStdin)
+        XCTAssertTrue(defaultResult.stdout[0].hasSuffix("A"))
+        XCTAssertTrue(defaultResult.stdout[1].hasSuffix("Z"))
+        XCTAssertEqual(first.titleFetchCount, 2)
+        XCTAssertEqual(second.titleFetchCount, 2)
+    }
+
+}

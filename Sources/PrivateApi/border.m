@@ -1,0 +1,426 @@
+#import "private.h"
+#import <Foundation/Foundation.h>
+#import <dlfcn.h>
+
+// Keep the private ABI here. Shape coordinates and placement follow Dinky's
+// local-shape implementation; do not add JankyBorders' global-shape transform.
+static void *sky(void) {
+    static void *handle;
+    if (!handle) handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY);
+    return handle;
+}
+// Each call site resolves its symbol once: dlsym searches the export trie every time, and
+// border and window-frame calls run for every window event.
+#define SYM(name, type) ({ static void *symbol; if (!symbol) symbol = dlsym(sky(), name); (type)symbol; })
+typedef int (*Connection)(void);
+typedef int (*Region)(CGRect *, CFTypeRef *);
+typedef int (*NewWindow)(int, int, float, float, CFTypeRef, uint32_t *);
+typedef int (*Window)(int, uint32_t);
+typedef CFTypeRef (*Transaction)(int);
+typedef int (*Order)(CFTypeRef, uint32_t, int, uint32_t);
+typedef int (*Move)(CFTypeRef, uint32_t, CGPoint);
+typedef int (*Commit)(CFTypeRef, int);
+typedef int (*Update)(int);
+typedef CGContextRef (*Context)(int, uint32_t, CFDictionaryRef);
+static int cid(void) { return SYM("SLSMainConnectionID", Connection)(); }
+
+static WinMuxWindowClosedCallback closedCallback;
+static WinMuxWindowServerChangedCallback missionControlCallback;
+static void missionControlChanged(uint32_t event, void *data, size_t length, void *context) {
+    (void)context;
+    uint32_t window = 0;
+    size_t offset = (event == 1325 || event == 1326) ? sizeof(uint64_t) : 0;
+    if (data && length >= offset + sizeof(window))
+        memcpy(&window, (const char *)data + offset, sizeof(window));
+    // SkyLight can invoke notify procs on AppKit's event thread. Swift's
+    // registered closures are MainActor-isolated: cross that boundary here.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (missionControlCallback) missionControlCallback(event, window);
+    });
+}
+
+bool winmux_watch_mission_control(WinMuxWindowServerChangedCallback callback) {
+    typedef int (*Register)(void *, uint32_t, void *);
+    Register registerNotify = sky() ? SYM("SLSRegisterNotifyProc", Register) : NULL;
+    if (!registerNotify) return false;
+    missionControlCallback = callback;
+    // WindowManager's display-sized overview window is ordered in/out on
+    // macOS 27. Also observe creation and level/size changes during transition.
+    const uint32_t events[] = {1204, 1325, 1326, 723, 806, 807, 808, 815, 816, 811};
+    bool success = true;
+    for (unsigned i = 0; i < sizeof(events) / sizeof(events[0]); ++i)
+        if (registerNotify((void *)missionControlChanged, events[i], NULL)) success = false;
+    return success;
+}
+static void nativeWindowClosed(uint32_t event, void *data, size_t length, void *context) {
+    (void)context;
+    // JankyBorders events.h: close (804) carries a window id; destroy
+    // (1326) carries a uint64 Space id followed by a uint32 window id.
+    size_t offset = event == 1326 ? sizeof(uint64_t) : 0;
+    if (!data || length < offset + sizeof(uint32_t)) return;
+    uint32_t window;
+    memcpy(&window, (const char *)data + offset, sizeof(window));
+    // 1326 can also mean "left this Space", not destruction of the window.
+    if (event == 1326 && winmux_window_exists(window)) return;
+    if (window) dispatch_async(dispatch_get_main_queue(), ^{
+        if (closedCallback) closedCallback(window);
+    });
+}
+
+bool winmux_watch_window_closures(WinMuxWindowClosedCallback callback) {
+    typedef int (*Register)(void *, uint32_t, void *);
+    Register registerNotify = sky() ? SYM("SLSRegisterNotifyProc", Register) : NULL;
+    if (!registerNotify) return false;
+    closedCallback = callback;
+    int closeResult = registerNotify((void *)nativeWindowClosed, 804, NULL);
+    int destroyResult = registerNotify((void *)nativeWindowClosed, 1326, NULL);
+    return !closeResult && !destroyResult;
+}
+
+void winmux_watch_windows(const uint32_t *windows, int count) {
+    typedef int (*Request)(int, const uint32_t *, int);
+    Request request = sky() ? SYM("SLSRequestNotificationsForWindows", Request) : NULL;
+    if (request && windows && count > 0) request(cid(), windows, count);
+}
+
+bool winmux_window_exists(uint32_t window) {
+    typedef int (*Bounds)(int, uint32_t, CGRect *);
+    Bounds bounds = sky() ? SYM("SLSGetWindowBounds", Bounds) : NULL;
+    Connection connection = sky() ? SYM("SLSMainConnectionID", Connection) : NULL;
+    if (!bounds || !connection) return true; // Preserve AX fallback on unsupported systems.
+    CGRect frame;
+    CGError error = bounds(connection(), window, &frame);
+    // A window that no longer exists reports kCGErrorFailure. Other errors, such as a
+    // connection failure, say nothing about the window, so it is kept and the code logged.
+    if (error != kCGErrorSuccess && error != kCGErrorFailure)
+        NSLog(@"StripMuxX: window %u bounds query failed with %d; keeping it", window, error);
+    return error != kCGErrorFailure;
+}
+
+bool winmux_window_frame(uint32_t window, CGRect *frame) {
+    typedef int (*Bounds)(int, uint32_t, CGRect *);
+    Bounds bounds = sky() ? SYM("SLSGetWindowBounds", Bounds) : NULL;
+    Connection connection = sky() ? SYM("SLSMainConnectionID", Connection) : NULL;
+    if (!frame || !bounds || !connection) return false;
+    CGRect nativeFrame;
+    if (bounds(connection(), window, &nativeFrame) != kCGErrorSuccess) return false;
+    *frame = nativeFrame;
+    return true;
+}
+
+bool winmux_window_is_document_kind(uint32_t parent, uint64_t tags) {
+    bool hasDocumentTag = (tags & (1ULL << 0)) ||
+        ((tags & (1ULL << 1)) && (tags & (1ULL << 31)));
+    bool attached = tags & (1ULL << 7);
+    bool ignoresCycle = tags & (1ULL << 18);
+    return parent == 0 && hasDocumentTag && !attached && !ignoresCycle;
+}
+
+int winmux_window_document_kind(uint32_t window) {
+    typedef CFTypeRef (*QueryWindows)(int, CFArrayRef, int);
+    typedef CFTypeRef (*CopyWindows)(CFTypeRef);
+    typedef bool (*AdvanceWindow)(CFTypeRef);
+    typedef uint32_t (*WindowID)(CFTypeRef);
+    typedef uint32_t (*ParentID)(CFTypeRef);
+    typedef uint64_t (*WindowTags)(CFTypeRef);
+    Connection connection = sky() ? SYM("SLSMainConnectionID", Connection) : NULL;
+    QueryWindows queryWindows = sky() ? SYM("SLSWindowQueryWindows", QueryWindows) : NULL;
+    CopyWindows copyWindows = sky() ? SYM("SLSWindowQueryResultCopyWindows", CopyWindows) : NULL;
+    AdvanceWindow advanceWindow = sky() ? SYM("SLSWindowIteratorAdvance", AdvanceWindow) : NULL;
+    WindowID windowID = sky() ? SYM("SLSWindowIteratorGetWindowID", WindowID) : NULL;
+    ParentID parentID = sky() ? SYM("SLSWindowIteratorGetParentID", ParentID) : NULL;
+    WindowTags windowTags = sky() ? SYM("SLSWindowIteratorGetTags", WindowTags) : NULL;
+    if (!connection || !queryWindows || !copyWindows || !advanceWindow || !windowID || !parentID || !windowTags)
+        return -1;
+
+    int32_t value = (int32_t)window;
+    CFNumberRef number = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &value);
+    if (!number) return -1;
+    const void *values[] = { number };
+    CFArrayRef windows = CFArrayCreate(kCFAllocatorDefault, values, 1, &kCFTypeArrayCallBacks);
+    CFRelease(number);
+    if (!windows) return -1;
+    CFTypeRef query = queryWindows(connection(), windows, 1);
+    CFRelease(windows);
+    if (!query) return -1;
+    CFTypeRef iterator = copyWindows(query);
+    CFRelease(query);
+    if (!iterator) return -1;
+
+    int result = -1;
+    while (advanceWindow(iterator)) {
+        if (windowID(iterator) == window) {
+            result = winmux_window_is_document_kind(parentID(iterator), windowTags(iterator)) ? 1 : 0;
+            break;
+        }
+    }
+    CFRelease(iterator);
+    return result;
+}
+
+static bool createWindow(float scale, uint32_t *identifier) {
+    if (!identifier || !sky()) return false;
+    const char *required[] = {
+        "SLSMainConnectionID", "CGSNewRegionWithRect", "SLSNewWindow",
+        "SLSReleaseWindow", "SLSSetWindowShape", "SLWindowContextCreate",
+        "SLSDisableUpdate", "SLSReenableUpdate", "SLSTransactionCreate",
+        "SLSTransactionMoveWindowWithGroup", "SLSTransactionOrderWindow",
+        "SLSTransactionCommit", "SLSSetWindowResolution", "SLSSetWindowOpacity",
+        "SLSSetWindowTags", "SLSFlushWindowContentRegion"
+    };
+    for (unsigned i = 0; i < sizeof(required) / sizeof(required[0]); ++i)
+        if (!dlsym(sky(), required[i])) return false;
+    CGRect bounds = CGRectMake(0, 0, 1, 1);
+    CFTypeRef region = NULL;
+    if (SYM("CGSNewRegionWithRect", Region)(&bounds, &region) || !region) return false;
+    uint32_t window = 0;
+    int result = SYM("SLSNewWindow", NewWindow)(cid(), 2, -9999, -9999, region, &window);
+    CFRelease(region);
+    if (result || !window) {
+        if (window) SYM("SLSReleaseWindow", Window)(cid(), window);
+        return false;
+    }
+    typedef int (*Resolution)(int, uint32_t, double);
+    typedef int (*Opacity)(int, uint32_t, bool);
+    typedef int (*Tags)(int, uint32_t, uint64_t *, int);
+    typedef int (*Shadow)(uint32_t, CFDictionaryRef);
+    uint64_t tags = (1ULL << 1) | (1ULL << 9);
+    if (SYM("SLSSetWindowResolution", Resolution)(cid(), window, scale) ||
+        SYM("SLSSetWindowOpacity", Opacity)(cid(), window, false) ||
+        SYM("SLSSetWindowTags", Tags)(cid(), window, &tags, 64)) {
+        SYM("SLSReleaseWindow", Window)(cid(), window);
+        return false;
+    }
+    Shadow shadow = SYM("SLSWindowSetShadowProperties", Shadow);
+    if (shadow) shadow(window, (__bridge CFDictionaryRef)@{@"com.apple.WindowShadowDensity": @0});
+    *identifier = window;
+    return true;
+}
+
+struct WinMuxBorder { uint32_t windows[WINMUX_BORDER_PIECES]; CGRect pieces[WINMUX_BORDER_PIECES]; float scale; };
+
+CGRect winmux_border_piece(CGSize size, float radius, float width, float scale, int index) {
+    if (index < 0 || index >= WINMUX_BORDER_PIECES || size.width <= 0 || size.height <= 0 || width <= 0) return CGRectZero;
+    scale = MAX(1, scale);
+    // Include the final antialiased pixel rather than clipping at a fractional edge.
+    size.width = ceil(size.width * scale) / scale;
+    size.height = ceil(size.height * scale) / scale;
+    // WindowServer quantizes separate surface placement to whole points, even
+    // with Retina backing. A half-point partition can leave one backing row
+    // unpainted when its neighbor is placed at the next whole point.
+    // Keep internal joins integral in screen points as well as backing pixels.
+    CGFloat requestedBand = ceil(2 * (MAX(0, radius) + width) + 1 / scale);
+    CGFloat band = MIN(requestedBand, floor(size.height / 2));
+    CGFloat bottomStart = size.height <= requestedBand * 2 ? band : floor(size.height - band);
+    CGFloat bottomBand = size.height - bottomStart;
+    CGFloat middle = MAX(0, bottomStart - band);
+    CGFloat requestedEdge = ceil(width + 1 / scale);
+    CGFloat edge = MIN(requestedEdge, floor(size.width / 2));
+    CGFloat rightStart = size.width <= requestedEdge * 2 ? edge : floor(size.width - edge);
+    // Only the corners need the full band. Between them the top and bottom bands are
+    // as thin as the sides: a full-width band was mostly transparent backing.
+    CGFloat corner = MIN(requestedBand, floor(size.width / 2));
+    CGFloat rightCorner = size.width <= requestedBand * 2 ? corner : floor(size.width - corner);
+    CGFloat span = MAX(0, rightCorner - corner);
+    CGFloat topEdge = MIN(requestedEdge, band);
+    // A fractional height puts the ring's inner edge exactly on floor(height - edge),
+    // where a clip there rounded that row differently; one more point keeps it inside.
+    CGFloat bottomEdgeStart = MAX(bottomStart, floor(size.height - requestedEdge - 1));
+    switch (index) {
+        case 0: return CGRectMake(0, 0, corner, band);
+        case 1: return CGRectMake(corner, 0, span, topEdge);
+        case 2: return CGRectMake(rightCorner, 0, size.width - rightCorner, band);
+        case 3: return CGRectMake(0, bottomStart, corner, bottomBand);
+        case 4: return CGRectMake(corner, bottomEdgeStart, span, size.height - bottomEdgeStart);
+        case 5: return CGRectMake(rightCorner, bottomStart, size.width - rightCorner, bottomBand);
+        case 6: return CGRectMake(0, band, edge, middle);
+        default: return CGRectMake(rightStart, band, size.width - rightStart, middle);
+    }
+}
+
+bool winmux_border_create(float scale, WinMuxBorderHandle *handle) {
+    if (!handle) return false;
+    *handle = NULL;
+    WinMuxBorderHandle result = calloc(1, sizeof(struct WinMuxBorder));
+    if (!result) return false;
+    result->scale = scale;
+    for (int i = 0; i < WINMUX_BORDER_PIECES; ++i) {
+        if (!createWindow(scale, &result->windows[i])) {
+            winmux_border_destroy(result);
+            return false;
+        }
+    }
+    *handle = result;
+    return true;
+}
+
+uint32_t winmux_border_window_id(WinMuxBorderHandle border, int index) {
+    return border && index >= 0 && index < WINMUX_BORDER_PIECES ? border->windows[index] : 0;
+}
+
+static void placePiece(CFTypeRef transaction, uint32_t border, uint32_t target, CGPoint origin, bool above) {
+    SYM("SLSTransactionMoveWindowWithGroup", Move)(transaction, border, origin);
+    typedef int (*GetLevel)(int, uint32_t, int64_t *);
+    typedef int (*SetLevel)(CFTypeRef, uint32_t, int);
+    typedef int32_t (*GetSubLevel)(int, uint32_t);
+    GetLevel getLevel = SYM("SLSGetWindowLevel", GetLevel);
+    SetLevel setLevel = SYM("SLSTransactionSetWindowLevel", SetLevel);
+    int64_t level = 0;
+    if (getLevel && setLevel && !getLevel(cid(), target, &level))
+        setLevel(transaction, border, (int)level);
+    GetSubLevel getSubLevel = SYM("SLSGetWindowSubLevel", GetSubLevel);
+    SetLevel setSubLevel = SYM("SLSTransactionSetWindowSubLevel", SetLevel);
+    if (getSubLevel && setSubLevel)
+        setSubLevel(transaction, border, getSubLevel(cid(), target));
+    SYM("SLSTransactionOrderWindow", Order)(transaction, border, above ? 1 : -1, target);
+}
+
+static void roundedRect(CGMutablePathRef path, CGRect rect, CGFloat radius) {
+    radius = MAX(0, MIN(radius, MIN(rect.size.width, rect.size.height) / 2));
+    CGPathAddRoundedRect(path, NULL, rect, radius, radius);
+}
+
+void winmux_border_draw(CGContextRef context, CGSize size, CGRect piece, float radius, uint32_t rgba, float width) {
+    CGRect local = { CGPointZero, piece.size };
+    CGRect bounds = { CGPointZero, size };
+    CGContextClearRect(context, local);
+    CGContextSaveGState(context);
+    CGContextClipToRect(context, local);
+    CGContextTranslateCTM(context, -piece.origin.x, -piece.origin.y);
+    CGMutablePathRef ring = CGPathCreateMutable();
+    roundedRect(ring, bounds, radius + width);
+    CGRect inner = CGRectInset(bounds, width, width);
+    if (!CGRectIsEmpty(inner)) roundedRect(ring, inner, radius);
+    CGContextSetRGBFillColor(context, ((rgba >> 24) & 255) / 255.0,
+        ((rgba >> 16) & 255) / 255.0, ((rgba >> 8) & 255) / 255.0, (rgba & 255) / 255.0);
+    CGContextAddPath(context, ring);
+    CGContextEOFillPath(context);
+    CGPathRelease(ring);
+    CGContextRestoreGState(context);
+}
+
+void winmux_border_draw_path(CGContextRef context, CGRect piece, CGPathRef path, uint32_t rgba) {
+    CGRect local = { CGPointZero, piece.size };
+    CGContextClearRect(context, local);
+    CGContextSaveGState(context);
+    CGContextClipToRect(context, local);
+    CGContextTranslateCTM(context, -piece.origin.x, -piece.origin.y);
+    CGContextSetRGBFillColor(context, ((rgba >> 24) & 255) / 255.0,
+        ((rgba >> 16) & 255) / 255.0, ((rgba >> 8) & 255) / 255.0, (rgba & 255) / 255.0);
+    CGContextAddPath(context, path);
+    CGContextEOFillPath(context);
+    CGContextRestoreGState(context);
+}
+
+static void syncBorderSpace(WinMuxBorderHandle border, uint32_t target) {
+    typedef CFArrayRef (*Spaces)(int, int, CFArrayRef);
+    typedef int (*MoveSpace)(int, CFArrayRef, uint64_t);
+    Spaces spaces = SYM("SLSCopySpacesForWindows", Spaces);
+    MoveSpace move = SYM("SLSMoveWindowsToManagedSpace", MoveSpace);
+    if (!spaces || !move) return;
+    CFArrayRef list = spaces(cid(), 7, (__bridge CFArrayRef)@[@(target)]);
+    uint64_t space = 0;
+    if (list && CFArrayGetCount(list))
+        CFNumberGetValue(CFArrayGetValueAtIndex(list, 0), kCFNumberSInt64Type, &space);
+    if (list) CFRelease(list);
+    if (!space) return;
+    NSMutableArray *windows = [NSMutableArray arrayWithCapacity:WINMUX_BORDER_PIECES];
+    for (int i = 0; i < WINMUX_BORDER_PIECES; ++i) [windows addObject:@(border->windows[i])];
+    move(cid(), (__bridge CFArrayRef)windows, space);
+}
+
+static bool placeBorder(WinMuxBorderHandle border, uint32_t target, CGPoint origin, bool above, bool synchronous) {
+    syncBorderSpace(border, target);
+    CFTypeRef transaction = SYM("SLSTransactionCreate", Transaction)(cid());
+    if (!transaction) return false;
+    for (int i = 0; i < WINMUX_BORDER_PIECES; ++i) {
+        if (CGRectIsEmpty(border->pieces[i])) {
+            SYM("SLSTransactionOrderWindow", Order)(transaction, border->windows[i], 0, 0);
+        } else {
+            CGPoint point = CGPointMake(origin.x + border->pieces[i].origin.x, origin.y + border->pieces[i].origin.y);
+            placePiece(transaction, border->windows[i], target, point, above);
+        }
+    }
+    // The commit's return value is not a status: current macOS leaves an arbitrary value in
+    // it. The placement check below is what decides success.
+    SYM("SLSTransactionCommit", Commit)(transaction, synchronous);
+    CFRelease(transaction);
+    // Small edge windows can be constrained independently at display boundaries.
+    // A successful transaction does not guarantee the requested placement.
+    for (int i = 0; i < WINMUX_BORDER_PIECES; ++i) {
+        if (CGRectIsEmpty(border->pieces[i])) continue;
+        CGRect actual;
+        CGPoint expected = CGPointMake(origin.x + border->pieces[i].origin.x,
+                                       origin.y + border->pieces[i].origin.y);
+        if (!winmux_window_frame(border->windows[i], &actual) ||
+            fabs(actual.origin.x - expected.x) > 1 || fabs(actual.origin.y - expected.y) > 1)
+            return false;
+    }
+    return true;
+}
+
+bool winmux_border_update(WinMuxBorderHandle border, uint32_t target, CGRect frame,
+                          float radius, uint32_t rgba, float width, bool above, CGPathRef path) {
+    if (!border || !path) return false;
+    CGRect outer = CGRectInset(frame, -width, -width);
+    CGRect bounds = { CGPointZero, outer.size };
+    typedef int (*Shape)(int, uint32_t, float, float, CFTypeRef);
+    typedef int (*Flush)(int, uint32_t, void *);
+    SYM("SLSDisableUpdate", Update)(cid());
+    bool success = true;
+    for (int i = 0; i < WINMUX_BORDER_PIECES && success; ++i) {
+        CGRect piece = winmux_border_piece(bounds.size, radius, width, border->scale, i);
+        border->pieces[i] = piece;
+        if (CGRectIsEmpty(piece)) continue;
+        CGRect local = { CGPointZero, piece.size };
+        CFTypeRef region = NULL;
+        success = !SYM("CGSNewRegionWithRect", Region)(&local, &region) && region;
+        if (!success) break;
+        // The shape's offset is the window's origin: reshape in place, or the piece shows at
+        // the display corner until the move below.
+        success = !SYM("SLSSetWindowShape", Shape)(cid(), border->windows[i],
+            outer.origin.x + piece.origin.x, outer.origin.y + piece.origin.y, region);
+        CFRelease(region);
+        if (!success) break;
+        // Allocate only this edge's backing surface, after reshaping.
+        CGContextRef context = SYM("SLWindowContextCreate", Context)(cid(), border->windows[i], NULL);
+        if (!context) { success = false; break; }
+        // Pieces are laid out top-down, like the AppKit fallback's flipped view. Current macOS
+        // hands out window contexts whose y axis points up, which drew each piece upside down.
+        if (CGContextGetCTM(context).d > 0) {
+            CGContextTranslateCTM(context, 0, piece.size.height);
+            CGContextScaleCTM(context, 1, -1);
+        }
+        winmux_border_draw_path(context, piece, path, rgba);
+        CGContextFlush(context);
+        CGContextRelease(context);
+        success = !SYM("SLSFlushWindowContentRegion", Flush)(cid(), border->windows[i], NULL);
+    }
+    if (success) success = placeBorder(border, target, outer.origin, above, true);
+    if (!success) winmux_border_hide(border);
+    SYM("SLSReenableUpdate", Update)(cid());
+    return success;
+}
+
+bool winmux_border_move(WinMuxBorderHandle border, uint32_t target, CGRect frame, float width, bool above) {
+    return border && placeBorder(border, target, CGRectInset(frame, -width, -width).origin, above, true);
+}
+
+void winmux_border_hide(WinMuxBorderHandle border) {
+    if (!border) return;
+    CFTypeRef transaction = SYM("SLSTransactionCreate", Transaction)(cid());
+    if (!transaction) return;
+    for (int i = 0; i < WINMUX_BORDER_PIECES; ++i)
+        if (border->windows[i]) SYM("SLSTransactionOrderWindow", Order)(transaction, border->windows[i], 0, 0);
+    // Nothing reads the result back, so this does not wait for WindowServer: every switch hides
+    // the parked windows' borders. Later transactions on this connection still apply after it.
+    SYM("SLSTransactionCommit", Commit)(transaction, false);
+    CFRelease(transaction);
+}
+
+void winmux_border_destroy(WinMuxBorderHandle border) {
+    if (!border) return;
+    Window release = sky() ? SYM("SLSReleaseWindow", Window) : NULL;
+    if (release) for (int i = 0; i < WINMUX_BORDER_PIECES; ++i) if (border->windows[i]) release(cid(), border->windows[i]);
+    free(border);
+}
