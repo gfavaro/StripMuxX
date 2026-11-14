@@ -59,6 +59,8 @@ struct Config: ConvenienceCopyable {
     var onFocusedMonitorChanged: [any Command] = []
 
     var fullscreenWidth: Double?
+    /// Independent width for a lone tiled window; nil falls back to fullscreen-width.
+    var loneWindowWidth: Double?
     var displayWindowSettings: [DisplayWindowSettings] = []
     var singleWindowAlignment: SingleWindowAlignment = .center
     var singleWindowAspectRatio: DynamicConfigValue<Double> = .constant(1.5)

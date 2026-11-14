@@ -9,8 +9,28 @@ final class WindowWidthTest: WorkspaceTestCase {
         let parsed = parseConfig(text)
         XCTAssertTrue(parsed.errors.isEmpty, "\(parsed.errors)")
         config.fullscreenWidth = parsed.config.fullscreenWidth
+        config.loneWindowWidth = parsed.config.loneWindowWidth
         config.singleWindowAlignment = parsed.config.singleWindowAlignment
         config.displayWindowSettings = parsed.config.displayWindowSettings
+    }
+
+    func testLoneWidthFallbackAndSeparateFullscreenAcrossScopes() async throws {
+        try load("fullscreen-width = 0.7")
+        let workspace = focus.workspace
+        let lone = TestWindow.new(id: 72010, parent: workspace.rootTilingContainer)
+        XCTAssertEqual(workspaceTilingRect(workspace).width,
+                       workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width * 0.7, accuracy: 0.001)
+        lone.isFullscreen = true
+        XCTAssertEqual(fullscreenWindowRect(lone, in: workspace).width,
+                       workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width * 0.7, accuracy: 0.001)
+        lone.isFullscreen = false
+
+        try load("fullscreen-width = 1.0\nlone-window-width = 0.6")
+        XCTAssertEqual(workspaceTilingRect(workspace).width,
+                       workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width * 0.6, accuracy: 0.001)
+        lone.isFullscreen = true
+        XCTAssertEqual(fullscreenWindowRect(lone, in: workspace).width,
+                       workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width, accuracy: 0.001)
     }
 
     func testRangeAndTypesAtEveryScope() {
@@ -22,6 +42,10 @@ final class WindowWidthTest: WorkspaceTestCase {
                 XCTAssertTrue(parseConfig(prefix + "fullscreen-width = " + value).errors.isEmpty, prefix + value)
             }
             XCTAssertFalse(parseConfig(prefix + "single-window-alignment = 'top'").errors.isEmpty)
+            for value in ["0.09", "1.01", "'0.5'", "true"] {
+                XCTAssertFalse(parseConfig(prefix + "lone-window-width = " + value).errors.isEmpty)
+            }
+            XCTAssertTrue(parseConfig(prefix + "lone-window-width = 0.65").errors.isEmpty)
         }
         XCTAssertFalse(parseConfig("[display.main]\nfullscren-width = 0.7").errors.isEmpty)
         XCTAssertFalse(parseConfig("display = []").errors.isEmpty)
