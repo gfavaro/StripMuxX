@@ -17,12 +17,14 @@ final class SettingsNewKeysTest: XCTestCase {
             ("scrolling", "center-focused-column", "'on-overflow'"),
             ("scrolling", "minimap-hold-modifiers", tomlCommaSeparatedStringArray("ctrl, alt")),
             ("scrolling", "keep-window-height", "true"),
+            ("scrolling", "three-finger-swipe", "true"),
             ("native-spaces", "restore-layouts", "false"),
             ("native-spaces", "restore-frames-on-quit", "false"),
         ])
         XCTAssertEqual(config.scrolling.centerFocusedColumn, .onOverflow)
         XCTAssertEqual(config.scrolling.minimapHoldModifiers, [.control, .option])
         XCTAssertTrue(config.scrolling.keepWindowHeight)
+        XCTAssertTrue(config.scrolling.threeFingerSwipe)
         XCTAssertFalse(config.nativeSpaces.restoreLayouts)
         XCTAssertFalse(config.nativeSpaces.restoreFramesOnQuit)
     }

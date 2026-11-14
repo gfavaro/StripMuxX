@@ -50,6 +50,15 @@ final class StripDockSwipeTrackerTest: XCTestCase {
         XCTAssertEqual(tracker.receive(phase: 4, progress: 0.2, endVelocity: 0, timestamp: 0.1, to: spy), .pass)
     }
 
+    func testVelocityOnlySwipeIsNotClaimedForViewportMovement() {
+        var tracker = StripDockSwipeTracker(dockNeedsEnd: true)
+        let spy = StripSwipeSpy()
+        XCTAssertEqual(tracker.receive(phase: 1, progress: 0, endVelocity: 0, timestamp: 0, to: spy), .hold)
+        XCTAssertEqual(tracker.receive(phase: 4, progress: 0, endVelocity: 4, timestamp: 0.01, to: spy),
+                       .replayHeldThenPass)
+        XCTAssertEqual(spy.began, 0, "Flick without movement cannot steal Dock navigation")
+    }
+
     func testCancelDoesNotCommitOrLeakState() {
         var tracker = StripDockSwipeTracker(dockNeedsEnd: true)
         let spy = StripSwipeSpy()

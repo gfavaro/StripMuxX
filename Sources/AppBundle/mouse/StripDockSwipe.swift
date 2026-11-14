@@ -254,8 +254,13 @@ final class StripDockSwipeSource {
             status = "Enable three-finger horizontal Space swipes in macOS Trackpad settings"
             return
         }
-        guard let dock = makeTap(type: Self.dockControl), let envelope = makeTap(type: Self.gesture) else {
-            status = "Event tap unavailable"
+        guard let dock = makeTap(type: Self.dockControl) else {
+            status = "Dock event tap unavailable"
+            return
+        }
+        guard let envelope = makeTap(type: Self.gesture) else {
+            discard(dock)
+            status = "Gesture envelope tap unavailable"
             return
         }
         dockTap = dock
@@ -275,17 +280,19 @@ final class StripDockSwipeSource {
         tracker.abandon(receiver)
         if NativeScrollingPan.shared.isDockSwipeActive { NativeScrollingPan.shared.cancel() }
         held.removeAll()
-        for tap in [dockTap, envelopeTap].compactMap({ $0 }) {
-            CGEvent.tapEnable(tap: tap.port, enable: false)
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), tap.source, .commonModes)
-            CFMachPortInvalidate(tap.port)
-        }
+        for tap in [dockTap, envelopeTap].compactMap({ $0 }) { discard(tap) }
         dockTap = nil
         envelopeTap = nil
         envelopeEnabled = false
         wakeObservers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
         wakeObservers.removeAll()
         status = "Disabled"
+    }
+
+    private func discard(_ tap: (port: CFMachPort, source: CFRunLoopSource)) {
+        CGEvent.tapEnable(tap: tap.port, enable: false)
+        CFRunLoopRemoveSource(CFRunLoopGetMain(), tap.source, .commonModes)
+        CFMachPortInvalidate(tap.port)
     }
 
     private func revive() {
