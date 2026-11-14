@@ -20,6 +20,7 @@ struct ShortcutBehaviorSettingsView: View {
     @State private var showsLearnedMinimums = false
     @State private var showsCustomColumnSizes = false
     @State private var showsAdvancedNavigation = false
+    @Environment(\.settingsSearchTarget) private var searchTarget
 
     @SettingsDraft("single-window-alignment", load: { config.singleWindowAlignment }) private var singleWindowAlignment: SingleWindowAlignment
     @SettingsDraft("fullscreen-width", load: { config.fullscreenWidth ?? 1.0 }) private var fullscreenWidth: Double
@@ -59,6 +60,8 @@ struct ShortcutBehaviorSettingsView: View {
             }
         }
         .navigationTitle("Windows")
+        .onAppear { revealSearchedControl() }
+        .onChange(of: searchTarget) { _ in revealSearchedControl() }
         .confirmationDialog("Forget all learned minimum sizes?", isPresented: $confirmsForgetAllMinimums, titleVisibility: .visible) {
             Button("Forget All", role: .destructive) { minimums.forgetAll() }
         } message: {
@@ -216,6 +219,15 @@ struct ShortcutBehaviorSettingsView: View {
                 }
                 .disabled(!scrollingMinimapEnabled)
             }
+    }
+
+    private func revealSearchedControl() {
+        switch searchTarget?.id {
+            case "scrolling.gesture-sensitivity": showsAdvancedNavigation = true
+            case "scrolling.width-presets.custom", "scrolling.column-width.custom":
+                showsCustomColumnSizes = true
+            default: break
+        }
     }
 
     private func persistRootBool(_ key: String, _ value: Bool) {

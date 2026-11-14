@@ -14,6 +14,7 @@ struct ShortcutAppearanceSettingsView: View {
 
     @State private var showsInnerSpacing = false
     @State private var showsOuterSpacing = false
+    @Environment(\.settingsSearchTarget) private var searchTarget
 
     var body: some View {
         SettingsScrollView {
@@ -87,6 +88,14 @@ struct ShortcutAppearanceSettingsView: View {
             }
         }
         .navigationTitle("Appearance")
+        .onAppear { revealSearchedGap() }
+        .onChange(of: searchTarget) { _ in revealSearchedGap() }
+    }
+
+    private func revealSearchedGap() {
+        guard let id = searchTarget?.id else { return }
+        if id.hasPrefix("gaps.inner.") { showsInnerSpacing = true }
+        if id.hasPrefix("gaps.outer.") { showsOuterSpacing = true }
     }
 
     private var hasPerMonitorGaps: Bool {

@@ -8,6 +8,9 @@ final class SettingsSearchTest: XCTestCase {
         XCTAssertEqual(settingsControlSearchResults("three finger"), [.threeFingers])
         XCTAssertEqual(settingsControlSearchResults("minimap"), [.minimap, .minimapHold])
         XCTAssertTrue(settingsControlSearchResults("sidebar").isEmpty)
+        XCTAssertEqual(settingsControlSearchResults("column size shortcuts"), [.widthPresets])
+        XCTAssertEqual(settingsControlSearchResults("single-window width"), [.fullscreenWidth])
+        XCTAssertEqual(settingsControlSearchResults("left screen spacing"), [.gapOuterLeft])
     }
 
     func testSubmitPrefersControlOverPageAndFallsBackToPage() {

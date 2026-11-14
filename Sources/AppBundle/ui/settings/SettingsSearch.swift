@@ -23,6 +23,11 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case sensitivity = "scrolling.gesture-sensitivity"
     case width = "scrolling.column-width"
     case widthPresets = "scrolling.width-presets"
+    case fullscreenWidth = "fullscreen-width"
+    case centerFocused = "scrolling.center-focused-column"
+    case keepHeight = "scrolling.keep-window-height"
+    case gapHorizontal = "gaps.inner.horizontal"
+    case gapOuterLeft = "gaps.outer.left"
     case edgePreview = "scrolling.edge-preview"
     case minimapHold = "scrolling.minimap-hold-modifiers"
     case appearance = "appearance"
@@ -42,6 +47,11 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .sensitivity: "Gesture sensitivity"
             case .width: "Default column width"
             case .widthPresets: "Column size shortcuts"
+            case .fullscreenWidth: "Single-window width"
+            case .centerFocused: "When focusing a column"
+            case .keepHeight: "Keep opening window height"
+            case .gapHorizontal: "Horizontal window spacing"
+            case .gapOuterLeft: "Left screen spacing"
             case .edgePreview: "Offscreen column preview"
             case .minimapHold: "Hold to keep the minimap up"
             case .appearance: "Theme"
@@ -51,7 +61,8 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     var page: SettingsSidebarItem {
         switch self {
             case .startAtLogin, .autoReload, .restoreLayouts, .restoreFrames: .general
-            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .edgePreview, .minimapHold: .windows
+            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
+            case .gapHorizontal, .gapOuterLeft: .appearance
             case .appearance, .menuBar: .appearance
         }
     }
