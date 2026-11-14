@@ -41,6 +41,13 @@ order.
 `move-workspace-to-monitor` moves a desktop's windows and strip to the desktop the
 other display shows; macOS keeps the desktop itself where it is.
 
+**Experimental input diagnostics:** `debug-windows --gesture-probe-start` starts an opt-in,
+non-intercepting public-API gesture probe. With another app focused, try a horizontal
+scroll using two fingers, three-finger swipe and four-finger Space switch, then run
+`debug-windows --gesture-probe-stop` for aggregate counts. The probe does not
+record content or finger locations and **cannot identify finger count**; it tests
+whether public event streams are observable before any gesture engine is selected.
+
 **Inspect and maintain:** `list-workspaces`, `list-windows`, `list-apps`,
 `list-modes`, `list-monitors`, `list-exec-env-vars`, `config`, `doctor`,
 `reload-config` and `enable` provide queries, diagnostics or runtime controls.

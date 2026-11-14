@@ -21,13 +21,16 @@ enum DebugWindowsState {
 
 struct DebugWindowsCommand: Command {
     let args: DebugWindowsCmdArgs
-    var isQuery: Bool { args.eventsStart || args.eventsStop || args.eventsExport || args.checkModel }
+    var isQuery: Bool { args.eventsStart || args.eventsStop || args.eventsExport || args.checkModel || args.gestureProbeStart || args.gestureProbeStop }
 
     func run(_ env: CmdEnv, _ io: CmdIo) async throws -> Bool {
-        let eventFlags = [args.eventsStart, args.eventsStop, args.eventsExport, args.checkModel].filter { $0 }.count
+        let eventFlags = [args.eventsStart, args.eventsStop, args.eventsExport, args.checkModel,
+                          args.gestureProbeStart, args.gestureProbeStop].filter { $0 }.count
         if eventFlags > 1 || (eventFlags > 0 && args.windowId != nil) {
             return io.err("Use only one event/model diagnostic flag, without --window-id")
         }
+        if args.gestureProbeStart { return PublicGestureProbe.shared.start(io: io) }
+        if args.gestureProbeStop { return PublicGestureProbe.shared.stop(io: io) }
         if args.eventsStart { runtime.events.start(); runtime.workMetrics.start(); io.out("Event history started"); return true }
         if args.eventsStop { runtime.events.stop(); runtime.workMetrics.stop(); io.out("Event history stopped and cleared"); return true }
         if args.checkModel {

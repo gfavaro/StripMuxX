@@ -49,7 +49,10 @@ final class NativeScrollingPan {
                     phase: event.getIntegerValueField(.scrollWheelEventScrollPhase),
                     momentumPhase: event.getIntegerValueField(.scrollWheelEventMomentumPhase),
                     point: event.location)
-                let consumed = MainActor.assumeIsolated { nativePanTiming.measure("scroll event") { NativeScrollingPan.shared.handle(scroll) } }
+                let consumed = MainActor.assumeIsolated {
+                    PublicGestureProbe.shared.observeCGScroll(scroll)
+                    return nativePanTiming.measure("scroll event") { NativeScrollingPan.shared.handle(scroll) }
+                }
                 return consumed ? nil : Unmanaged.passUnretained(event)
             }, userInfo: nil) else { return }
         self.tap = tap
