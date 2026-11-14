@@ -102,7 +102,7 @@ final class ScrollingMinimapView: NSView {
             let tile = map.tiles[index]
             button.frame = CGRect(x: tile.minX, y: tile.minY, width: tile.width, height: tile.height)
         }
-        if previousOffset != offset, !hovered, !keyboardNavigation {
+        if (previousOffset != offset || previousOffset == nil), !hovered, !keyboardNavigation {
             let visibleWidth = scrollView.contentView.bounds.width
             let x = min(max(map.viewport.midX - visibleWidth / 2, 0), max(contentWidth - visibleWidth, 0))
             scrollView.contentView.scroll(to: CGPoint(x: x, y: 0))
@@ -280,10 +280,14 @@ private final class ScrollingMinimapButton: NSButton {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     func configure(_ model: ScrollingMinimapTile, icons: [Int32: NSImage], focused: Bool, keyboardSelected: Bool) {
-        guard !configured || self.model != model || self.focused != focused || self.keyboardSelected != keyboardSelected else { return }
+        let updatedIcons = model.applications.prefix(3).compactMap { icons[$0] }
+        let iconsChanged = self.icons.count != updatedIcons.count ||
+            !zip(self.icons, updatedIcons).allSatisfy { $0 === $1 }
+        guard !configured || self.model != model || self.focused != focused ||
+              self.keyboardSelected != keyboardSelected || iconsChanged else { return }
         configured = true
         self.model = model
-        self.icons = model.applications.prefix(3).compactMap { icons[$0] }
+        self.icons = updatedIcons
         self.focused = focused
         self.keyboardSelected = keyboardSelected
         let count = (model.count > 1 ? ", \(model.count) windows" : "") +

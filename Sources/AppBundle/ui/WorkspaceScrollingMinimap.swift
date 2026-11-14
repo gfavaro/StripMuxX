@@ -100,7 +100,7 @@ final class WorkspaceScrollingMinimap: NSObject {
         let screens = NSScreen.screens
         let index = workspace.workspaceMonitor.monitorAppKitNsScreenScreensId
         guard screens.indices.contains(index - 1) else { dismiss(); return }
-        let width = min(680, max(240, screens[index - 1].visibleFrame.width - 48))
+        let width = min(680, max(1, screens[index - 1].visibleFrame.width - 48))
         let height = scrollingMinimapRowHeight(metrics: workspace.scrollingMetrics) + 62
         guard let frame = scrollingMinimapFrame(size: CGSize(width: width, height: height),
             visibleFrames: screens.map(\.visibleFrame), screenIndex: index) else { dismiss(); return }

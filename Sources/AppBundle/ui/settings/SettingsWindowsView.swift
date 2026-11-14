@@ -8,6 +8,7 @@ struct ShortcutBehaviorSettingsView: View {
     @SettingsDraft("scrolling.column-width", load: { Int((config.scrolling.columnWidth * 100).rounded()) }) private var scrollingColumnWidth: Int
     @SettingsDraft("scrolling.width-presets", load: { config.scrolling.widthPresets.map { String($0 * 100) }.joined(separator: ", ") }) private var scrollingWidthPresets: String
     @SettingsDraft("scrolling.gesture-enabled", load: { config.scrolling.gestureEnabled }) private var scrollingGestureEnabled: Bool
+    @SettingsDraft("scrolling.three-finger-swipe", load: { config.scrolling.threeFingerSwipe }) private var threeFingerSwipe: Bool
     @SettingsDraft("scrolling.gesture-sensitivity", load: { String(config.scrolling.gestureSensitivity) }) private var scrollingSensitivity: String
     @SettingsDraft("scrolling.minimap-enabled", load: { config.scrolling.minimapEnabled }) private var scrollingMinimapEnabled: Bool
     @SettingsDraft("scrolling.keep-window-height", load: { config.scrolling.keepWindowHeight }) private var scrollingKeepWindowHeight: Bool
@@ -50,7 +51,7 @@ struct ShortcutBehaviorSettingsView: View {
 
             }
             SettingsSection("Gestures") {
-                Text("macOS swipes between desktops and opens Mission Control. Hold Option and scroll with two fingers to pan the strip.")
+                Text("Option + two-finger scrolling pans the strip. An experimental three-finger horizontal gesture can be enabled below; it replaces macOS horizontal Space switching while active.")
                     .font(.callout).foregroundStyle(.secondary)
             }
             scrollingSettingsSection
@@ -115,6 +116,11 @@ struct ShortcutBehaviorSettingsView: View {
                 help: "Pan the strip with a horizontal two-finger scroll while holding Option.") {
                 persistConfig(section: "scrolling", key: "gesture-enabled", value: scrollingGestureEnabled ? "true" : "false")
             }
+            SettingsToggle("Three-finger horizontal pan (experimental)", id: "scrolling.three-finger-swipe", isOn: $threeFingerSwipe,
+                help: "Requires macOS Trackpad settings to use three fingers for horizontal Space swipes. Only enable when StripMuxX is the sole window manager intercepting Dock swipes.") {
+                persistConfig(section: "scrolling", key: "three-finger-swipe", value: threeFingerSwipe ? "true" : "false")
+            }
+            .disabled(!scrollingGestureEnabled)
             SettingsTextField("Gesture sensitivity", id: "scrolling.gesture-sensitivity", text: $scrollingSensitivity,
                 help: "Multiplier for the default pan distance. Enter a finite value greater than zero.", validate: scrollingSensitivityError) {
                 if let value = Double(scrollingSensitivity), value.isFinite, value > 0 {
