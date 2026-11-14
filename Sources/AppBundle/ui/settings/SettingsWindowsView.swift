@@ -17,6 +17,7 @@ struct ShortcutBehaviorSettingsView: View {
     @SettingsDraft("scrolling.minimap-hold-modifiers", load: { minimapHoldModifierNames(config.scrolling.minimapHoldModifiers) }) private var minimapHoldModifiers: String
     @SettingsDraft("automatically-tile-new-windows", load: { config.automaticallyTileNewWindows }) private var automaticallyTileNewWindows: Bool
     @State private var confirmsForgetAllMinimums = false
+    @State private var showsLearnedMinimums = false
 
     @SettingsDraft("single-window-alignment", load: { config.singleWindowAlignment }) private var singleWindowAlignment: SingleWindowAlignment
     @SettingsDraft("fullscreen-width", load: { config.fullscreenWidth ?? 1.0 }) private var fullscreenWidth: Double
@@ -26,15 +27,14 @@ struct ShortcutBehaviorSettingsView: View {
             SettingsSection("New windows") {
                 SettingsToggle("Tile new windows automatically", id: "automatically-tile-new-windows", isOn: $automaticallyTileNewWindows, help: "A new window becomes a column right of the focused one. Off leaves new windows floating.") { persistRootBool("automatically-tile-new-windows", automaticallyTileNewWindows) }
             }
-            learnedMinimumsSection
-            SettingsSection("Lone windows and fullscreen") {
-                SettingsStepper("Width", id: "fullscreen-width", value: Binding(
+            SettingsSection("Lone windows and managed fullscreen") {
+                SettingsStepper("Single window / managed fullscreen width", id: "fullscreen-width", value: Binding(
                     get: { Int((fullscreenWidth * 100).rounded()) },
                     set: { fullscreenWidth = Double($0) / 100 }), range: 10...100,
                     help: "Share of the available width for a lone tiled window or StripMuxX fullscreen. Display overrides take priority.", unit: "%") {
                     persistConfig(section: nil, key: "fullscreen-width", value: String(fullscreenWidth))
                 }
-                Text("Applies after outer gaps on any display. Fullscreen stays centered; alignment below applies to lone tiled windows.")
+                Text("This width affects both a lone tiled window and the managed fullscreen command. Native macOS fullscreen is separate. Values below 100% deliberately leave space at the sides.")
                     .font(.callout).foregroundStyle(.secondary)
                 if let width = focus.workspace.windowWidthSettings.fullscreenWidth {
                     Text("Current desktop: \(Int((width * 100).rounded()))% · \(focus.workspace.windowWidthSettings.singleWindowAlignment?.rawValue ?? "center") · \(focus.workspace.workspaceMonitor.name)")
@@ -56,6 +56,9 @@ struct ShortcutBehaviorSettingsView: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
             scrollingSettingsSection
+            DisclosureGroup("Advanced: learned application minimums", isExpanded: $showsLearnedMinimums) {
+                learnedMinimumsSection
+            }
         }
         .navigationTitle("Windows")
         .confirmationDialog("Forget all learned minimum sizes?", isPresented: $confirmsForgetAllMinimums, titleVisibility: .visible) {
@@ -67,7 +70,7 @@ struct ShortcutBehaviorSettingsView: View {
     }
 
     private var learnedMinimumsSection: some View {
-        SettingsSection("Learned minimum sizes") {
+        SettingsSection("Learned minimum sizes (diagnostics)") {
             if minimums.snapshot.isEmpty {
                 Text("No confirmed app minimum sizes have been saved.")
                     .font(.callout).foregroundStyle(.secondary)

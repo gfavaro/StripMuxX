@@ -105,7 +105,7 @@ struct SettingsDisplaysView: View {
                     }
                 }
                 assignmentEditor
-                SettingsDescription("Native Spaces use assignments only to choose where new desktops are created.")
+                SettingsDescription("Advanced: these assignments affect only where StripMuxX creates new native desktops. They do not move or pin existing macOS Spaces.")
                 Button("Startup options…", action: onGeneral)
             }
             if let error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
@@ -143,7 +143,7 @@ struct SettingsDisplaysView: View {
             }
             DisclosureGroup("Advanced", isExpanded: $displays.assignment.advanced) {
                 if !displays.assignment.isEditing {
-                    SettingsEditorField("Workspace name", prompt: "Desktop number for an existing or future workspace", text: $displays.assignment.workspace)
+                    SettingsEditorField("Desktop number", prompt: "Number for a native desktop to be created", text: $displays.assignment.workspace)
                 }
                 SettingsEditorField("Display selector", prompt: "uuid:…, hardware:… or an array", text: $displays.assignment.selector)
                 SettingsDescription("Use UUIDs for exact displays. Arrays retain ordered alternatives. Unavailable assignments are kept until you explicitly change them.")

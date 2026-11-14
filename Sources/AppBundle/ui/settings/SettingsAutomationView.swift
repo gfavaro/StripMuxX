@@ -11,7 +11,6 @@ struct ShortcutAutomationSettingsView: View {
     @ObservedObject var rules: SettingsWindowRulesModel
     var onRawEditor: () -> Void
     @SettingsDraft("after-startup-command", load: { config.afterStartupCommand.map { $0.args.description }.joined(separator: "\n") }) private var startupCommands: String
-    @SettingsDraft("exec-on-workspace-change", load: { config.execOnWorkspaceChange.joined(separator: "\n") }) private var workspaceCommands: String
     @SettingsDraft("on-focus-changed", load: { config.onFocusChanged.map { $0.args.description }.joined(separator: "\n") }) private var focusCommands: String
     @SettingsDraft("on-focused-monitor-changed", load: { config.onFocusedMonitorChanged.map { $0.args.description }.joined(separator: "\n") }) private var monitorCommands: String
     @SettingsDraft("on-mode-changed", load: { config.onModeChanged.map { $0.args.description }.joined(separator: "\n") }) private var modeCommands: String
@@ -32,7 +31,7 @@ struct ShortcutAutomationSettingsView: View {
     private var events: some View {
         SettingsScrollView {
             SettingsSection("Event actions") {
-                SettingsMultilineField("On desktop change", id: "exec-on-workspace-change", text: $workspaceCommands, help: "One command per line. The command runs after the desktop changes.", savedValue: config.execOnWorkspaceChange.joined(separator: "\n")) { onSaved in saveCommands("exec-on-workspace-change", workspaceCommands, onSaved: onSaved) }
+                SettingsDescription("Run StripMuxX commands when focus, display or keyboard mode changes. The legacy exec-on-workspace-change key remains readable in TOML but is not edited here.")
                 SettingsMultilineField("On focus change", id: "on-focus-changed", text: $focusCommands, help: "One command per line. Commands run after the focused window changes.", savedValue: config.onFocusChanged.map { $0.args.description }.joined(separator: "\n")) { onSaved in saveCommands("on-focus-changed", focusCommands, onSaved: onSaved) }
                 SettingsMultilineField("On focused monitor change", id: "on-focused-monitor-changed", text: $monitorCommands, help: "One command per line. Commands run after the active display changes.", savedValue: config.onFocusedMonitorChanged.map { $0.args.description }.joined(separator: "\n")) { onSaved in saveCommands("on-focused-monitor-changed", monitorCommands, onSaved: onSaved) }
                 SettingsMultilineField("On mode change", id: "on-mode-changed", text: $modeCommands, help: "One command per line. Commands run after a mode changes.", savedValue: config.onModeChanged.map { $0.args.description }.joined(separator: "\n")) { onSaved in saveCommands("on-mode-changed", modeCommands, onSaved: onSaved) }

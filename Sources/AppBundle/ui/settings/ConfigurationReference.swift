@@ -20,7 +20,7 @@ var configurationReferenceSections: [ConfigurationReferenceSection] {
         .init(id: "windows", title: "Windows", description: "Controls automatic new-window tiling and single-window size/alignment. fullscreen-width sets a share of usable width for lone windows and StripMuxX fullscreen.", defaults: "automatically-tile-new-windows = \(defaults.automaticallyTileNewWindows), single-window-alignment = '\(defaults.singleWindowAlignment.rawValue)'", pane: .windows),
         .init(id: "appearance", title: "Appearance", description: "[gaps] controls spacing. Root appearance chooses system, light or dark for StripMuxX UI. [menu-bar] indicator chooses icon or workspace; icon-appearance chooses color or monochrome.", defaults: "appearance = '\(defaults.appearance.rawValue)', indicator = '\(defaults.menuBar.indicator.rawValue)', icon-appearance = '\(defaults.menuBar.iconAppearance.rawValue)'", pane: .appearance),
         .init(id: "modifier-sides", title: "Modifier sides", description: "[modifiers] accepts alt, cmd, ctrl and shift with both, left or right. Applies to shortcut chords; modifier taps retain their explicit sides. The unused side passes through for normal typing.", defaults: "All modifiers use both sides.", example: "[modifiers]\nalt = 'left'"),
-        .init(id: "rules", title: "[[on-window-detected]]", description: "Match exact app-id, app-id-regex, workspace, app-name-regex-substring, window-title-regex-substring or during-winmux-startup. Rules run in file order; check-further-callbacks = true continues after a match.", defaults: "No rules; check-further-callbacks = false.", example: """
+        .init(id: "rules", title: "[[on-window-detected]]", description: "Match exact app-id, app-id-regex, workspace, app-name-regex-substring, window-title-regex-substring or during-winmux-startup (legacy name). Rules run in file order; check-further-callbacks = true continues after a match.", defaults: "No rules; check-further-callbacks = false.", example: """
         [[on-window-detected]]
         if.app-id = 'com.apple.finder'
         check-further-callbacks = false
@@ -52,13 +52,12 @@ var configurationReferenceSections: [ConfigurationReferenceSection] {
         [mode.main.binding]
         alt-mykey = 'focus left'
         """, pane: .shortcuts),
-        .init(id: "automation", title: "Automation callbacks", description: "after-startup-command runs after startup. on-focus-changed, on-focused-monitor-changed and on-mode-changed run after the corresponding focus or mode changes. They accept a StripMuxX command or an array of commands. exec-on-workspace-change accepts an executable followed by its arguments.", defaults: "on-focused-monitor-changed = \(tomlStringArray(defaults.onFocusedMonitorChanged.map { $0.args.description }.joined(separator: "\n"))); other callbacks are empty.", example: """
+        .init(id: "automation", title: "Automation callbacks", description: "after-startup-command runs after startup. on-focus-changed, on-focused-monitor-changed and on-mode-changed run after the corresponding focus or mode changes. They accept a StripMuxX command or an array of commands. exec-on-workspace-change is a legacy compatibility key best edited in the raw configuration.", defaults: "on-focused-monitor-changed = \(tomlStringArray(defaults.onFocusedMonitorChanged.map { $0.args.description }.joined(separator: "\n"))); other callbacks are empty.", example: """
         on-display-changed = []
         on-focus-changed = []
         on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
         on-mode-changed = []
         after-startup-command = []
-        exec-on-workspace-change = []
         """, pane: .automation),
         .init(id: "exec", title: "[exec] and [exec.env-vars]", description: "Commands inherit the app’s environment. When [exec] is omitted, PATH receives /opt/homebrew/bin:/opt/homebrew/sbin before the inherited PATH. Defining [exec] replaces that implicit configuration; add PATH explicitly to retain the prefix. Variables support ${NAME} interpolation.", defaults: "inherit-env-vars = true; Homebrew PATH prefix when [exec] is absent.", example: """
         [exec]
