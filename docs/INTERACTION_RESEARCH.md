@@ -75,3 +75,6 @@ private compositor. MacOS Spaces remain the sole workspace system.
 The project uses the existing pure strip geometry, one runtime owner on MainActor,
 per-application AX workers and the native Space observation/fence. Do not
 duplicate this architecture for an interaction feature.
+
+
+See [WinMuxX portability audit](WINMUXX_PORTABILITY_AUDIT.md) for the limited three-finger Dock event port, alternatives and physical acceptance criteria.

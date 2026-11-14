@@ -24,7 +24,7 @@ protocol StripDockSwipeReceiver: AnyObject {
     func dockSwipeEnded(commit: Bool, progress: Double, velocity: Double, timestamp: Double)
 }
 
-/// One Dock swipe at a time: whether WinMuxX or macOS owns it, and when WinMuxX releases
+/// One Dock swipe at a time: whether StripMuxX or macOS owns it, and when StripMuxX releases
 /// it, whether it completes. Progress is macOS's travel since touchdown, signed by direction.
 @MainActor
 struct StripDockSwipeTracker {
@@ -130,12 +130,10 @@ struct StripDockSwipeTracker {
                     case .idle, .passing: return .pass
                     case .ignoring: return close
                     case .undecided:
-                        // A flick can end before any sample travelled far enough to say which way.
-                        guard endVelocity != 0 else { summary.outcome = "no direction"; return .replayHeldThenPass }
-                        let verdict = start(sign: endVelocity > 0 ? 1 : -1, progress: 0, timestamp: timestamp, receiver)
-                        guard verdict == .swallow else { return verdict }
-                        if case .claimed = state { finish(commit: true, velocity: 0, timestamp: timestamp, receiver) }
-                        return close
+                        // A scrollable viewport needs displacement, not a Space-switch
+                        // flick. Never steal a Dock swipe based only on release velocity.
+                        summary.outcome = "no direction"
+                        return .replayHeldThenPass
                     case .claimed(let sign):
                         // macOS measures the release itself, signed like its progress, and it
                         // already reads near zero when the fingers rested before lifting. Without
@@ -198,7 +196,7 @@ struct StripDockSwipeTracker {
     }
 }
 
-/// The last swipe, for `winmuxx doctor`: macOS's progress scale and end velocity are
+/// The last recognized swipe: macOS's progress scale and end velocity are
 /// private, so these are what to compare when a swipe does not feel native.
 struct StripDockSwipeSummary: Equatable {
     var samples = 0
@@ -231,7 +229,8 @@ private final class StripDockPanReceiver: StripDockSwipeReceiver {
     func dockSwipeEnded(commit: Bool, progress: Double, velocity: Double, timestamp: Double) {
         // The viewport has already tracked the fingers; snap to the nearest
         // column on lift, regardless of whether macOS would switch Spaces.
-        NativeScrollingPan.shared.endDockSwipe()
+        if commit { NativeScrollingPan.shared.endDockSwipe() }
+        else { NativeScrollingPan.shared.cancel() }
     }
 }
 
@@ -274,7 +273,7 @@ final class StripDockSwipeSource {
 
     func stop() {
         tracker.abandon(receiver)
-        if NativeScrollingPan.shared.isPanning { NativeScrollingPan.shared.cancel() }
+        if NativeScrollingPan.shared.isDockSwipeActive { NativeScrollingPan.shared.cancel() }
         held.removeAll()
         for tap in [dockTap, envelopeTap].compactMap({ $0 }) {
             CGEvent.tapEnable(tap: tap.port, enable: false)

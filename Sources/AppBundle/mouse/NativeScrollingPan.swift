@@ -17,6 +17,7 @@ final class NativeScrollingPan {
     private var gestureMonitor: String?
     private var dockSwipeProgress: Double = 0
     private var dockSwipeSign: Double = 1
+    private(set) var isDockSwipeActive = false
     var isPanning: Bool { workspace != nil }
     private var lastDirection: CGFloat = 0
     private var idleTask: Task<Void, Never>?
@@ -130,6 +131,7 @@ final class NativeScrollingPan {
         workspace = target
         gestureEpoch = target.scrollingSessionEpoch
         gestureMonitor = target.workspaceMonitor.displayUUID
+        isDockSwipeActive = true
         dockSwipeSign = positive ? 1 : -1
         dockSwipeProgress = 0
         lastDirection = 0
@@ -182,6 +184,7 @@ final class NativeScrollingPan {
         gestureEpoch = nil
         gestureMonitor = nil
         dockSwipeProgress = 0
+        isDockSwipeActive = false
         workspace.scrollingGestureMotionActive = false
         workspace.scrollingGestureSessionID = nil
         WorkspaceScrollingMinimap.shared.endGesture()

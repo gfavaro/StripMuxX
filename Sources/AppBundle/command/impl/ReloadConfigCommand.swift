@@ -137,5 +137,5 @@ struct ReloadConfigCommand: Command {
     updateTrayText()
     ShortcutSettingsModel.shared.reload()
     SecureInputPanel.shared.refresh()
-    if !serverArgs.isReadOnly { StripDockSwipeSource.shared.syncConfiguration() }
+    if isWinMuxRuntimeReady, !serverArgs.isReadOnly { StripDockSwipeSource.shared.syncConfiguration() }
 }
