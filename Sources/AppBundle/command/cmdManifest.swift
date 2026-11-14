@@ -19,6 +19,8 @@ extension CmdArgs {
             case let args as JoinWithCmdArgs: JoinWithCommand(args: args)
             case let args as LayoutCmdArgs: LayoutCommand(args: args)
             case let args as ScrollingCenterCmdArgs: ScrollingCenterCommand(args: args)
+            case let args as ScrollingPanCmdArgs: ScrollingPanCommand(args: args)
+            case let args as ScrollingWidthPixelsCmdArgs: ScrollingWidthPixelsCommand(args: args)
             case let args as UndoLayoutCmdArgs: UndoLayoutCommand(args: args)
             case let args as RetileCmdArgs: RetileCommand(args: args)
             case let args as ScrollingWidthCmdArgs: ScrollingWidthCommand(args: args)
