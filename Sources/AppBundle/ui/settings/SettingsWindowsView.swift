@@ -6,6 +6,7 @@ struct ShortcutBehaviorSettingsView: View {
     @ObservedObject private var minimums = PersistedAppMinimums.shared
     @ObservedObject var model: ShortcutSettingsModel
     @SettingsDraft("scrolling.column-width", load: { Int((config.scrolling.columnWidth * 100).rounded()) }) private var scrollingColumnWidth: Int
+    @SettingsDraft("scrolling.edge-preview", load: { config.scrolling.edgePreview }) private var edgePreview: Int
     @SettingsDraft("scrolling.width-presets", load: { config.scrolling.widthPresets.map { String($0 * 100) }.joined(separator: ", ") }) private var scrollingWidthPresets: String
     @SettingsDraft("scrolling.gesture-enabled", load: { config.scrolling.gestureEnabled }) private var scrollingGestureEnabled: Bool
     @SettingsDraft("scrolling.three-finger-swipe", load: { config.scrolling.threeFingerSwipe }) private var threeFingerSwipe: Bool
@@ -105,6 +106,10 @@ struct ShortcutBehaviorSettingsView: View {
             SettingsStepper("Default column width", id: "scrolling.column-width", value: $scrollingColumnWidth,
                 range: 10...100, help: "Preferred share of the usable display width. A lone column still fills the display.", unit: "%") {
                 persistConfig(section: "scrolling", key: "column-width", value: String(Double(scrollingColumnWidth) / 100))
+            }
+            SettingsStepper("Offscreen column preview", id: "scrolling.edge-preview", value: $edgePreview,
+                range: 0...40, help: "How many points of a column parked beyond the left or right edge remain visible. Smaller values recover usable width without changing outer gaps.", unit: "pt") {
+                persistConfig(section: "scrolling", key: "edge-preview", value: String(edgePreview))
             }
             SettingsTextField("Width presets (%)", id: "scrolling.width-presets", text: $scrollingWidthPresets,
                 help: "Comma-separated ascending percentages from 10 to 100.", validate: scrollingPresetError) {

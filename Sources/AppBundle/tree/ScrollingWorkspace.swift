@@ -302,7 +302,7 @@ extension Workspace {
             },
             horizontalGap: CGFloat(gaps.inner.horizontal),
             outerLeft: CGFloat(gaps.outer.left), outerRight: CGFloat(gaps.outer.right),
-            leftWall: leftWall, rightWall: rightWall, preview: 25, focusedColumnIndex: focusedIndex,
+            leftWall: leftWall, rightWall: rightWall, preview: CGFloat(config.scrolling.edgePreview), focusedColumnIndex: focusedIndex,
             sheetOffset: scrollingSheetReveal?.revealed))
     }
 

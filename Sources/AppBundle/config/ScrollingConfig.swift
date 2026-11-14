@@ -14,6 +14,8 @@ enum ScrollingCenterMode: String, CaseIterable {
 
 struct ScrollingConfig: ConvenienceCopyable, Equatable {
     var columnWidth = 0.49
+    /// How much of an offscreen column remains visible at the display edge.
+    var edgePreview = 14
     var widthPresets = [0.25, 0.3333, 0.5, 0.6667, 0.75, 1.0]
     var gestureEnabled = true
     /// Experimental: intercept macOS's recognized three-finger horizontal Dock swipe.
@@ -36,6 +38,9 @@ func parseScrolling(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace, _ error
             parseArrayOfDoubles(raw, trace).filter(.semantic(trace, "Expected ascending widths between 0.1 and 1.0")) {
                 !$0.isEmpty && $0.allSatisfy { $0.isFinite && (0.1...1).contains($0) } && zip($0, $0.dropFirst()).allSatisfy(<)
             }
+        },
+        "edge-preview": Parser(\.edgePreview) { raw, trace in
+            parseInt(raw, trace).filter(.semantic(trace, "Must be between 0 and 40 points")) { (0...40).contains($0) }
         },
         "gesture-enabled": Parser(\.gestureEnabled, parseBool),
         "three-finger-swipe": Parser(\.threeFingerSwipe, parseBool),

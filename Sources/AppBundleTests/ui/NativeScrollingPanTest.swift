@@ -102,6 +102,13 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertEqual(pan.lastDecision, "gesture cancelled: desktop or session changed")
     }
 
+    func testEdgePreviewHasSafeBounds() {
+        XCTAssertEqual(parseConfig("[scrolling]\nedge-preview = 0").config.scrolling.edgePreview, 0)
+        XCTAssertEqual(parseConfig("[scrolling]\nedge-preview = 40").config.scrolling.edgePreview, 40)
+        XCTAssertFalse(parseConfig("[scrolling]\nedge-preview = 41").errors.isEmpty)
+        XCTAssertFalse(parseConfig("[scrolling]\nedge-preview = -1").errors.isEmpty)
+    }
+
     func testExperimentalThreeFingerSwipeConfigDefaultsOffAndCanBeEnabled() {
         XCTAssertFalse(parseConfig("[scrolling]\ngesture-enabled = true").config.scrolling.threeFingerSwipe)
         let enabled = parseConfig("[scrolling]\nthree-finger-swipe = true")

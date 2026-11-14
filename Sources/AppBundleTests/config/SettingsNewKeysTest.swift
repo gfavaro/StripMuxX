@@ -15,6 +15,7 @@ final class SettingsNewKeysTest: XCTestCase {
     func testSettingsWritesForEveryNewKeyParseBack() {
         let config = write("", [
             ("scrolling", "center-focused-column", "'on-overflow'"),
+            ("scrolling", "edge-preview", "12"),
             ("scrolling", "minimap-hold-modifiers", tomlCommaSeparatedStringArray("ctrl, alt")),
             ("scrolling", "keep-window-height", "true"),
             ("scrolling", "three-finger-swipe", "true"),
@@ -22,6 +23,7 @@ final class SettingsNewKeysTest: XCTestCase {
             ("native-spaces", "restore-frames-on-quit", "false"),
         ])
         XCTAssertEqual(config.scrolling.centerFocusedColumn, .onOverflow)
+        XCTAssertEqual(config.scrolling.edgePreview, 12)
         XCTAssertEqual(config.scrolling.minimapHoldModifiers, [.control, .option])
         XCTAssertTrue(config.scrolling.keepWindowHeight)
         XCTAssertTrue(config.scrolling.threeFingerSwipe)

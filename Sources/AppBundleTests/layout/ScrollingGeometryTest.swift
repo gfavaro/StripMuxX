@@ -108,6 +108,44 @@ final class ScrollingGeometryTest: XCTestCase {
         }
     }
 
+
+    func testSmallerPreviewPreservesColumnSizesAndRecoversUsableWidth() {
+        func layout(_ preview: CGFloat) -> ScrollingWorkspaceGeometry {
+            calculateScrollingWorkspaceGeometry(.init(
+                bounds: CGRect(x: 8, y: 0, width: 984, height: 700),
+                parkingBounds: CGRect(x: 0, y: 0, width: 1000, height: 700),
+                offset: 0,
+                columns: [0.49, 0.49, 0.49].map { .init(preferredWidth: $0, minimumWidth: 0) },
+                horizontalGap: 8, outerLeft: 8, outerRight: 8,
+                leftWall: false, rightWall: false, preview: preview))
+        }
+        let wide = layout(25)
+        let compact = layout(14)
+        XCTAssertEqual(wide.area.minX, 29)
+        XCTAssertEqual(compact.area.minX, 18)
+        XCTAssertGreaterThan(compact.area.width, wide.area.width)
+        XCTAssertGreaterThan(compact.columns[0].physicalFrame.width, wide.columns[0].physicalFrame.width,
+                             "Percent column widths follow the recovered viewport width")
+        XCTAssertEqual(compact.columns[0].logicalFrame.width, compact.columns[1].logicalFrame.width)
+        XCTAssertEqual(compact.columns[1].logicalFrame.minX - compact.columns[0].logicalFrame.maxX, 8)
+        XCTAssertEqual(compact.columns[2].physicalFrame.minX, 986,
+                       "The right edge preview shows exactly 14 points")
+    }
+
+    func testNoPreviewKeepsParkedColumnsAtScreenEdgeWithoutChangingInterColumnGap() {
+        let geometry = calculateScrollingWorkspaceGeometry(.init(
+            bounds: CGRect(x: 8, y: 0, width: 984, height: 700),
+            parkingBounds: CGRect(x: 0, y: 0, width: 1000, height: 700),
+            offset: 0,
+            columns: [0.6, 0.6, 0.6].map { .init(preferredWidth: $0, minimumWidth: 0) },
+            horizontalGap: 8, outerLeft: 8, outerRight: 8,
+            leftWall: false, rightWall: false, preview: 0))
+        XCTAssertEqual(geometry.area.minX, 8)
+        XCTAssertEqual(geometry.area.width, 984)
+        XCTAssertEqual(geometry.columns.last?.physicalFrame.minX, 1000)
+        XCTAssertEqual(geometry.columns[1].logicalFrame.minX - geometry.columns[0].logicalFrame.maxX, 8)
+    }
+
     func testSheetOffsetExtendsAllowedRangeTemporarily() {
         let result = calculateScrollingWorkspaceGeometry(makeInput(offset: -80, sheetOffset: -80))
         XCTAssertEqual(result.offsetRange.lowerBound, -80)
