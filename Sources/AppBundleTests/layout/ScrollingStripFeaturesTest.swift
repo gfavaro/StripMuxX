@@ -186,7 +186,6 @@ final class ScrollingStripFeaturesTest: XCTestCase {
         windows[2].unbindFromParent()
         try await workspace.layoutWorkspace()
         XCTAssertTrue(workspace.scrollingOffset.isFinite, "Removing the anchor must not poison the viewport")
-        XCTAssertTrue(workspace.scrollingOffset.isFinite)
         XCTAssertTrue(workspace.scrollingMetrics.columns.allSatisfy { $0.width.isFinite && $0.width > 0 })
     }
 
