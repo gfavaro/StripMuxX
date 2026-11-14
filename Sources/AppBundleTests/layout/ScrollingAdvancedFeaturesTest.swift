@@ -10,6 +10,39 @@ final class ScrollingAdvancedFeaturesTest: WorkspaceTestCase {
         XCTAssertEqual(result.exitCode, 0, result.stderr.joined())
     }
 
+    func testManagedFullscreenKeepsTheWindowInTheSameNativeSpace() async throws {
+        let workspace = focus.workspace
+        let first = TestWindow.new(id: 73470, parent: workspace.rootTilingContainer)
+        let second = TestWindow.new(id: 73471, parent: workspace.rootTilingContainer)
+        _ = first.focusWindow()
+        let originalParent = first.parent
+        let originalIndex = first.index
+        try await run("fullscreen on")
+        XCTAssertTrue(first.isFullscreen)
+        XCTAssertTrue(first.parent === originalParent, "Managed fullscreen must not rebind to a new Space")
+        XCTAssertEqual(first.index, originalIndex)
+        XCTAssertTrue(second.nodeWorkspace === workspace, "Other columns remain in the same strip")
+        let fullscreenRect = fullscreenWindowRect(first, in: workspace)
+        XCTAssertEqual(fullscreenRect.width, workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width)
+        try await run("fullscreen off")
+        XCTAssertFalse(first.isFullscreen)
+        XCTAssertTrue(first.parent === originalParent)
+    }
+
+    func testManagedFullscreenWithoutGapsUsesAvailableDisplayRect() async throws {
+        let workspace = focus.workspace
+        let window = TestWindow.new(id: 73472, parent: workspace.rootTilingContainer)
+        _ = window.focusWindow()
+        try await run("fullscreen on --no-outer-gaps")
+        XCTAssertTrue(window.noOuterGapsInFullscreen)
+        let fullscreen = fullscreenWindowRect(window, in: workspace)
+        let screen = workspace.workspaceMonitor.visibleRect
+        XCTAssertEqual(fullscreen.width, screen.width)
+        XCTAssertEqual(fullscreen.height, screen.height)
+        XCTAssertEqual(fullscreen.topLeftCorner.x, screen.topLeftCorner.x)
+        try await run("fullscreen off")
+    }
+
     func testPanDoesNotChangeFocus() async throws {
         let workspace = focus.workspace
         let first = TestWindow.new(id: 73401, parent: workspace.rootTilingContainer)
