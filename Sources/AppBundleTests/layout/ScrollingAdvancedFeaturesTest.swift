@@ -16,11 +16,11 @@ final class ScrollingAdvancedFeaturesTest: WorkspaceTestCase {
         let second = TestWindow.new(id: 73471, parent: workspace.rootTilingContainer)
         _ = first.focusWindow()
         let originalParent = first.parent
-        let originalIndex = first.index
+        let originalIndex = originalParent?.children.firstIndex(where: { $0 === first })
         try await run("fullscreen on")
         XCTAssertTrue(first.isFullscreen)
         XCTAssertTrue(first.parent === originalParent, "Managed fullscreen must not rebind to a new Space")
-        XCTAssertEqual(first.index, originalIndex)
+        XCTAssertEqual(first.parent?.children.firstIndex(where: { $0 === first }), originalIndex)
         XCTAssertTrue(second.nodeWorkspace === workspace, "Other columns remain in the same strip")
         let fullscreenRect = fullscreenWindowRect(first, in: workspace)
         XCTAssertEqual(fullscreenRect.width, workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width)
