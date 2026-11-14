@@ -22,6 +22,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case minimap = "scrolling.minimap-enabled"
     case sensitivity = "scrolling.gesture-sensitivity"
     case width = "scrolling.column-width"
+    case widthPresets = "scrolling.width-presets"
     case edgePreview = "scrolling.edge-preview"
     case minimapHold = "scrolling.minimap-hold-modifiers"
     case appearance = "appearance"
@@ -40,6 +41,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .minimap: "Show scrolling minimap"
             case .sensitivity: "Gesture sensitivity"
             case .width: "Default column width"
+            case .widthPresets: "Column size shortcuts"
             case .edgePreview: "Offscreen column preview"
             case .minimapHold: "Hold to keep the minimap up"
             case .appearance: "Theme"
@@ -49,7 +51,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     var page: SettingsSidebarItem {
         switch self {
             case .startAtLogin, .autoReload, .restoreLayouts, .restoreFrames: .general
-            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .edgePreview, .minimapHold: .windows
+            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .edgePreview, .minimapHold: .windows
             case .appearance, .menuBar: .appearance
         }
     }

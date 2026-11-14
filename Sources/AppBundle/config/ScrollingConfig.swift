@@ -13,10 +13,10 @@ enum ScrollingCenterMode: String, CaseIterable {
 }
 
 struct ScrollingConfig: ConvenienceCopyable, Equatable {
-    var columnWidth = 0.49
+    var columnWidth = 0.5
     /// How much of an offscreen column remains visible at the display edge.
     var edgePreview = 14
-    var widthPresets = [0.25, 0.3333, 0.5, 0.6667, 0.75, 1.0]
+    var widthPresets = [0.3333, 0.5, 0.6667, 1.0]
     var gestureEnabled = true
     /// Experimental: intercept macOS's recognized three-finger horizontal Dock swipe.
     var threeFingerSwipe = false

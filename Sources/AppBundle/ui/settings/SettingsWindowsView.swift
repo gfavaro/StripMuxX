@@ -18,6 +18,8 @@ struct ShortcutBehaviorSettingsView: View {
     @SettingsDraft("automatically-tile-new-windows", load: { config.automaticallyTileNewWindows }) private var automaticallyTileNewWindows: Bool
     @State private var confirmsForgetAllMinimums = false
     @State private var showsLearnedMinimums = false
+    @State private var showsCustomColumnSizes = false
+    @State private var showsAdvancedNavigation = false
 
     @SettingsDraft("single-window-alignment", load: { config.singleWindowAlignment }) private var singleWindowAlignment: SingleWindowAlignment
     @SettingsDraft("fullscreen-width", load: { config.fullscreenWidth ?? 1.0 }) private var fullscreenWidth: Double
@@ -50,10 +52,6 @@ struct ShortcutBehaviorSettingsView: View {
                     Text("Right").tag(SingleWindowAlignment.right)
                 } onChange: { persistRootString("single-window-alignment", singleWindowAlignment.rawValue) }
 
-            }
-            SettingsSection("Gestures") {
-                Text("Option + two-finger scrolling pans the strip. An experimental three-finger horizontal gesture can be enabled below; it replaces macOS horizontal Space switching while active.")
-                    .font(.callout).foregroundStyle(.secondary)
             }
             scrollingSettingsSection
             DisclosureGroup("Advanced: learned application minimums", isExpanded: $showsLearnedMinimums) {
@@ -105,57 +103,100 @@ struct ShortcutBehaviorSettingsView: View {
     }
 
     private var scrollingSettingsSection: some View {
-        SettingsSection("Strip") {
-            SettingsStepper("Default column width", id: "scrolling.column-width", value: $scrollingColumnWidth,
-                range: 10...100, help: "Preferred share of the usable display width. A lone column still fills the display.", unit: "%") {
-                persistConfig(section: "scrolling", key: "column-width", value: String(Double(scrollingColumnWidth) / 100))
-            }
-            SettingsStepper("Offscreen column preview", id: "scrolling.edge-preview", value: $edgePreview,
-                range: 0...40, help: "How many points of a column parked beyond the left or right edge remain visible. Smaller values recover usable width without changing outer gaps.", unit: "pt") {
-                persistConfig(section: "scrolling", key: "edge-preview", value: String(edgePreview))
-            }
-            SettingsTextField("Width presets (%)", id: "scrolling.width-presets", text: $scrollingWidthPresets,
-                help: "Comma-separated ascending percentages from 10 to 100.", validate: scrollingPresetError) {
-                if let values = scrollingPresetValues(scrollingWidthPresets) {
-                    persistConfig(section: "scrolling", key: "width-presets", value: "[" + values.map { String($0) }.joined(separator: ", ") + "]")
+        Group {
+            SettingsSection("Columns") {
+                SettingsColumnWidthPicker(value: $scrollingColumnWidth) {
+                    persistConfig(section: "scrolling", key: "column-width",
+                                  value: String(Double(scrollingColumnWidth) / 100))
+                }
+                SettingsColumnPresetPicker(values: Binding(
+                    get: { scrollingPresetValues(scrollingWidthPresets) ?? config.scrolling.widthPresets },
+                    set: { values in
+                        scrollingWidthPresets = values.map { String($0 * 100) }.joined(separator: ", ")
+                        persistConfig(section: "scrolling", key: "width-presets",
+                                      value: "[" + values.map(String.init).joined(separator: ", ") + "]")
+                    }))
+                DisclosureGroup("Custom column sizes", isExpanded: $showsCustomColumnSizes) {
+                    SettingsStepper("Exact default width", id: "scrolling.column-width.custom",
+                                    value: $scrollingColumnWidth, range: 10...100,
+                                    help: "Use any whole percentage, including values between the illustrated cards.", unit: "%") {
+                        persistConfig(section: "scrolling", key: "column-width",
+                                      value: String(Double(scrollingColumnWidth) / 100))
+                    }
+                    SettingsTextField("Exact size shortcuts (%)", id: "scrolling.width-presets.custom",
+                                      text: $scrollingWidthPresets,
+                                      help: "Ascending percentages from 10 to 100; keeps custom sizes.",
+                                      validate: scrollingPresetError) {
+                        if let values = scrollingPresetValues(scrollingWidthPresets) {
+                            persistConfig(section: "scrolling", key: "width-presets",
+                                          value: "[" + values.map(String.init).joined(separator: ", ") + "]")
+                        }
+                    }
                 }
             }
-            SettingsToggle("Option + two-finger pan", id: "scrolling.gesture-enabled", isOn: $scrollingGestureEnabled,
-                help: "Pan the strip with a horizontal two-finger scroll while holding Option.") {
-                persistConfig(section: "scrolling", key: "gesture-enabled", value: scrollingGestureEnabled ? "true" : "false")
-            }
-            SettingsToggle("Three-finger horizontal pan (experimental)", id: "scrolling.three-finger-swipe", isOn: $threeFingerSwipe,
-                help: "Requires macOS Trackpad settings to use three fingers for horizontal Space swipes. Only enable when StripMuxX is the sole window manager intercepting Dock swipes.") {
-                persistConfig(section: "scrolling", key: "three-finger-swipe", value: threeFingerSwipe ? "true" : "false")
-            }
-            .disabled(!scrollingGestureEnabled)
-            SettingsTextField("Gesture sensitivity", id: "scrolling.gesture-sensitivity", text: $scrollingSensitivity,
-                help: "Multiplier for the default pan distance. Enter a finite value greater than zero.", validate: scrollingSensitivityError) {
-                if let value = Double(scrollingSensitivity), value.isFinite, value > 0 {
-                    persistConfig(section: "scrolling", key: "gesture-sensitivity", value: String(value))
+            SettingsSection("Navigation") {
+                SettingsToggle("Option + two-finger pan", id: "scrolling.gesture-enabled",
+                               isOn: $scrollingGestureEnabled,
+                               help: "Two-finger scrolling without Option remains in the application.") {
+                    persistConfig(section: "scrolling", key: "gesture-enabled",
+                                  value: scrollingGestureEnabled ? "true" : "false")
+                }
+                SettingsToggle("Three-finger pan (experimental)", id: "scrolling.three-finger-swipe",
+                               isOn: $threeFingerSwipe,
+                               help: "Uses undocumented macOS Dock swipe events. Requires three-finger Space swipes in Trackpad settings.") {
+                    persistConfig(section: "scrolling", key: "three-finger-swipe",
+                                  value: threeFingerSwipe ? "true" : "false")
+                }
+                .disabled(!scrollingGestureEnabled)
+                SettingsPicker("When focusing a column", id: "scrolling.center-focused-column",
+                               selection: $scrollingCenterMode,
+                               help: "Choose how the strip moves when keyboard focus changes.") {
+                    Text("Reveal only (recommended)").tag(ScrollingCenterMode.never)
+                    Text("Center if offscreen").tag(ScrollingCenterMode.onOverflow)
+                    Text("Always center").tag(ScrollingCenterMode.always)
+                } onChange: {
+                    persistConfig(section: "scrolling", key: "center-focused-column",
+                                  value: "'\(scrollingCenterMode.rawValue)'")
+                }
+                DisclosureGroup("Advanced navigation", isExpanded: $showsAdvancedNavigation) {
+                    SettingsTextField("Gesture sensitivity", id: "scrolling.gesture-sensitivity",
+                                      text: $scrollingSensitivity,
+                                      help: "Positive movement multiplier.", validate: scrollingSensitivityError) {
+                        if let value = Double(scrollingSensitivity), value.isFinite, value > 0 {
+                            persistConfig(section: "scrolling", key: "gesture-sensitivity", value: String(value))
+                        }
+                    }
+                    SettingsToggle("Keep opening window height", id: "scrolling.keep-window-height",
+                                   isOn: $scrollingKeepWindowHeight,
+                                   help: "A window alone in a column retains its original height.") {
+                        persistConfig(section: "scrolling", key: "keep-window-height",
+                                      value: scrollingKeepWindowHeight ? "true" : "false")
+                    }
                 }
             }
-            SettingsToggle("Keep each window's opening height", id: "scrolling.keep-window-height", isOn: $scrollingKeepWindowHeight,
-                help: "A window alone in its column keeps the height it opened with, aligned to the top, instead of filling the column.") {
-                persistConfig(section: "scrolling", key: "keep-window-height", value: scrollingKeepWindowHeight ? "true" : "false")
-            }
-            SettingsToggle("Show scrolling minimap", id: "scrolling.minimap-enabled", isOn: $scrollingMinimapEnabled,
-                help: "Show the strip's map while panning and allow it to be opened from the menu or a shortcut.") {
-                persistConfig(section: "scrolling", key: "minimap-enabled", value: scrollingMinimapEnabled ? "true" : "false")
-            }
-            SettingsTextField("Hold to keep the minimap up", id: "scrolling.minimap-hold-modifiers", text: $minimapHoldModifiers,
-                help: "Comma-separated keys from ctrl, alt, cmd and shift; while they are held the minimap stays open. Empty turns this off.",
-                validate: minimapHoldModifierError) {
-                if minimapHoldModifierError(minimapHoldModifiers) == nil {
-                    persistConfig(section: "scrolling", key: "minimap-hold-modifiers", value: tomlCommaSeparatedStringArray(minimapHoldModifiers))
+            SettingsSection("Minimap") {
+                SettingsToggle("Show scrolling minimap", id: "scrolling.minimap-enabled",
+                               isOn: $scrollingMinimapEnabled,
+                               help: "Visualize and navigate the strip with a gesture or keyboard shortcut.") {
+                    persistConfig(section: "scrolling", key: "minimap-enabled",
+                                  value: scrollingMinimapEnabled ? "true" : "false")
                 }
+                SettingsStepper("Offscreen column preview", id: "scrolling.edge-preview",
+                                value: $edgePreview, range: 0...40,
+                                help: "Visible edge of a column outside the current viewport.", unit: "pt") {
+                    persistConfig(section: "scrolling", key: "edge-preview", value: String(edgePreview))
+                }
+                SettingsTextField("Hold to show minimap", id: "scrolling.minimap-hold-modifiers",
+                                  text: $minimapHoldModifiers,
+                                  help: "Optional keys: ctrl, alt, cmd, shift; empty turns this off.",
+                                  validate: minimapHoldModifierError) {
+                    if minimapHoldModifierError(minimapHoldModifiers) == nil {
+                        persistConfig(section: "scrolling", key: "minimap-hold-modifiers",
+                                      value: tomlCommaSeparatedStringArray(minimapHoldModifiers))
+                    }
+                }
+                .disabled(!scrollingMinimapEnabled)
             }
-            SettingsPicker("Centre the focused column", id: "scrolling.center-focused-column", selection: $scrollingCenterMode,
-                help: "Where focusing a column scrolls the strip.") {
-                Text("Never: just bring it into view").tag(ScrollingCenterMode.never)
-                Text("Only when the strip overflows").tag(ScrollingCenterMode.onOverflow)
-                Text("Always").tag(ScrollingCenterMode.always)
-            } onChange: { persistConfig(section: "scrolling", key: "center-focused-column", value: "'\(scrollingCenterMode.rawValue)'") }
         }
     }
 
