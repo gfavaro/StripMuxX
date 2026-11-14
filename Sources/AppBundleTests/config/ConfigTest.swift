@@ -37,7 +37,7 @@ final class ConfigTest: XCTestCase {
         XCTAssertTrue(bindings?["alt-cmd-r"]?.commands.first is ScrollingWidthCommand)
         let sections = buildShortcutSections()
         let actions = sections.flatMap(\.actions)
-        XCTAssertTrue(actions.contains(where: { $0.id == "scrolling-width-previous" && $0.commandScript == "scrolling-width prev" }))
+        XCTAssertTrue(actions.contains(where: { $0.id == "scrolling-width-previous" && $0.commandScript == "scrolling-width previous" }))
         XCTAssertTrue(actions.contains(where: { $0.id == "fullscreen" && $0.commandScript == "fullscreen" }))
     }
 

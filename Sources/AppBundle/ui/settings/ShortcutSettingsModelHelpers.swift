@@ -84,7 +84,7 @@ func buildShortcutSections() -> [ShortcutSettingsModel.Section] {
                 shortcutAction(id: "scrolling-pin-right", title: "Pin Column Right", command: "scrolling-pin right"),
                 shortcutAction(id: "scrolling-center", title: "Centre Column", command: "scrolling-center"),
                 shortcutAction(id: "scrolling-width-next", title: "Next Column Width", command: "scrolling-width next"),
-                shortcutAction(id: "scrolling-width-previous", title: "Previous Column Width", command: "scrolling-width prev"),
+                shortcutAction(id: "scrolling-width-previous", title: "Previous Column Width", command: "scrolling-width previous"),
                 shortcutAction(id: "scrolling-width-full", title: "Full Column Width", subtitle: "Expand the column; this is not macOS fullscreen.", command: "scrolling-width full"),
             ],
         ),

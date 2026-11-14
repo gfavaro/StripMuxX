@@ -5,6 +5,7 @@ struct ShortcutGeneralSettingsView: View {
     @SettingsDraft("start-at-login", load: { config.startAtLogin }) private var startAtLogin: Bool
     @SettingsDraft("auto-reload-config", load: { config.autoReloadConfig }) private var autoReloadConfig: Bool
     @State private var advancedOpen = false
+    @Environment(\.settingsSearchTarget) private var searchTarget
 
     @SettingsDraft("native-spaces.restore-layouts", load: { config.nativeSpaces.restoreLayouts }) private var restoreNativeLayouts: Bool
     @SettingsDraft("native-spaces.restore-frames-on-quit", load: { config.nativeSpaces.restoreFramesOnQuit }) private var restoreFramesOnQuit: Bool
@@ -44,7 +45,13 @@ struct ShortcutGeneralSettingsView: View {
             }
         }
         .navigationTitle("General")
+        .onAppear { revealSearchedControl() }
+        .onChange(of: searchTarget) { _ in revealSearchedControl() }
 
+    }
+
+    private func revealSearchedControl() {
+        if searchTarget?.id == "auto-reload-config" { advancedOpen = true }
     }
 
     private func persistRootBool(_ key: String, _ value: Bool) {
