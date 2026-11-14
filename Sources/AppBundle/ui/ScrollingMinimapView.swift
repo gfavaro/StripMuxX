@@ -90,6 +90,7 @@ final class ScrollingMinimapView: NSView {
                 button.target = self
                 button.action = #selector(selectTile(_:))
                 button.dropped = { [weak self] button, midX in self?.dropTile(button, at: midX) }
+                button.autoScroll = { [weak self] location in self?.scrollDuringTileDrag(windowX: location) ?? 0 }
                 tileCanvas.addSubview(button)
                 return button
             }
@@ -101,7 +102,8 @@ final class ScrollingMinimapView: NSView {
             button.configure(models[index], icons: icons, focused: models[index].id == focused,
                              keyboardSelected: keyboardNavigation && index == selectedIndex)
             let tile = map.tiles[index]
-            button.frame = CGRect(x: tile.minX, y: tile.minY, width: tile.width, height: tile.height)
+            let target = CGRect(x: tile.minX, y: tile.minY, width: tile.width, height: tile.height)
+            if button.frame != target { button.frame = target }
         }
         // The minimap's scale can change when columns are inserted/resized even
         // if the workspace offset stays the same. Track mapped geometry too.
@@ -135,7 +137,24 @@ final class ScrollingMinimapView: NSView {
             return button
         }()
         button.configure(model, icons: icons, focused: model.id == focused, keyboardSelected: false)
-        button.frame = frame
+        if button.frame != frame { button.frame = frame }
+    }
+
+    /// While a tile is being dragged, move the scroll canvas near its edges.
+    /// Returns the document-coordinate shift so the tile continues following
+    /// the pointer rather than jumping when the viewport scrolls.
+    private func scrollDuringTileDrag(windowX: CGFloat) -> CGFloat {
+        let local = convert(CGPoint(x: windowX, y: 0), from: nil)
+        let clip = scrollView.contentView
+        let previous = clip.bounds.minX
+        let delta = scrollingMinimapEdgeScrollDelta(pointerX: local.x - scrollView.frame.minX,
+            viewportWidth: clip.bounds.width, contentOffset: previous,
+            contentWidth: tileCanvas.frame.width)
+        guard delta != 0 else { return 0 }
+        clip.scroll(to: CGPoint(x: previous + delta, y: clip.bounds.minY))
+        scrollView.reflectScrolledClipView(clip)
+        updateViewportFrame()
+        return clip.bounds.minX - previous
     }
 
     @objc private func selectPinned(_ sender: ScrollingMinimapButton) { selected?(sender.model.id) }
@@ -261,6 +280,8 @@ private final class ScrollingMinimapButton: NSButton {
 
     /// Called on release after a horizontal drag, with the tile's centre in the canvas.
     var dropped: ((ScrollingMinimapButton, CGFloat) -> Void)?
+    /// Invoked only during a real pointer drag; returns the canvas scroll distance.
+    var autoScroll: ((CGFloat) -> CGFloat)?
 
     /// A click activates the tile; a drag past a few points moves it to reorder columns.
     override func mouseDown(with event: NSEvent) {
@@ -268,6 +289,7 @@ private final class ScrollingMinimapButton: NSButton {
         let start = event.locationInWindow
         let origin = frame.origin.x
         var dragging = false
+        var scrollDisplacement: CGFloat = 0
         while let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
             let delta = next.locationInWindow.x - start.x
             if next.type == .leftMouseUp {
@@ -275,7 +297,10 @@ private final class ScrollingMinimapButton: NSButton {
                 return
             }
             if !dragging, abs(delta) > 4 { dragging = true; superview?.addSubview(self) } // Drawn above its neighbours.
-            if dragging { frame.origin.x = origin + delta }
+            if dragging {
+                scrollDisplacement += autoScroll?(next.locationInWindow.x) ?? 0
+                frame.origin.x = origin + delta + scrollDisplacement
+            }
         }
     }
 

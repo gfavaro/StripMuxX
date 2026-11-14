@@ -106,8 +106,10 @@ final class WorkspaceScrollingMinimap: NSObject {
             visibleFrames: screens.map(\.visibleFrame), screenIndex: index) else { dismiss(); return }
         let panel = self.panel ?? makePanel()
         self.panel = panel
-        panel.setContentSize(frame.size)
-        panel.setFrameOrigin(frame.origin)
+        // During a gesture the origin and dimensions usually do not change.
+        // Avoid repeated WindowServer transactions for a stationary overlay.
+        if panel.frame.size != frame.size { panel.setContentSize(frame.size) }
+        if panel.frame.origin != frame.origin { panel.setFrameOrigin(frame.origin) }
         let view: ScrollingMinimapView
         if let existing = self.view { view = existing }
         else {
@@ -136,7 +138,8 @@ final class WorkspaceScrollingMinimap: NSObject {
             panel.contentView = effect
             self.view = view
         }
-        view.frame = CGRect(origin: .zero, size: frame.size)
+        let targetViewFrame = CGRect(origin: .zero, size: frame.size)
+        if view.frame != targetViewFrame { view.frame = targetViewFrame }
         let expectedEpoch = workspace.scrollingSessionEpoch
         let expectedTopology = workspace.scrollingTopologySignature
         view.selected = { [weak self, weak workspace] id in

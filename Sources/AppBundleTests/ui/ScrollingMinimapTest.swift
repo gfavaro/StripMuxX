@@ -98,6 +98,23 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertEqual(scroll.contentView.bounds.minX, 0, accuracy: 0.01)
     }
 
+    func testDragEdgeScrollStaysWithinCanvasAndKeepsDragDeltaFinite() {
+        XCTAssertEqual(scrollingMinimapEdgeScrollDelta(pointerX: 8, viewportWidth: 400,
+            contentOffset: 100, contentWidth: 1600), -13.5, accuracy: 0.001)
+        XCTAssertEqual(scrollingMinimapEdgeScrollDelta(pointerX: 392, viewportWidth: 400,
+            contentOffset: 100, contentWidth: 1600), 13.5, accuracy: 0.001)
+        XCTAssertEqual(scrollingMinimapEdgeScrollDelta(pointerX: 200, viewportWidth: 400,
+            contentOffset: 100, contentWidth: 1600), 0)
+        XCTAssertEqual(scrollingMinimapEdgeScrollDelta(pointerX: 0, viewportWidth: 400,
+            contentOffset: 0, contentWidth: 1600), 0)
+        XCTAssertEqual(scrollingMinimapEdgeScrollDelta(pointerX: 400, viewportWidth: 400,
+            contentOffset: 1200, contentWidth: 1600), 0)
+        XCTAssertEqual(scrollingMinimapEdgeScrollDelta(pointerX: 400, viewportWidth: 400,
+            contentOffset: 0, contentWidth: 400), 0)
+        XCTAssertEqual(scrollingMinimapEdgeScrollDelta(pointerX: .nan, viewportWidth: 400,
+            contentOffset: 100, contentWidth: 1600), 0)
+    }
+
     func testPinnedColumnGetsItsOwnTileBesideTheStrip() throws {
         let (workspace, windows) = fixture(count: 4)
         let metrics = workspace.scrollingMetrics

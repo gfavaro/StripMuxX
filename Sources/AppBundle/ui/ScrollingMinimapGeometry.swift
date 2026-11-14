@@ -49,6 +49,30 @@ func scrollingMinimapContentWidth(metrics: ScrollingWorkspaceMetrics, visibleWid
     return max(visibleWidth, max(end - start, 1) * scale)
 }
 
+/// Scroll one small step per drag event near a minimap edge; never scroll
+/// beyond the document. Returning a document-space delta keeps drag geometry
+/// independent from the AppKit scroll view.
+func scrollingMinimapEdgeScrollDelta(pointerX: CGFloat, viewportWidth: CGFloat,
+                                    contentOffset: CGFloat, contentWidth: CGFloat,
+                                    edgeWidth: CGFloat = 32, maxStep: CGFloat = 18) -> CGFloat {
+    guard viewportWidth > 0, contentWidth > viewportWidth, pointerX.isFinite,
+          contentOffset.isFinite, contentWidth.isFinite else { return 0 }
+    let edge = min(edgeWidth, viewportWidth / 2)
+    guard edge > 0 else { return 0 }
+    let direction: CGFloat
+    let intensity: CGFloat
+    if pointerX < edge {
+        direction = -1
+        intensity = min(max((edge - pointerX) / edge, 0), 1)
+    } else if pointerX > viewportWidth - edge {
+        direction = 1
+        intensity = min(max((pointerX - (viewportWidth - edge)) / edge, 0), 1)
+    } else { return 0 }
+    let upper = max(contentWidth - viewportWidth, 0)
+    let next = min(max(contentOffset + direction * maxStep * intensity, 0), upper)
+    return next - contentOffset
+}
+
 struct ScrollingMinimapLifetime {
     private var lastActivity: TimeInterval = 0
     private var hovered = false
