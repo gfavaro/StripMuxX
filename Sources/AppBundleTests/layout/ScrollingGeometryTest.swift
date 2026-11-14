@@ -57,7 +57,7 @@ final class ScrollingGeometryTest: XCTestCase {
     }
 
     func testNarrowStripCentersWithoutScrolling() {
-        let result = calculateScrollingWorkspaceGeometry(makeInput(widths: [0.3], offset: 100))
+        let result = calculateScrollingWorkspaceGeometry(makeInput(offset: 100, widths: [0.3]))
         XCTAssertEqual(result.columns.count, 1)
         XCTAssertEqual(result.clampedOffset, 0)
         XCTAssertEqual(result.columns[0].logicalFrame.width, result.area.width)
@@ -76,7 +76,7 @@ final class ScrollingGeometryTest: XCTestCase {
     }
 
     func testSheetOffsetExtendsAllowedRangeTemporarily() {
-        let result = calculateScrollingWorkspaceGeometry(makeInput(sheetOffset: -80, offset: -80))
+        let result = calculateScrollingWorkspaceGeometry(makeInput(offset: -80, sheetOffset: -80))
         XCTAssertEqual(result.offsetRange.lowerBound, -80)
         XCTAssertEqual(result.clampedOffset, -80)
         let settled = calculateScrollingWorkspaceGeometry(makeInput(offset: -80))
