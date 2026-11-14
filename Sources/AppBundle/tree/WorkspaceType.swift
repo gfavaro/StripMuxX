@@ -24,6 +24,9 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     var scrollingAnchorWindowId: UInt32?
     var scrollingAnchorViewportPosition: CGFloat?
     var scrollingAnchorAreaWidth: CGFloat?
+    /// Last observed logical center of the anchored column in strip coordinates.
+    /// Inserting/removing earlier columns changes this even if the screen width does not.
+    var scrollingAnchorLogicalCenter: CGFloat?
     @MainActor var scrollingGestureMotionActive = false
     @MainActor var scrollingGestureSessionID: UUID?
 

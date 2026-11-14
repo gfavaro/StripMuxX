@@ -57,6 +57,7 @@ behavior, record a source link and version/date when possible.
 | P0 | Drag a minimap column to a new location | No focus theft or unrelated size change; reject stale drag targets after Space/topology changes |
 | P0 | Pan independently of focus (keyboard) | Focus does not change; position is clamped and persisted |
 | P0 | Restore camera position per native Space | Restart does not immediately recenter the saved viewport |
+| P0 | Preserve camera while inserting/removing earlier columns | Anchored window keeps its screen-relative position unless clamped to a strip edge |
 | P1 | Pinned column while panning nearby columns | Pinned frame stays stable; no window appears on another display |
 | P1 | Gesture reversal and trackpad momentum | Gesture follows fingers; cancellation and settling predictable |
 | P1 | Wake with two side-by-side displays | Layout stays on the correct display; no relocation loop |

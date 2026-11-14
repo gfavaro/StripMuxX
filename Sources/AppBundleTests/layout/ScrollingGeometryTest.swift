@@ -75,6 +75,39 @@ final class ScrollingGeometryTest: XCTestCase {
         XCTAssertTrue(result.columns.allSatisfy { $0.physicalFrame.origin.x.isFinite && $0.physicalFrame.size.width.isFinite })
     }
 
+
+    func testLargeStripGeometryClampsAllOffsetsAndKeepsFramesFinite() {
+        for count in [5, 15, 30, 50] {
+            let widths = (0..<count).map { $0.isMultiple(of: 3) ? CGFloat(0.25) : CGFloat(0.6) }
+            let initial = calculateScrollingWorkspaceGeometry(makeInput(widths: widths))
+            XCTAssertEqual(initial.columns.count, count)
+            XCTAssertGreaterThanOrEqual(initial.offsetRange.upperBound, initial.offsetRange.lowerBound)
+            for requested in [-10_000.0, 0, 150, 10_000.0] {
+                let geometry = calculateScrollingWorkspaceGeometry(makeInput(offset: requested, widths: widths))
+                XCTAssertTrue(geometry.offsetRange.contains(geometry.clampedOffset))
+                XCTAssertEqual(geometry.stackingOrder.count, count)
+                XCTAssertEqual(Set(geometry.stackingOrder).count, count)
+                for column in geometry.columns {
+                    XCTAssertTrue(column.logicalFrame.minX.isFinite)
+                    XCTAssertTrue(column.physicalFrame.minX.isFinite)
+                    XCTAssertGreaterThan(column.physicalFrame.width, 0)
+                }
+            }
+        }
+    }
+
+    func testParkingAgainstBothAdjacentDisplayWallsRemainsInsideDisplay() {
+        for requested in [0.0, 500, 10_000.0] {
+            let geometry = calculateScrollingWorkspaceGeometry(
+                makeInput(offset: requested, widths: Array(repeating: 0.6, count: 12),
+                          leftWall: true, rightWall: true))
+            for column in geometry.columns {
+                XCTAssertGreaterThanOrEqual(column.physicalFrame.minX, geometry.area.minX - 1)
+                XCTAssertLessThanOrEqual(column.physicalFrame.maxX, geometry.area.maxX + 1)
+            }
+        }
+    }
+
     func testSheetOffsetExtendsAllowedRangeTemporarily() {
         let result = calculateScrollingWorkspaceGeometry(makeInput(offset: -80, sheetOffset: -80))
         XCTAssertEqual(result.offsetRange.lowerBound, -80)

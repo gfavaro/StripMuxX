@@ -151,6 +151,45 @@ final class ScrollingStripFeaturesTest: XCTestCase {
         XCTAssertNil(ScrollingSheetReveal.step(current: 100, windowId: 7, target: 100, remembered: nil).remembered)
     }
 
+
+    func testInsertingAndRemovingColumnBeforeFocusPreservesViewportAnchor() async throws {
+        let (workspace, windows) = try await strip()
+        _ = windows[2].focusWindow()
+        try await workspace.layoutWorkspace()
+        let before = workspace.scrollingMetrics
+        let anchor = try XCTUnwrap(before.columns.first(where: { $0.node === windows[2] }))
+        let position = (anchor.start + anchor.width / 2 - workspace.scrollingOffset) / before.areaWidth
+        let saved = workspace.scrollingOffset
+        let inserted = TestWindow.new(id: 8200, parent: workspace.rootTilingContainer)
+        inserted.scrollingColumnWidth = 0.4
+        inserted.unbindFromParent()
+        inserted.bind(to: workspace.rootTilingContainer, adaptiveWeight: WEIGHT_AUTO, index: 0)
+        try await workspace.layoutWorkspace()
+        let added = workspace.scrollingMetrics
+        let moved = try XCTUnwrap(added.columns.first(where: { $0.node === windows[2] }))
+        XCTAssertGreaterThan(workspace.scrollingOffset, saved)
+        XCTAssertEqual((moved.start + moved.width / 2 - workspace.scrollingOffset) / added.areaWidth,
+                       position, accuracy: 0.01)
+
+        inserted.unbindFromParent()
+        try await workspace.layoutWorkspace()
+        let removed = workspace.scrollingMetrics
+        let restored = try XCTUnwrap(removed.columns.first(where: { $0.node === windows[2] }))
+        XCTAssertEqual((restored.start + restored.width / 2 - workspace.scrollingOffset) / removed.areaWidth,
+                       position, accuracy: 0.01)
+    }
+
+    func testRemovingAnAnchoredColumnDoesNotUseItsOldCenterForUnrelatedWindow() async throws {
+        let (workspace, windows) = try await strip()
+        _ = windows[2].focusWindow()
+        try await workspace.layoutWorkspace()
+        windows[2].unbindFromParent()
+        try await workspace.layoutWorkspace()
+        XCTAssertTrue(workspace.scrollingOffset.isFinite, "Removing the anchor must not poison the viewport")
+        XCTAssertTrue(workspace.scrollingOffset.isFinite)
+        XCTAssertTrue(workspace.scrollingMetrics.columns.allSatisfy { $0.width.isFinite && $0.width > 0 })
+    }
+
     func testMinimapDragReordersStripColumns() async throws {
         let (workspace, windows) = try await strip()
         workspace.moveScrollingColumn(ObjectIdentifier(windows[0]), toStripIndex: 3)

@@ -334,29 +334,43 @@ extension Workspace {
         guard let anchor, anchor.nodeWorkspace === self,
               let column = metrics.columns.first(where: { $0.node === anchor.topLevelWorkspaceGroup }) else { return }
         scrollingAnchorWindowId = anchor.windowId
-        scrollingAnchorViewportPosition = (column.start + column.width / 2 - scrollingOffset) / metrics.areaWidth
+        let center = column.start + column.width / 2
+        scrollingAnchorViewportPosition = (center - scrollingOffset) / metrics.areaWidth
         scrollingAnchorAreaWidth = metrics.areaWidth
+        scrollingAnchorLogicalCenter = center
     }
 
     @MainActor
     func rebaseScrollingViewportIfNeeded(using metrics: ScrollingWorkspaceMetrics) {
         guard metrics.areaWidth > 0 else { return }
-        guard let oldWidth = scrollingAnchorAreaWidth else {
+        guard let oldWidth = scrollingAnchorAreaWidth,
+              let oldCenter = scrollingAnchorLogicalCenter else {
             captureScrollingViewportAnchor(using: metrics)
             return
         }
-        guard abs(oldWidth - metrics.areaWidth) > 0.5 else { return }
+        // A saved camera position belongs to the Space, not the focus. Do not
+        // reinterpret it using an anchor from the pre-restore layout.
+        if scrollingRestoredViewportPending {
+            captureScrollingViewportAnchor(using: metrics)
+            return
+        }
         let anchor = scrollingAnchorWindowId.flatMap(Window.get(byId:))
             ?? lastScrollingFocusWindowId.flatMap(Window.get(byId:))
             ?? mostRecentWorkspaceFocusableWindowRecursive
         guard let anchor, anchor.nodeWorkspace === self,
               let position = scrollingAnchorViewportPosition, position.isFinite,
               let column = metrics.columns.first(where: { $0.node === anchor.topLevelWorkspaceGroup }) else {
-            scrollingAnchorAreaWidth = metrics.areaWidth
+            // A removed anchor is never allowed to impose an old offset on
+            // a different window. Establish the new reference after layout.
+            scrollingAnchorAreaWidth = nil
+            scrollingAnchorLogicalCenter = nil
             return
         }
-        scrollingOffset = metrics.clampedOffset(column.start + column.width / 2 - position * metrics.areaWidth)
+        let center = column.start + column.width / 2
+        guard abs(oldWidth - metrics.areaWidth) > 0.5 || abs(oldCenter - center) > 0.5 else { return }
+        scrollingOffset = metrics.clampedOffset(center - position * metrics.areaWidth)
         scrollingAnchorAreaWidth = metrics.areaWidth
+        scrollingAnchorLogicalCenter = center
     }
 
     @MainActor
