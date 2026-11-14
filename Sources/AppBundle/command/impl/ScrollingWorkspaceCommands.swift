@@ -47,6 +47,7 @@ struct ScrollingWidthCommand: Command {
             case .previous:
                 next = presets.last(where: { $0 < current }) ?? presets[presets.count - 1]
         }
+        column.scrollingColumnFixedWidth = nil
         column.scrollingColumnWidth = CGFloat(next)
         workspace.lastScrollingFocusWindowId = nil
         scheduleRefreshSession(.globalObserver("scrollingWidth"))
@@ -132,6 +133,48 @@ struct ScrollingPinCommand: Command {
         }
         workspace.lastScrollingFocusWindowId = nil
         scheduleRefreshSession(.globalObserver("scrollingPin"))
+        return true
+    }
+}
+
+struct ScrollingPanCommand: Command {
+    let args: ScrollingPanCmdArgs
+    func run(_ env: CmdEnv, _ io: CmdIo) -> Bool {
+        guard let target = args.resolveTargetOrReportError(env, io) else { return false }
+        let workspace = target.workspace
+        let metrics = workspace.scrollingMetrics
+        guard !metrics.columns.isEmpty else { return io.err("The strip has no columns") }
+        let original = metrics.clampedOffset(workspace.scrollingOffset)
+        let next: CGFloat
+        switch args.direction.val {
+            case .left: next = metrics.clampedOffset(original - metrics.areaWidth / 2)
+            case .right: next = metrics.clampedOffset(original + metrics.areaWidth / 2)
+            case .focus:
+                guard let window = target.windowOrNil,
+                      let column = metrics.columns.first(where: { $0.node === window.topLevelWorkspaceGroup }) else {
+                    return io.err(noWindowIsFocused)
+                }
+                next = metrics.revealedOffset(for: column, current: original)
+        }
+        guard abs(next - original) >= 0.5 else { return true }
+        workspace.scrollingOffset = next
+        runtime.native.tiling.relayoutVisibleScrolling()
+        return true
+    }
+}
+struct ScrollingWidthPixelsCommand: Command {
+    let args: ScrollingWidthPixelsCmdArgs
+    func run(_ env: CmdEnv, _ io: CmdIo) -> Bool {
+        guard let target = args.resolveTargetOrReportError(env, io) else { return false }
+        let workspace = target.workspace
+        guard let window = target.windowOrNil,
+              let column = workspace.workspaceLayoutUnits.first(where: { $0 === window.topLevelWorkspaceGroup }) else {
+            return io.err(noWindowIsFocused)
+        }
+        column.scrollingColumnFixedWidth = CGFloat(args.points.val)
+        column.scrollingColumnWidth = nil
+        workspace.lastScrollingFocusWindowId = nil
+        scheduleRefreshSession(.globalObserver("scrollingWidthPixels"))
         return true
     }
 }

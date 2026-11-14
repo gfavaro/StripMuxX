@@ -40,6 +40,7 @@ struct ScrollingWorkspaceGeometryInput {
     struct Column {
         let preferredWidth: CGFloat
         let minimumWidth: CGFloat
+        var fixedWidth: CGFloat? = nil
     }
 
     let bounds: CGRect
@@ -77,7 +78,9 @@ func calculateScrollingWorkspaceGeometry(_ input: ScrollingWorkspaceGeometryInpu
         let preferred = column.preferredWidth.isFinite ? column.preferredWidth : 0.49
         let share = min(max(preferred, 0.1), 1)
         let minimum = max(0, column.minimumWidth.isFinite ? column.minimumWidth : 0)
-        let width = input.columns.count == 1 ? max(area.width, minimum + lead + trail) : max((area.width * share).rounded(), minimum + lead + trail)
+        let fixed = column.fixedWidth.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        let desired = fixed ?? (input.columns.count == 1 ? area.width : (area.width * share).rounded())
+        let width = max(desired.rounded(), minimum + lead + trail)
         spans.append((cursor, width, lead, trail))
         cursor += width
     }
@@ -176,14 +179,21 @@ struct ScrollingWorkspaceMetrics {
     /// Where the strip goes when focus lands on `column`, per `center-focused-column`.
     @MainActor
     func focusedOffset(for column: ScrollingColumnMetric, current: CGFloat,
-                       mode: ScrollingCenterMode = config.scrolling.centerFocusedColumn) -> CGFloat {
+                       mode: ScrollingCenterMode = config.scrolling.centerFocusedColumn,
+                       previous: ScrollingColumnMetric? = nil) -> CGFloat {
         switch mode {
             case .never: return revealedOffset(for: column, current: current)
             case .always: return centeredOffset(for: column)
             case .onOverflow:
                 // Already wholly visible: stay. Otherwise centre instead of edging it in.
                 let current = clampedOffset(current)
-                return revealedOffset(for: column, current: current) == current ? current : centeredOffset(for: column)
+                if revealedOffset(for: column, current: current) == current { return current }
+                if let previous {
+                    let first = min(previous.start, column.start)
+                    let last = max(previous.start + previous.width, column.start + column.width)
+                    if last - first <= areaWidth { return revealedOffset(for: column, current: current) }
+                }
+                return centeredOffset(for: column)
         }
     }
 
@@ -252,7 +262,8 @@ extension Workspace {
         let gap = CGFloat(gaps.inner.horizontal)
         let share = min(pinned.scrollingColumnWidth ?? config.scrolling.columnWidth, 0.8)
         let minimum = pinned.minimumLayoutExtent(along: .h, gaps: gaps)
-        let width = min(max((rect.width * share).rounded(), minimum), rect.width * 0.8).rounded()
+        let desired = pinned.scrollingColumnFixedWidth ?? rect.width * share
+        let width = min(max(desired.rounded(), minimum), rect.width * 0.8).rounded()
         let stripWidth = max(1, rect.width - width - gap)
         return scrollingPinSide == .left
             ? (Rect(topLeftX: rect.minX, topLeftY: rect.minY, width: width, height: rect.height),
@@ -286,7 +297,8 @@ extension Workspace {
             columns: units.map { node in
                 let saved = node.scrollingColumnWidth ?? config.scrolling.columnWidth
                 return .init(preferredWidth: saved,
-                             minimumWidth: node.minimumLayoutExtent(along: .h, gaps: gaps))
+                             minimumWidth: node.minimumLayoutExtent(along: .h, gaps: gaps),
+                             fixedWidth: node.scrollingColumnFixedWidth)
             },
             horizontalGap: CGFloat(gaps.inner.horizontal),
             outerLeft: CGFloat(gaps.outer.left), outerRight: CGFloat(gaps.outer.right),

@@ -275,7 +275,8 @@ final class NativeTilingCoordinator {
                  is FullscreenCommand, is MacosNativeFullscreenCommand, is MacosNativeMinimizeCommand,
                  is CloseCommand, is CloseAllWindowsButCurrentCommand,
                  is BalanceSizesCommand, is JoinWithCommand,
-                 is ScrollingCenterCommand, is ScrollingWidthCommand, is ScrollingMinimapCommand,
+                 is ScrollingCenterCommand, is ScrollingWidthCommand, is ScrollingWidthPixelsCommand,
+                 is ScrollingPanCommand, is ScrollingMinimapCommand,
                  is ScrollingFocusCommand, is ScrollingMoveCommand, is ScrollingPinCommand,
                  is UndoLayoutCommand, is RetileCommand: return true
             case is FlattenWorkspaceTreeCommand: return true

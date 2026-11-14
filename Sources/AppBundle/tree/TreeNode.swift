@@ -17,6 +17,8 @@ open class TreeNode: Equatable, WinMuxAny {
     var lastAppliedLayoutPhysicalRect: Rect? = nil
     /// A column's own width as a share of the viewport; nil uses `[scrolling] column-width`.
     var scrollingColumnWidth: CGFloat? = nil
+    /// Optional absolute width in points (takes precedence over the relative share).
+    var scrollingColumnFixedWidth: CGFloat? = nil
     final var unboundStacktrace: String? = nil
     var isBound: Bool { parent != nil } // todo drop, once https://github.com/nikitabobko/WinMux/issues/1215 is fixed
 

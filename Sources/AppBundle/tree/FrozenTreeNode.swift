@@ -13,6 +13,7 @@ struct FrozenContainer: Codable, Equatable, Sendable {
     let orientation: Orientation
     let weight: CGFloat
     let scrollingColumnWidth: CGFloat?
+    let scrollingColumnFixedWidth: CGFloat?
 
     @MainActor init(_ container: TilingContainer) {
         children = container.children.map {
@@ -25,6 +26,7 @@ struct FrozenContainer: Codable, Equatable, Sendable {
         orientation = container.orientation
         weight = getWeightOrNil(container) ?? 1
         scrollingColumnWidth = container.scrollingColumnWidth
+        scrollingColumnFixedWidth = container.scrollingColumnFixedWidth
     }
 
     var windows: [FrozenWindow] {
@@ -51,6 +53,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
     let lastFloatingSize: CGSize?
     let singleWindowManualWidth: CGFloat?
     let scrollingColumnWidth: CGFloat?
+    let scrollingColumnFixedWidth: CGFloat?
 
     @MainActor init(_ window: Window) {
         id = window.windowId
@@ -62,6 +65,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
             ? window.lastKnownActualRect?.size ?? window.lastFloatingSize : window.lastFloatingSize
         singleWindowManualWidth = window.singleWindowManualWidth
         scrollingColumnWidth = window.scrollingColumnWidth
+        scrollingColumnFixedWidth = window.scrollingColumnFixedWidth
         minimumEvidenceVersion = 3
         let minimum = window as? MacWindow
         learnedMinimumSize = minimum?.learnedMinimum.size == .zero ? nil : minimum?.learnedMinimum.size
@@ -85,6 +89,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         case lastFloatingSize
         case singleWindowManualWidth
         case scrollingColumnWidth
+        case scrollingColumnFixedWidth
     }
 
     init(from decoder: any Decoder) throws {
@@ -104,6 +109,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         lastFloatingSize = try container.decodeIfPresent(CGSize.self, forKey: .lastFloatingSize)
         singleWindowManualWidth = try container.decodeIfPresent(CGFloat.self, forKey: .singleWindowManualWidth)
         scrollingColumnWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnWidth)
+        scrollingColumnFixedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnFixedWidth)
     }
 }
 
@@ -184,6 +190,7 @@ func restoreStrip(_ frozen: FrozenStrip, to workspace: Workspace, windowsById: [
             case .container(let saved):
                 let stack = TilingContainer(parent: root, adaptiveWeight: saved.weight, .v, index: INDEX_BIND_LAST)
                 stack.scrollingColumnWidth = saved.scrollingColumnWidth
+                stack.scrollingColumnFixedWidth = saved.scrollingColumnFixedWidth
                 for member in saved.windows {
                     guard let window = windowsById[member.id] else { continue }
                     applyFrozenWindowState(window, member)
@@ -211,6 +218,7 @@ func restoreStrip(_ frozen: FrozenStrip, to workspace: Workspace, windowsById: [
 @MainActor
 func applyFrozenWindowState(_ window: Window, _ frozenWindow: FrozenWindow) {
     window.scrollingColumnWidth = frozenWindow.scrollingColumnWidth
+    window.scrollingColumnFixedWidth = frozenWindow.scrollingColumnFixedWidth.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
     window.isFullscreen = frozenWindow.isFullscreen
     window.noOuterGapsInFullscreen = frozenWindow.noOuterGapsInFullscreen
     (window as? MacWindow)?.restoreLearnedMinimum(

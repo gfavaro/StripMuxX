@@ -81,7 +81,7 @@ extension Workspace {
         let bounds = workspaceTilingRect(self)
         var values: [String] = [id.rawValue, "\(bounds.minX),\(bounds.minY),\(bounds.width),\(bounds.height)"]
         func visit(_ node: TreeNode) {
-            values.append("\(ObjectIdentifier(node).hashValue):\(node.bindingGeneration):\(node.children.count):\(node.scrollingColumnWidth ?? config.scrolling.columnWidth)")
+            values.append("\(ObjectIdentifier(node).hashValue):\(node.bindingGeneration):\(node.children.count):\(node.scrollingColumnWidth ?? config.scrolling.columnWidth):\(node.scrollingColumnFixedWidth ?? 0)")
             if let window = node as? Window {
                 values.append("\(window.minimumLayoutSize.width),\(window.minimumLayoutSize.height)")
             }

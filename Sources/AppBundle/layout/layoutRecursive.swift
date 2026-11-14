@@ -44,7 +44,11 @@ private func layoutStrip(in rect: Rect, _ context: LayoutContext) async throws {
        workspace.lastScrollingFocusWindowId != focused.windowId,
        let column = metrics.columns.first(where: { $0.node === focused.topLevelWorkspaceGroup })
     {
-        workspace.scrollingOffset = metrics.focusedOffset(for: column, current: workspace.scrollingOffset)
+        let previous = workspace.lastScrollingFocusWindowId.flatMap(Window.get(byId:)).flatMap { window in
+            metrics.columns.first(where: { $0.node === window.topLevelWorkspaceGroup })
+        }
+        workspace.scrollingOffset = metrics.focusedOffset(for: column, current: workspace.scrollingOffset,
+                                                          previous: previous)
         workspace.lastScrollingFocusWindowId = focused.windowId
     }
     workspace.scrollingOffset = metrics.clampedOffset(workspace.scrollingOffset)

@@ -21,6 +21,7 @@ extension Workspace {
                     let mru = root.mostRecentChild
                     let binding = stack.unbindFromParent()
                     window.scrollingColumnWidth = stack.scrollingColumnWidth
+                    window.scrollingColumnFixedWidth = stack.scrollingColumnFixedWidth
                     window.bind(to: root, adaptiveWeight: binding.adaptiveWeight, index: binding.index)
                     if scrollingPinnedNode === stack { scrollingPinnedNode = window }
                     (mru === stack ? window : mru)?.markAsMostRecentChild()

@@ -38,6 +38,7 @@ func resizeColumn(of window: Window, toWidth requested: CGFloat, in workspace: W
     let maximum = max(metrics.areaWidth - column.frameStartInset - column.frameEndInset, lower)
     let actual = min(max(requested, lower), maximum)
     if abs(actual - column.width) >= 0.5 {
+        group.scrollingColumnFixedWidth = nil
         group.scrollingColumnWidth = min(max((actual + column.frameStartInset + column.frameEndInset) / max(metrics.areaWidth, 1), 0.1), 1)
     }
     return actual
@@ -84,10 +85,13 @@ func stack(_ window: Window, with target: TreeNode, above: Bool, in workspace: W
         let binding = target.unbindFromParent()
         let stack = TilingContainer(parent: binding.parent, adaptiveWeight: binding.adaptiveWeight, .v, index: binding.index)
         stack.scrollingColumnWidth = target.scrollingColumnWidth
+        stack.scrollingColumnFixedWidth = target.scrollingColumnFixedWidth
         target.scrollingColumnWidth = nil
+        target.scrollingColumnFixedWidth = nil
         target.bind(to: stack, adaptiveWeight: WEIGHT_AUTO, index: 0)
         window.bind(to: stack, adaptiveWeight: WEIGHT_AUTO, index: above ? 0 : INDEX_BIND_LAST)
     }
     window.scrollingColumnWidth = nil
+    window.scrollingColumnFixedWidth = nil
     workspace.normalizeContainers()
 }
