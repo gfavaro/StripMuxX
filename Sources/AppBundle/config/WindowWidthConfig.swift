@@ -22,7 +22,7 @@ struct DisplayWindowSettings {
 
 func parseFullscreenWidth(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace) -> ParsedToml<Double?> {
     guard let value: Double = parseSimpleType(raw), value.isFinite, (0.1...1).contains(value) else {
-        return .failure(.semantic(trace, "Expected a finite fullscreen-width from 0.1 to 1.0"))
+        return .failure(.semantic(trace, "Expected a finite width from 0.1 to 1.0"))
     }
     return .success(value)
 }

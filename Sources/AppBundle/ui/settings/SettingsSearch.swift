@@ -24,6 +24,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case width = "scrolling.column-width"
     case widthPresets = "scrolling.width-presets"
     case fullscreenWidth = "fullscreen-width"
+    case loneWidth = "lone-window-width"
     case centerFocused = "scrolling.center-focused-column"
     case keepHeight = "scrolling.keep-window-height"
     case gapHorizontal = "gaps.inner.horizontal"
@@ -47,7 +48,8 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .sensitivity: "Gesture sensitivity"
             case .width: "Default column width"
             case .widthPresets: "Column size shortcuts"
-            case .fullscreenWidth: "Single-window width"
+            case .fullscreenWidth: "Managed fullscreen width"
+            case .loneWidth: "Lone window width"
             case .centerFocused: "When focusing a column"
             case .keepHeight: "Keep opening window height"
             case .gapHorizontal: "Horizontal window spacing"
@@ -61,7 +63,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     var page: SettingsSidebarItem {
         switch self {
             case .startAtLogin, .autoReload, .restoreLayouts, .restoreFrames: .general
-            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
+            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .loneWidth, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
             case .gapHorizontal, .gapOuterLeft: .appearance
             case .appearance, .menuBar: .appearance
         }
