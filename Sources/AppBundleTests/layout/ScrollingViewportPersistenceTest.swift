@@ -22,6 +22,27 @@ final class ScrollingViewportPersistenceTest: WorkspaceTestCase {
         XCTAssertTrue(workspace.scrollingRestoredViewportPending)
     }
 
+
+    func testRestoredViewportIsNotOverriddenByInitialFocusLayout() async throws {
+        let workspace = focus.workspace
+        let first = TestWindow.new(id: 73011, parent: workspace.rootTilingContainer)
+        let second = TestWindow.new(id: 73012, parent: workspace.rootTilingContainer)
+        first.scrollingColumnWidth = 0.6
+        second.scrollingColumnWidth = 0.6
+        _ = first.focusWindow()
+        workspace.scrollingOffset = 120
+        let record = FrozenStrip(workspace)
+
+        workspace.scrollingOffset = 0
+        workspace.lastScrollingFocusWindowId = nil
+        restoreStrip(record, to: workspace, windowsById: [73011: first, 73012: second])
+        XCTAssertTrue(workspace.scrollingRestoredViewportPending)
+        try await workspace.layoutWorkspace()
+        XCTAssertEqual(workspace.scrollingOffset, 120, accuracy: 1)
+        XCTAssertFalse(workspace.scrollingRestoredViewportPending)
+        XCTAssertEqual(workspace.lastScrollingFocusWindowId, first.windowId)
+    }
+
     func testOldSnapshotWithoutViewportStillDecodes() throws {
         let workspace = focus.workspace
         let window = TestWindow.new(id: 73003, parent: workspace.rootTilingContainer)

@@ -65,6 +65,33 @@ final class ScrollingAdvancedFeaturesTest: WorkspaceTestCase {
             previous: metrics.columns[0]), metrics.centeredOffset(for: metrics.columns[2]))
     }
 
+
+    func testFixedWidthHonorsMinimumAndSurvivesStackNormalization() throws {
+        let workspace = focus.workspace
+        let first = TestWindow.new(id: 73431, parent: workspace.rootTilingContainer)
+        let second = TestWindow.new(id: 73432, parent: workspace.rootTilingContainer)
+        let minimum = calculateScrollingWorkspaceGeometry(.init(
+            bounds: CGRect(x: 0, y: 0, width: 1000, height: 700),
+            parkingBounds: CGRect(x: 0, y: 0, width: 1000, height: 700),
+            offset: 0, columns: [
+                .init(preferredWidth: 0.5, minimumWidth: 620, fixedWidth: 420),
+                .init(preferredWidth: 0.5, minimumWidth: 0)
+            ], horizontalGap: 0, outerLeft: 0, outerRight: 0,
+            leftWall: false, rightWall: false, preview: 25
+        ))
+        XCTAssertEqual(minimum.columns[0].spanWidth, 620)
+
+        let group = TilingContainer(parent: workspace.rootTilingContainer, adaptiveWeight: 1, .v, index: 0)
+        group.scrollingColumnFixedWidth = 420
+        first.bind(to: group, adaptiveWeight: 1, index: 0)
+        second.bind(to: group, adaptiveWeight: 1, index: 1)
+        let frozen = FrozenStrip(workspace)
+        let decoded = try JSONDecoder().decode(FrozenStrip.self, from: JSONEncoder().encode(frozen))
+        if case .container(let stack) = decoded.root.children[0] {
+            XCTAssertEqual(stack.scrollingColumnFixedWidth, 420)
+        } else { XCTFail("Expected stacked column") }
+    }
+
     func testInvalidCommands() {
         for command in ["scrolling-pan up", "scrolling-width-pixels 0", "scrolling-width-pixels abc"] {
             XCTAssertNil(parseCommand(command).cmdOrNil)

@@ -22,6 +22,8 @@ applications implement identical layouts.
 ## Source material to consult
 
 - Spear official site: https://spearui.com/
+- Clayton Miller's published updates: https://www.teapawt.net/claymill
+  (his October 2026 posts explicitly describe Spear as an overlapping, non-tiling manager)
 - Clayton Miller's project introduction and 10/GUI background: seek
   original published demos/interviews before specifying exact gestural behavior.
 - ChainYourMac features: https://chainyourmac.com/
