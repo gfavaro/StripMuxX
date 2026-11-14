@@ -169,14 +169,9 @@ func parseCommandOrCommands(_ raw: TOMLValueConvertible) -> Parsed<[any Command]
         if rawTable.contains(key: persistentWorkspacesKey) {
             errors += [.semantic(.rootKey(persistentWorkspacesKey), "This config option is only available since 'config-version = 2'")]
         }
-        config.persistentWorkspaces = (config.modes.values.lazy
-            .flatMap { (mode: Mode) -> [HotkeyBinding] in Array(mode.bindings.values) }
-            .flatMap { (binding: HotkeyBinding) -> [String] in
-                binding.commands.filterIsInstance(of: WorkspaceCommand.self).compactMap { $0.args.target.val.workspaceNameOrNil()?.raw } +
-                    binding.commands.filterIsInstance(of: MoveNodeToWorkspaceCommand.self).compactMap { $0.args.target.val.workspaceNameOrNil()?.raw }
-            }
-            + (config.workspaceToMonitorForceAssignment).keys)
-            .toOrderedSet()
+        // Desktops are macOS's; only an explicit persistent-workspaces list ever adds one.
+        // (AeroSpace derived persistent names from version-1 shortcuts, which here
+        // would create a desktop for every `workspace N` binding.)
     }
 
     return (config, errors)

@@ -356,7 +356,7 @@ final class ConfigTest: XCTestCase {
         XCTAssertTrue(TapModifierKey.leftAlt.isPressed(in: .option))
     }
 
-    func testPermanentWorkspaceNames() {
+    func testWorkspaceShortcutsNeverMakeDesktopsPersistent() {
         let (config, errors) = parseConfig(
             """
             [mode.main.binding]
@@ -367,7 +367,7 @@ final class ConfigTest: XCTestCase {
             """,
         )
         assertEquals(errors.descriptions, [])
-        assertEquals(config.persistentWorkspaces.sorted(), ["1", "2", "3", "4"])
+        assertEquals(config.persistentWorkspaces.sorted(), [], additionalMsg: "A version-1 config's shortcuts must not create desktops")
     }
 
     func testUnknownTopLevelKeyParseError() {

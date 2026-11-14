@@ -61,7 +61,7 @@ final class ConfigurationSourceTest: WorkspaceTestCase {
         let parsed = parseConfig(migrated)
         XCTAssertTrue(parsed.errors.isEmpty, "\(parsed.errors)")
         XCTAssertEqual(parsed.config.configVersion, 2)
-        XCTAssertEqual(Array(parsed.config.persistentWorkspaces), ["7", "1", "2"])
+        XCTAssertEqual(Array(parsed.config.persistentWorkspaces), ["1", "2", "3"], "Shortcuts are not persistent desktops")
         XCTAssertFalse(parsed.config.modes[mainModeId]?.bindings.isEmpty ?? true)
     }
 
