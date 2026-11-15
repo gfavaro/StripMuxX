@@ -81,7 +81,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         }
     }
 
-    func testTilesAreReadableButCompactAndCentred() {
+    func testTilesAreCompactAndCentred() {
         let (workspace, windows) = fixture(count: 4)
         windows.forEach { $0.scrollingColumnWidth = 0.5 }
         let metrics = workspace.scrollingMetrics
@@ -90,7 +90,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
             bounds: CGRect(x: 0, y: 0, width: width, height: 60))
         for tile in geometry.tiles {
-            XCTAssertGreaterThanOrEqual(tile.width, 56)
+            XCTAssertGreaterThanOrEqual(tile.width, 32)
             XCTAssertLessThanOrEqual(tile.width, scrollingMinimapMaximumTypicalTileWidth + 0.5)
         }
         let left = geometry.tiles.first?.minX ?? 0, right = 608 - (geometry.tiles.last?.maxX ?? 0)

@@ -47,7 +47,7 @@ func scrollingMinimapSpan(_ metrics: ScrollingWorkspaceMetrics) -> CGFloat {
 }
 
 /// A typical column is drawn no wider than this; a few columns stay compact and centred.
-let scrollingMinimapMaximumTypicalTileWidth: CGFloat = 110
+let scrollingMinimapMaximumTypicalTileWidth: CGFloat = 55
 
 func scrollingMinimapTypicalColumnWidth(_ metrics: ScrollingWorkspaceMetrics) -> CGFloat {
     let widths = metrics.columns.map(\.width).sorted()
@@ -57,14 +57,15 @@ func scrollingMinimapTypicalColumnWidth(_ metrics: ScrollingWorkspaceMetrics) ->
 /// One fixed row height: room for an icon and a title, whatever the windows' shapes.
 func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 60 }
 
-/// The strip fills the visible width. When that would make typical columns too narrow
-/// to read (56 pt) or any column too narrow to click (32 pt), the canvas grows and scrolls.
+/// The strip fills the visible width. When that would make typical columns narrower than
+/// their compact width or any column too narrow to click (32 pt), the canvas grows and scrolls.
 func scrollingMinimapContentWidth(metrics: ScrollingWorkspaceMetrics, visibleWidth: CGFloat) -> CGFloat {
     let span = scrollingMinimapSpan(metrics)
     let widths = metrics.columns.map(\.width).sorted()
     guard let narrowest = widths.first else { return visibleWidth }
     let typical = widths[widths.count / 2]
-    let scale = max(visibleWidth / span, 32 / max(narrowest, 1), 56 / max(typical, 1))
+    let scale = max(visibleWidth / span, 32 / max(narrowest, 1),
+                    scrollingMinimapMaximumTypicalTileWidth / max(typical, 1))
     return max(visibleWidth, span * scale)
 }
 
