@@ -76,6 +76,7 @@ enum FocusChangeOrigin: Equatable { case explicit, native }
     runtime.focus.requested = newFocus.frozen
     if origin == .native { runtime.focus.lastKnown = newFocus.frozen }
     newFocus.windowOrNil?.markAsMostRecentChild()
+    NativeWindowBorder.shared.refresh()
     return true
 }
 
