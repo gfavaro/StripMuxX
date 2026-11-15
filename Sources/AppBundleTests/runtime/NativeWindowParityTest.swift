@@ -28,6 +28,36 @@ final class NativeWindowParityTest: WorkspaceTestCase {
         XCTAssertEqual(nativeSkippedWindowRuleCommands, ["move-node-to-monitor 2"])
     }
 
+    func testRulesSetANewWindowsColumnWidthByShareOrPoints() async throws {
+        config.onWindowDetected = parseConfig("""
+        [[on-window-detected]]
+        if.window-title-regex-substring = 'share'
+        run = 'scrolling-width 0.4'
+        [[on-window-detected]]
+        if.window-title-regex-substring = 'points'
+        run = ['scrolling-width-pixels 900', 'scrolling-width next']
+        """).config.onWindowDetected
+        let workspace = Workspace.get(byName: "native-desktop")
+        let share = TestWindow.new(id: 60, parent: workspace.rootTilingContainer)
+        share.testTitle = "share"
+        let points = TestWindow.new(id: 61, parent: workspace.rootTilingContainer)
+        points.testTitle = "points"
+        _ = TestWindow.new(id: 62, parent: workspace.rootTilingContainer).focusWindow()
+        try await applyNativeWindowDetectedRules(share) { true }
+        try await applyNativeWindowDetectedRules(points) { true }
+        XCTAssertEqual(share.scrollingColumnWidth, 0.4)
+        XCTAssertNil(share.scrollingColumnFixedWidth)
+        XCTAssertEqual(points.scrollingColumnFixedWidth, 900)
+        XCTAssertNil(focus.windowOrNil?.scrollingColumnFixedWidth, "Only the new window's column changes")
+        XCTAssertEqual(nativeSkippedWindowRuleCommands, ["scrolling-width next"])
+    }
+
+    func testScrollingWidthTakesAShareOfTheDisplay() {
+        XCTAssertEqual((parseCommand("scrolling-width 0.4").cmdOrNil as? ScrollingWidthCommand)?.args.target.val, .share(0.4))
+        XCTAssertNil(parseCommand("scrolling-width 1.5").cmdOrNil, "More than the display")
+        XCTAssertNil(parseCommand("scrolling-width wide").cmdOrNil)
+    }
+
     func testRulesLeaveAWindowWhoseOwnershipChangedDuringMatching() async throws {
         config.onWindowDetected = parseConfig("""
         [[on-window-detected]]

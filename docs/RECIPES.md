@@ -38,6 +38,22 @@ run = 'layout floating'
 
 Settings › Automation › Rules writes the same rule. Remove the table to tile the app again.
 
+## Open an app at a set width
+
+```toml
+[[on-window-detected]]
+if.app-id = 'com.apple.Safari'
+run = 'scrolling-width 0.66'      # a share of the display, 0.1 to 1
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+run = 'scrolling-width-pixels 900' # or a width in points
+```
+
+The width applies to the new window's own column only, whatever is focused. A window
+that opens floating or in a stack keeps its size. `scrolling-width 0.5` also works as a
+binding, for the focused column.
+
 ## Use one side of a modifier
 
 ```toml

@@ -40,11 +40,12 @@ struct ScrollingWidthCommand: Command {
         guard !presets.isEmpty else { return io.err("[scrolling].width-presets must not be empty") }
         let current = column.scrollingColumnWidth ?? config.scrolling.columnWidth
         let next: Double
-        switch args.action.val {
-            case .full: next = 1
-            case .next:
+        switch args.target.val {
+            case .share(let share): next = share
+            case .action(.full): next = 1
+            case .action(.next):
                 next = presets.first(where: { $0 > current }) ?? presets[0]
-            case .previous:
+            case .action(.previous):
                 next = presets.last(where: { $0 < current }) ?? presets[presets.count - 1]
         }
         column.scrollingColumnFixedWidth = nil

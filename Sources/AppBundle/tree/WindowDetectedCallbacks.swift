@@ -1,3 +1,4 @@
+import AppKit
 import Common
 
 /// Commands that send a window to another desktop or display.
@@ -53,6 +54,7 @@ func applyNativeWindowDetectedRules(_ window: Window, stillOwned: () -> Bool) as
                 }
                 continue
             }
+            if applyRuleColumnWidth(command, to: window) { continue }
             guard let layout = command as? LayoutCommand, !layout.args.forNextDetectedWindow,
                   let target = layout.args.toggleBetween.val.first(where: { $0 == .floating || $0 == .tiling }) else {
                 nativeSkippedWindowRuleCommands.insert("\(command.args)")
@@ -115,4 +117,25 @@ extension WindowDetectedCallback {
 func appHasOtherWindows(_ window: Window) -> Bool {
     func isOther(_ candidate: Window) -> Bool { candidate !== window && candidate.app.pid == window.app.pid }
     return Workspace.all.contains { $0.allLeafWindowsRecursive.contains(where: isOther) }
+}
+
+/// A rule's `scrolling-width` or `scrolling-width-pixels` sets the new window's own column,
+/// whatever is focused. Windows in a stack or floating are left alone.
+@MainActor
+func applyRuleColumnWidth(_ command: any Command, to window: Window) -> Bool {
+    let width: (share: CGFloat?, points: CGFloat?)
+    switch command {
+        case let command as ScrollingWidthCommand:
+            switch command.args.target.val {
+                case .share(let share): width = (CGFloat(share), nil)
+                case .action(.full): width = (1, nil)
+                case .action: return false // Stepping presets means nothing for a window just opened.
+            }
+        case let command as ScrollingWidthPixelsCommand: width = (nil, CGFloat(command.args.points.val))
+        default: return false
+    }
+    guard window.parent is TilingContainer, window.topLevelWorkspaceGroup === window else { return true }
+    window.scrollingColumnWidth = width.share
+    window.scrollingColumnFixedWidth = width.points
+    return true
 }
