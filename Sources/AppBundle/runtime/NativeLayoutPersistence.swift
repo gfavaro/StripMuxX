@@ -141,6 +141,11 @@ final class NativeLayoutPersistence {
         pairRemainingByApp(saved: savedWindows.filter { !floatingIDs.contains($0.id) },
                            candidates: candidates.filter { !($0.parent is Workspace) }, matched: &matched)
         pairRemainingByApp(saved: record.floating, candidates: candidates.filter { $0.parent is Workspace }, matched: &matched)
+        // A reopened app may initially give its window a different layout
+        // classification. Recover that saved state only when exactly one
+        // unmatched saved and live window share its app, avoiding guesses for
+        // ambiguous multi-window applications.
+        pairUniqueRemainingAcrossLayoutsByApp(saved: savedWindows, candidates: candidates, matched: &matched)
         guard matched.count == savedWindows.count || allowPartial && !matched.isEmpty else { return false }
         restoreStrip(record, to: workspace, windowsById: matched)
         return true
@@ -150,6 +155,19 @@ final class NativeLayoutPersistence {
     /// windows rarely match one by one. When an app has exactly as many unmatched
     /// windows here as it saved, they are paired in creation order: only their places
     /// in this desktop's layout depend on it.
+    private func pairUniqueRemainingAcrossLayoutsByApp(saved: [FrozenWindow], candidates: [Window],
+                                                       matched: inout [UInt32: Window]) {
+        let used = Set(matched.values.map(\.windowId))
+        let savedByApp = Dictionary(grouping: saved.filter { matched[$0.id] == nil && $0.restartIdentity != nil },
+            by: { $0.restartIdentity!.bundleId })
+        let liveByApp = Dictionary(grouping: candidates.filter { !used.contains($0.windowId) && $0.restartIdentity != nil },
+            by: { $0.restartIdentity!.bundleId })
+        for (app, records) in savedByApp where records.count == 1 {
+            guard let windows = liveByApp[app], windows.count == 1 else { continue }
+            matched[records[0].id] = windows[0]
+        }
+    }
+
     private func pairRemainingByApp(saved: [FrozenWindow], candidates: [Window], matched: inout [UInt32: Window]) {
         let used = Set(matched.values.map(\.windowId))
         let savedByApp = Dictionary(grouping: saved.filter { matched[$0.id] == nil && $0.restartIdentity != nil },
