@@ -56,6 +56,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
     let freeSizeFrame: CGRect?
     let freeSizePreviousColumnWidth: CGFloat?
     let freeSizePreviousFixedWidth: CGFloat?
+    let keptFloating: Bool?
     let scrollingColumnWidth: CGFloat?
     let scrollingColumnFixedWidth: CGFloat?
 
@@ -71,6 +72,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         freeSizeFrame = window.freeSizeRect.map { CGRect(origin: $0.topLeftCorner, size: $0.size) }
         freeSizePreviousColumnWidth = window.freeSizePreviousColumnWidth
         freeSizePreviousFixedWidth = window.freeSizePreviousFixedWidth
+        keptFloating = window.keptFloating ? true : nil
         scrollingColumnWidth = window.scrollingColumnWidth
         scrollingColumnFixedWidth = window.scrollingColumnFixedWidth
         minimumEvidenceVersion = 3
@@ -98,6 +100,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         case freeSizeFrame
         case freeSizePreviousColumnWidth
         case freeSizePreviousFixedWidth
+        case keptFloating
         case scrollingColumnWidth
         case scrollingColumnFixedWidth
     }
@@ -121,6 +124,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         freeSizeFrame = try container.decodeIfPresent(CGRect.self, forKey: .freeSizeFrame)
         freeSizePreviousColumnWidth = try container.decodeIfPresent(CGFloat.self, forKey: .freeSizePreviousColumnWidth)
         freeSizePreviousFixedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .freeSizePreviousFixedWidth)
+        keptFloating = try container.decodeIfPresent(Bool.self, forKey: .keptFloating)
         scrollingColumnWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnWidth)
         scrollingColumnFixedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnFixedWidth)
     }
@@ -213,6 +217,9 @@ func restoreStrip(_ frozen: FrozenStrip, to workspace: Workspace, windowsById: [
     }
     for saved in frozen.floating {
         guard let window = windowsById[saved.id] else { continue }
+        // Only a window floated with `layout floating` floats again. One that floated by
+        // itself and has since joined the strip at its own size stays there.
+        if saved.keptFloating != true && !window.isFloating { continue }
         applyFrozenWindowState(window, saved)
         // Floating windows keep their actual frame; only the tree changes.
         window.bind(to: workspace, adaptiveWeight: WEIGHT_AUTO, index: INDEX_BIND_LAST)
@@ -243,6 +250,7 @@ func applyFrozenWindowState(_ window: Window, _ frozenWindow: FrozenWindow) {
     }
     window.freeSizePreviousColumnWidth = frozenWindow.freeSizePreviousColumnWidth
     window.freeSizePreviousFixedWidth = frozenWindow.freeSizePreviousFixedWidth
+    window.keptFloating = frozenWindow.keptFloating == true
     window.scrollingColumnWidth = frozenWindow.scrollingColumnWidth
     window.scrollingColumnFixedWidth = frozenWindow.scrollingColumnFixedWidth.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
     window.isFullscreen = frozenWindow.isFullscreen
