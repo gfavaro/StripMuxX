@@ -5,7 +5,7 @@ import Common
 /// macOS keeps three- and four-finger swipes for switching Spaces.
 /// Scroll events, including macOS's own momentum after lifting, move the viewport
 /// directly and are consumed; on release focus follows the nearest column
-/// without shifting the camera again.
+/// without shifting the camera again. Two-finger panning never changes focus.
 @MainActor
 final class NativeScrollingPan {
     static let shared = NativeScrollingPan()
@@ -282,7 +282,9 @@ final class NativeScrollingPan {
         let wasResizing = resizingColumn
         resizingColumn = false
         resizeWindow = nil
-        let shouldFocus = focusNearest && !wasResizing
+        // Two-finger pan changes the camera only. Native focus may change solely
+        // for an explicitly committed Dock column swipe, never for a pan lift.
+        let shouldFocus = isDockSwipeActive && focusNearest && !wasResizing
         let committedDockSwipe = isDockSwipeActive && dockSwipeCommitted && shouldFocus
         let metricsAtRelease = workspace.scrollingMetrics
         let settleColumn = settledDockSwipeColumn(in: metricsAtRelease, offset: workspace.scrollingOffset,
@@ -314,8 +316,12 @@ final class NativeScrollingPan {
         // One fresh native read after the gesture is complete. Never retain
         // stale write authority from a previous Space while finishing.
         defer { runtime.native.observation?.requestRead(event: "nativeScrollingSettled") }
-        guard shouldFocus, workspace.isVisible,
-              nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else {
+        guard workspace.isVisible,
+              nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else { return }
+        guard shouldFocus else {
+            // Flush the final camera position to the relayout/persistence pipeline
+            // without activating any application or snapping the camera.
+            runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
             return
         }
         let metrics = workspace.scrollingMetrics
