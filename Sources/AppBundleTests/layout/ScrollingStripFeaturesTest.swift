@@ -50,6 +50,28 @@ final class ScrollingStripFeaturesTest: XCTestCase {
         XCTAssertEqual(windows[1].lastAppliedLayoutPhysicalRect?.height, full.height, "Never taller than the column")
     }
 
+    func testFreeSizeColumnKeepsNativeHeightWhileViewportPans() async throws {
+        let (workspace, windows) = try await strip()
+        let first = windows[0]
+        let original = try XCTUnwrap(first.lastAppliedLayoutPhysicalRect)
+        first.freeSizeRect = Rect(topLeftX: original.minX, topLeftY: original.minY + 28,
+                                  width: 510, height: 310)
+        first.scrollingColumnFixedWidth = 510
+        try await workspace.layoutWorkspace()
+        let before = try XCTUnwrap(first.lastAppliedLayoutPhysicalRect)
+        XCTAssertEqual(before.height, 310, accuracy: 1)
+        XCTAssertEqual(before.width, 510, accuracy: 1)
+
+        workspace.scrollingOffset = workspace.scrollingMetrics.clampedOffset(130)
+        workspace.lastScrollingFocusWindowId = first.windowId
+        try await workspace.layoutWorkspace()
+        let after = try XCTUnwrap(first.lastAppliedLayoutPhysicalRect)
+        XCTAssertEqual(after.height, before.height, accuracy: 1)
+        XCTAssertEqual(after.width, before.width, accuracy: 1)
+        XCTAssertEqual(after.minY, before.minY, accuracy: 1)
+        XCTAssertEqual(first.freeSizeRect?.height, 310)
+    }
+
     func testBackgroundWindowNeitherScrollsTheStripNorTakesFocus() async throws {
         let (workspace, windows) = try await strip()
         _ = windows[3].focusWindow()
