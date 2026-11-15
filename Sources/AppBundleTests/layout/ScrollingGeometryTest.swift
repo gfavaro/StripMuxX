@@ -115,7 +115,7 @@ final class ScrollingGeometryTest: XCTestCase {
                 bounds: CGRect(x: 8, y: 0, width: 984, height: 700),
                 parkingBounds: CGRect(x: 0, y: 0, width: 1000, height: 700),
                 offset: 0,
-                columns: [0.49, 0.49, 0.49].map { .init(preferredWidth: $0, minimumWidth: 0) },
+                columns: [0.49, 0.49, 0.49, 0.49].map { .init(preferredWidth: $0, minimumWidth: 0) },
                 horizontalGap: 8, outerLeft: 8, outerRight: 8,
                 leftWall: false, rightWall: false, preview: preview))
         }
@@ -126,10 +126,12 @@ final class ScrollingGeometryTest: XCTestCase {
         XCTAssertGreaterThan(compact.area.width, wide.area.width)
         XCTAssertGreaterThan(compact.columns[0].physicalFrame.width, wide.columns[0].physicalFrame.width,
                              "Percent column widths follow the recovered viewport width")
-        XCTAssertEqual(compact.columns[0].logicalFrame.width, compact.columns[1].logicalFrame.width)
         XCTAssertEqual(compact.columns[1].logicalFrame.minX - compact.columns[0].logicalFrame.maxX, 8)
-        XCTAssertEqual(compact.columns[2].physicalFrame.minX, 986,
+        // The fourth column lies wholly right of the viewport: only the preview shows.
+        XCTAssertEqual(compact.columns[3].visibility, .rightPreview)
+        XCTAssertEqual(compact.columns[3].physicalFrame.minX, 986,
                        "The right edge preview shows exactly 14 points")
+        XCTAssertEqual(wide.columns[3].physicalFrame.minX, 975, "and 25 with the wider preview")
     }
 
     func testNoPreviewKeepsParkedColumnsAtScreenEdgeWithoutChangingInterColumnGap() {
@@ -152,5 +154,34 @@ final class ScrollingGeometryTest: XCTestCase {
         XCTAssertEqual(result.clampedOffset, -80)
         let settled = calculateScrollingWorkspaceGeometry(makeInput(offset: -80))
         XCTAssertEqual(settled.clampedOffset, 0)
+    }
+
+    func testFiftyColumnsKeepOrderGapsAndExactPreviewsAtEveryOffset() {
+        let widths: [CGFloat] = (0..<50).map { [0.25, 0.3333, 0.5, 0.6667, 1.0][$0 % 5] }
+        for offset in stride(from: CGFloat(-500), through: 30_000, by: 1_250) {
+            let geometry = calculateScrollingWorkspaceGeometry(.init(
+                bounds: CGRect(x: 8, y: 0, width: 1904, height: 1000),
+                parkingBounds: CGRect(x: 0, y: 0, width: 1920, height: 1000),
+                offset: offset,
+                columns: widths.map { .init(preferredWidth: $0, minimumWidth: 0) },
+                horizontalGap: 8, outerLeft: 8, outerRight: 8,
+                leftWall: false, rightWall: false, preview: 14))
+            XCTAssertEqual(geometry.columns.count, 50)
+            XCTAssertTrue(geometry.offsetRange.contains(geometry.clampedOffset), "offset \(offset)")
+            for (previous, column) in zip(geometry.columns, geometry.columns.dropFirst()) {
+                XCTAssertEqual(column.logicalFrame.minX - previous.logicalFrame.maxX, 8, accuracy: 1,
+                               "Columns stay in order with one gap between them (offset \(offset))")
+            }
+            for column in geometry.columns {
+                switch column.visibility {
+                    case .rightPreview where column.logicalFrame.minX >= geometry.area.maxX:
+                        XCTAssertEqual(column.physicalFrame.minX, 1920 - 14)
+                    case .leftPreview where column.logicalFrame.maxX <= geometry.area.minX:
+                        XCTAssertEqual(column.physicalFrame.maxX, 14)
+                    default: break
+                }
+            }
+            XCTAssertEqual(Set(geometry.stackingOrder).count, 50, "Every column appears once in the stacking order")
+        }
     }
 }

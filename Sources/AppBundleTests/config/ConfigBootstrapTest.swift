@@ -71,7 +71,7 @@ final class ConfigBootstrapTest: XCTestCase {
             XCTFail("Expected constant vertical gap")
         }
         if case .constant(let outerLeftGap) = parsedConfig.gaps.outer.left {
-            XCTAssertEqual(outerLeftGap, 12)
+            XCTAssertEqual(outerLeftGap, 8, "Side gaps were tightened to 8 points")
         } else {
             XCTFail("Expected constant outer left gap")
         }

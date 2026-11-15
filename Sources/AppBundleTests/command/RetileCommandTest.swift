@@ -7,6 +7,8 @@ final class RetileCommandTest: WorkspaceTestCase {
     func testCountsOnlyTiledWindowsOffTheirTiles() async throws {
         let workspace = focus.workspace
         let windows = (0..<3).map { TestWindow.new(id: UInt32(9700 + $0), parent: workspace.rootTilingContainer) }
+        // Narrow enough that all three columns are on screen; a scrolled-out column is not retiled.
+        windows.forEach { $0.scrollingColumnWidth = 0.3 }
         let floating = TestWindow.new(id: 9710, parent: workspace)
         try await workspace.layoutWorkspace()
         let tiles = Dictionary(uniqueKeysWithValues: windows.map { ($0.windowId, try! XCTUnwrap($0.lastAppliedLayoutPhysicalRect)) })
