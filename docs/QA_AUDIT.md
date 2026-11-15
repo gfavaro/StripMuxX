@@ -74,8 +74,26 @@ counters from `doctor` were read before and after.
 | Memory footprint | 30.9 MiB, delta −0.02 MiB over 60 s |
 | Repeated normal frame targets since launch | 0 of 430 |
 
-Not measured: 15/30/50 windows, two displays, sustained interaction. Those need
-disposable fixture windows on a test desktop (§7).
+**Load test (build 35, run with permission):** a disposable fixture app opened N
+plain windows on desktop 1 beside your 5; 40 alternating `focus left/right` and 10
+`scrolling-width next` were sent through the CLI; CPU from `ps`, frame requests from
+`doctor`; the fixture was then quit.
+
+| Managed windows | Focus latency p50 / p90 / max | CPU for 50 commands | Frame requests per command | RSS |
+| --- | --- | --- | --- | --- |
+| 5 (your apps only) | 143 / 219 ms (20 commands) | — | — | — |
+| 20 (15 fixture) | 79 / 106 / 183 ms | 2.79 s | 21.6 | 92 → 93 MiB |
+| 35 (30 fixture) | 174 / 178 / 225 ms | 4.38 s | 37.1 | 93 → 90 MiB |
+
+CLI round trip without layout (`list-modes`): 26 ms median, included above. Latency is
+dominated by how fast apps answer AX, not by window count alone: your five real apps
+are slower than twenty fixture windows. Each command rewrites roughly every window on
+the strip (37 requests at 35 windows), because scrolling moves every visible column.
+No crash; memory flat; StripMuxX returned to your 5 windows after each run.
+
+**Smoke test (`script/smoke.sh`, build 35):** 13 pass, 0 fail, 3 skip (second desktop
+or display needed). Put-back, the three-try limit, `retile`, app quit and focus return
+pass; scrolling pan p90 lag 37 ms.
 
 Frame-write pipeline (reviewed, verified in code): one AX thread per app, one pending
 write per window (latest wins), writes cancelled on invalidation, permits checked per
@@ -86,8 +104,9 @@ change to the pipeline is proposed without a measured gap.
 
 | Area | Why |
 | --- | --- |
-| 15–50 real windows, two displays, display disconnect, sleep/wake | Would rearrange your live desktop; needs a dedicated test desktop and your go-ahead |
-| Space switching, moving windows across Spaces and displays, app quit/relaunch, StripMuxX restart | Same; automated simulations of these pass (`NativeSpaceNavigatorTest`, `NativeWindowSpaceMovesTest`, `NativeTilingTest`) |
+| Two displays, display disconnect, sleep/wake | One display attached; sleep needs you at the machine |
+| Space switching, moving windows across Spaces | Only one desktop exists and creating Spaces is out of bounds; automated simulations pass (`NativeSpaceNavigatorTest`, `NativeWindowSpaceMovesTest`) |
+| StripMuxX restart with layout restoration on real apps | Restarted for each install (layout came back with 5 windows, tiling active) but not checked column by column |
 | Three-finger gesture, Mission Control interplay | No synthetic Dock gestures without permission; you validated the gesture manually; code unchanged |
 | VoiceOver, Reduce Motion, keyboard-only Settings walk-through | Manual UI checks |
 | Settings persistence across an app update | Requires installing over a customised config; the save path is covered by `SettingsPersistenceRegressionTest` |
@@ -115,6 +134,9 @@ change to the pipeline is proposed without a measured gap.
 - `script/install_fork.py` requires Screen Recording, which StripMuxX does not use, so
   every install so far has been done by hand.
 - Nine fire-and-forget `Task`s drop their errors.
+- Command latency of 80–220 ms per focus change, driven by app AX response time;
+  every command rewrites the visible strip. Worth profiling which AX calls dominate
+  before changing the pipeline.
 
 ## 9. Recommended next actions
 
