@@ -38,6 +38,22 @@ shares its height differently, and `move left|right` takes a window out into a c
 of its own. A stack of one window is just a column again. `flatten-workspace-tree`
 turns every stack on the desktop into columns.
 
+## Free-size columns
+
+`layout free-size` adds the focused window as a **free-size strip column**.
+Its width, height and vertical placement remain user-controlled while its
+horizontal position follows the strip. A floating window can join the strip in
+this mode without being stretched to the full tile height. If the selected
+window is in a vertical stack, it first becomes a separate column.
+
+`layout tiling` returns a free-size window to normal tiled sizing;
+`layout floating` removes it from the strip and preserves its preferred
+dimensions. This mode is opt-in: existing floating rules are unchanged.
+
+Free-size geometry is included in the native Space restoration snapshot.
+The implementation has **not been compiled or physically validated** in this
+series of commits. See [implementation status](SCROLL_FEEL_IMPLEMENTATION_STATUS.md).
+
 ## Floating and fullscreen
 
 `layout floating` lifts the focused window off the strip and `layout tiling` puts it
