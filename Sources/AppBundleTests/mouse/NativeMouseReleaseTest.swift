@@ -38,6 +38,11 @@ final class NativeMouseReleaseTest: XCTestCase {
         XCTAssertNil(second.freeSizeRect)
         try await focus.workspace.layoutWorkspace()
         XCTAssertEqual(first.lastAppliedLayoutPhysicalRect?.height ?? 0, changed.height, accuracy: 1)
+        // The strip keeps the window's own size; the column gaps never eat into it.
+        for _ in 0..<3 { try await focus.workspace.layoutWorkspace() }
+        XCTAssertEqual(first.lastAppliedLayoutPhysicalRect?.width ?? 0, changed.width, accuracy: 0.5)
+        XCTAssertEqual(adoptNativeMouseRelease(first, actual: try XCTUnwrap(first.lastAppliedLayoutPhysicalRect),
+                                               pointer: changed.center), .none)
     }
 
     func testDropOntoAnotherTileSwapsThem() async throws {

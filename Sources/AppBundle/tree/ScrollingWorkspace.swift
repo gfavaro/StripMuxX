@@ -79,7 +79,8 @@ func calculateScrollingWorkspaceGeometry(_ input: ScrollingWorkspaceGeometryInpu
         let share = min(max(preferred, 0.1), 1)
         let minimum = max(0, column.minimumWidth.isFinite ? column.minimumWidth : 0)
         let fixed = column.fixedWidth.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
-        let desired = fixed ?? (input.columns.count == 1 ? area.width : (area.width * share).rounded())
+        // A fixed width is the window's own width; the gaps around it come on top.
+        let desired = fixed.map { $0 + lead + trail } ?? (input.columns.count == 1 ? area.width : (area.width * share).rounded())
         let width = max(desired.rounded(), minimum + lead + trail)
         spans.append((cursor, width, lead, trail))
         cursor += width
