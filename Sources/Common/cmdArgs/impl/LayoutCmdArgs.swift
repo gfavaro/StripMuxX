@@ -23,7 +23,7 @@ public struct LayoutCmdArgs: CmdArgs {
     }
 
     public enum LayoutDescription: String, CaseIterable, Equatable, Sendable {
-        case tiling, floating
+        case tiling, floating, freeSize = "free-size"
     }
 }
 
@@ -51,7 +51,7 @@ func parseLayoutCmdArgs(_ args: StrArrSlice) -> ParsedCmd<LayoutCmdArgs> {
     parseSpecificCmdArgs(LayoutCmdArgs(rawArgs: args), args).map {
         check(!$0.toggleBetween.val.isEmpty)
         return $0
-    }.filter("--for-next-detected-window allows exactly one tiling|floating argument") {
+    }.filter("--for-next-detected-window allows exactly one layout argument") {
         !$0.forNextDetectedWindow || $0.toggleBetween.val.count == 1
     }
 }
