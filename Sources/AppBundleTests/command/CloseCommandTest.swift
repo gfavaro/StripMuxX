@@ -21,6 +21,28 @@ final class CloseCommandTest: XCTestCase {
         assertEquals(focus.workspace.rootTilingContainer.children.count, 1)
     }
 
+    func testClosingFocusedWindowReturnsToPreviouslyFocusedColumn() async throws {
+        let workspace = focus.workspace
+        let first = TestWindow.new(id: 91001, parent: workspace.rootTilingContainer)
+        let second = TestWindow.new(id: 91002, parent: workspace.rootTilingContainer)
+        let third = TestWindow.new(id: 91003, parent: workspace.rootTilingContainer)
+        _ = first.focusWindow()
+        _ = second.focusWindow()
+        _ = third.focusWindow()
+        XCTAssertEqual(workspace.previousFocusedWindowID, second.windowId)
+        try await CloseCommand(args: CloseCmdArgs(rawArgs: [])).run(.defaultEnv, .emptyStdin)
+        XCTAssertEqual(focus.windowOrNil?.windowId, second.windowId)
+    }
+
+    func testClosingUnfocusedWindowDoesNotStealFocus() async throws {
+        let workspace = focus.workspace
+        let first = TestWindow.new(id: 91011, parent: workspace.rootTilingContainer)
+        _ = TestWindow.new(id: 91012, parent: workspace.rootTilingContainer)
+        _ = first.focusWindow()
+        try await CloseCommand(args: CloseCmdArgs(rawArgs: []).copy(\.windowId, 91012)).run(.defaultEnv, .emptyStdin)
+        XCTAssertEqual(focus.windowOrNil?.windowId, first.windowId)
+    }
+
     func testCloseViaWindowIdFlag() async throws {
         focus.workspace.rootTilingContainer.apply {
             _ = TestWindow.new(id: 1, parent: $0).focusWindow()

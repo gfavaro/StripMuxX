@@ -67,10 +67,31 @@ enum FocusChangeOrigin: Equatable { case explicit, native }
     guard let snapshot = layouts.snapshot,
           snapshot.displays.contains(where: { layouts.activeWorkspace(on: $0.identifier) === newFocus.workspace }),
           newFocus.windowOrNil?.nativeLayoutEligible != false else { return false }
+    let workspace = newFocus.workspace
+    if let nextID = newFocus.windowOrNil?.windowId,
+       workspace.lastFocusedWindowID != nextID {
+        workspace.previousFocusedWindowID = workspace.lastFocusedWindowID
+        workspace.lastFocusedWindowID = nextID
+    }
     runtime.focus.requested = newFocus.frozen
     if origin == .native { runtime.focus.lastKnown = newFocus.frozen }
     newFocus.windowOrNil?.markAsMostRecentChild()
     return true
+}
+
+/// Choose a logical focus fallback *only* if the closed window was still
+/// requested. Never activate apps, move Spaces or fight a newer native focus.
+@MainActor
+@discardableResult
+func restoreLogicalFocusAfterWindowClosed(_ closedID: UInt32, in workspace: Workspace) -> Bool {
+    guard runtime.focus.requested.windowId == closedID, workspace.isVisible else { return false }
+    let eligible = workspace.allLeafWindowsRecursive.filter {
+        $0.windowId != closedID && $0.nativeLayoutEligible && $0.participatesInWorkspaceFocus
+    }
+    guard !eligible.isEmpty else { return false }
+    let preferred = eligible.first(where: { $0.windowId == workspace.previousFocusedWindowID })
+    let chosen = preferred ?? eligible.first(where: { $0 === workspace.mostRecentWorkspaceFocusableWindowRecursive }) ?? eligible[0]
+    return setFocus(to: LiveFocus(windowOrNil: chosen, workspace: workspace), origin: .native)
 }
 
 extension Window {

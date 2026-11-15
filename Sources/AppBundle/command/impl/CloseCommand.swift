@@ -24,7 +24,9 @@ struct CloseCommand: Command {
                     return io.err("Failed to quit '\(window.app.name ?? "Unknown app")'")
                 }
             } else {
+                let workspace = window.nodeWorkspace
                 window.closeAxWindow()
+                if let workspace { _ = restoreLogicalFocusAfterWindowClosed(window.windowId, in: workspace) }
                 return true
             }
         }

@@ -58,7 +58,9 @@ final class NativeWorkspaceLifecycle {
                 owner.native.tiling.invalidate("window closed")
                 owner.native.windows.invalidate()
                 guard let window = MacWindow.allWindowsMap[id] else { return }
+                let workspace = window.nodeWorkspace
                 window.garbageCollect()
+                if let workspace { _ = restoreLogicalFocusAfterWindowClosed(id, in: workspace) }
                 owner.task { try? await window.macApp.unregisterDestroyedWindow(id) }
             }
         }
