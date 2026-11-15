@@ -33,6 +33,27 @@ final class WindowWidthTest: WorkspaceTestCase {
                        workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width, accuracy: 0.001)
     }
 
+    func testDisplayOverridesLoneWidthOnlyAndKeepsGlobalFullscreen() async throws {
+        try load("""
+            lone-window-width = 0.8
+            fullscreen-width = 0.9
+            [display.main]
+            lone-window-width = 0.5
+            """)
+        let workspace = focus.workspace
+        let lone = TestWindow.new(id: 72020, parent: workspace.rootTilingContainer)
+        let available = workspace.workspaceMonitor.visibleRectPaddedByOuterGaps.width
+        XCTAssertEqual(workspaceTilingRect(workspace).width, available * 0.5, accuracy: 0.001,
+                       "The display's lone width wins over the global one")
+        lone.isFullscreen = true
+        XCTAssertEqual(fullscreenWindowRect(lone, in: workspace).width, available * 0.9, accuracy: 0.001,
+                       "and does not change managed fullscreen")
+        lone.isFullscreen = false
+        _ = TestWindow.new(id: 72021, parent: workspace.rootTilingContainer)
+        XCTAssertEqual(workspaceTilingRect(workspace).width, available, accuracy: 0.001,
+                       "A second column ends the lone-window limit")
+    }
+
     func testRangeAndTypesAtEveryScope() {
         for prefix in ["", "[display.main]\n"] {
             for value in ["0", "0.09", "1.01", "nan", "inf", "-inf", "'0.7'", "true", "[]"] {

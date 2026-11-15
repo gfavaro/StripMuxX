@@ -40,10 +40,9 @@ func workspaceTilingRect(_ workspace: Workspace) -> Rect {
     let monitor = workspace.workspaceMonitor
     let available = monitor.visibleRectPaddedByOuterGaps
     let settings = workspace.windowWidthSettings
-    if let fraction = settings.fullscreenWidth {
-        if let window = workspace.rootTilingContainer.mostRecentWindowRecursive, window.isFullscreen {
-            return fullscreenWindowRect(window, in: workspace)
-        }
+    if settings.fullscreenWidth != nil,
+       let window = workspace.rootTilingContainer.mostRecentWindowRecursive, window.isFullscreen {
+        return fullscreenWindowRect(window, in: workspace)
     }
     guard let window = singleWindowWidthTarget(in: workspace) else { return available }
     let alignment = settings.singleWindowAlignment ?? .center
