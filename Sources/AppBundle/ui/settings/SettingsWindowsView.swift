@@ -24,6 +24,7 @@ struct ShortcutBehaviorSettingsView: View {
 
     @SettingsDraft("single-window-alignment", load: { config.singleWindowAlignment }) private var singleWindowAlignment: SingleWindowAlignment
     @SettingsDraft("fullscreen-width", load: { config.fullscreenWidth ?? 1.0 }) private var fullscreenWidth: Double
+    @SettingsDraft("lone-window-width", load: { config.loneWindowWidth ?? config.fullscreenWidth ?? 1.0 }) private var loneWindowWidth: Double
 
     var body: some View {
         SettingsScrollView {
@@ -31,16 +32,23 @@ struct ShortcutBehaviorSettingsView: View {
                 SettingsToggle("Tile new windows automatically", id: "automatically-tile-new-windows", isOn: $automaticallyTileNewWindows, help: "A new window becomes a column right of the focused one. Off leaves new windows floating.") { persistRootBool("automatically-tile-new-windows", automaticallyTileNewWindows) }
             }
             SettingsSection("Single window and managed fullscreen") {
-                SettingsStepper("Single-window width", id: "fullscreen-width", value: Binding(
+                SettingsStepper("Lone window width", id: "lone-window-width", value: Binding(
+                    get: { Int((loneWindowWidth * 100).rounded()) },
+                    set: { loneWindowWidth = Double($0) / 100 }), range: 10...100,
+                    help: "Width of a tiled window when it is the only column. Existing configs fall back to fullscreen-width.", unit: "%") {
+                    persistConfig(section: nil, key: "lone-window-width", value: String(loneWindowWidth))
+                }
+                SettingsStepper("Managed fullscreen width", id: "fullscreen-width", value: Binding(
                     get: { Int((fullscreenWidth * 100).rounded()) },
                     set: { fullscreenWidth = Double($0) / 100 }), range: 10...100,
-                    help: "Share of the available width for a lone tiled window or StripMuxX fullscreen. Display overrides take priority.", unit: "%") {
+                    help: "Width of StripMuxX fullscreen on the current desktop. Native macOS fullscreen remains separate.", unit: "%") {
                     persistConfig(section: nil, key: "fullscreen-width", value: String(fullscreenWidth))
                 }
-                Text("Also used by managed fullscreen. Choose 100% to maximize within the usable display area; native macOS fullscreen is separate.")
+                Text("These widths are independent. Per-display overrides may take priority. Native macOS fullscreen creates a separate Space.")
                     .font(.callout).foregroundStyle(.secondary)
-                if let width = focus.workspace.windowWidthSettings.fullscreenWidth {
-                    Text("Current desktop: \(Int((width * 100).rounded()))% · \(focus.workspace.windowWidthSettings.singleWindowAlignment?.rawValue ?? "center") · \(focus.workspace.workspaceMonitor.name)")
+                    .font(.callout).foregroundStyle(.secondary)
+                if let width = focus.workspace.windowWidthSettings.loneWindowWidth ?? focus.workspace.windowWidthSettings.fullscreenWidth {
+                    Text("Current desktop: \(Int((width * 100).rounded()))% lone window · \(focus.workspace.windowWidthSettings.singleWindowAlignment?.rawValue ?? "center") · \(focus.workspace.workspaceMonitor.name)")
                         .font(.callout).foregroundStyle(.secondary)
                 } else {
                     Text("The current desktop uses the legacy aspect-ratio setting. Saving a width switches to percentage sizing.")

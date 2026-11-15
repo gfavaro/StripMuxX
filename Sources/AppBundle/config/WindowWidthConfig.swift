@@ -4,10 +4,12 @@ import TOMLKit
 /// How wide a lone or fullscreen window may be, and where it sits.
 struct WindowWidthSettings: ConvenienceCopyable, Equatable {
     var fullscreenWidth: Double?
+    var loneWindowWidth: Double?
     var singleWindowAlignment: SingleWindowAlignment?
 
     func overlaying(_ base: Self) -> Self {
         Self(fullscreenWidth: fullscreenWidth ?? base.fullscreenWidth,
+             loneWindowWidth: loneWindowWidth ?? base.loneWindowWidth,
              singleWindowAlignment: singleWindowAlignment ?? base.singleWindowAlignment)
     }
 }
@@ -20,7 +22,7 @@ struct DisplayWindowSettings {
 
 func parseFullscreenWidth(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace) -> ParsedToml<Double?> {
     guard let value: Double = parseSimpleType(raw), value.isFinite, (0.1...1).contains(value) else {
-        return .failure(.semantic(trace, "Expected a finite fullscreen-width from 0.1 to 1.0"))
+        return .failure(.semantic(trace, "Expected a finite width from 0.1 to 1.0"))
     }
     return .success(value)
 }
@@ -34,6 +36,7 @@ func parseOptionalSingleWindowAlignment(_ raw: TOMLValueConvertible, _ trace: To
 
 private let displayWindowParsers: [String: any ParserProtocol<WindowWidthSettings>] = [
     "fullscreen-width": Parser(\.fullscreenWidth, parseFullscreenWidth),
+    "lone-window-width": Parser(\.loneWindowWidth, parseFullscreenWidth),
     "single-window-alignment": Parser(\.singleWindowAlignment, parseOptionalSingleWindowAlignment),
 ]
 
@@ -76,6 +79,7 @@ extension Workspace {
     @MainActor
     var windowWidthSettings: WindowWidthSettings {
         let global = WindowWidthSettings(fullscreenWidth: config.fullscreenWidth,
+                                            loneWindowWidth: config.loneWindowWidth,
                                             singleWindowAlignment: config.singleWindowAlignment)
         return matchingWindowSettings(config.displayWindowSettings, on: workspaceMonitor)?.overlaying(global) ?? global
     }

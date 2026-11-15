@@ -25,7 +25,8 @@ func singleWindowLimitedRect(available: Rect, screen: Rect, ratio: Double, minim
 func singleWindowWidthTarget(in workspace: Workspace) -> Window? {
     let windows = workspace.rootTilingContainer.allLeafWindowsRecursive
     guard windows.count == 1, let window = windows.first, !window.isFullscreen else { return nil }
-    if workspace.windowWidthSettings.fullscreenWidth != nil { return window }
+    if workspace.windowWidthSettings.loneWindowWidth != nil ||
+        workspace.windowWidthSettings.fullscreenWidth != nil { return window }
     // Compatibility for configs written before fullscreen-width.
     let monitor = workspace.workspaceMonitor
     let ratio = config.singleWindowAspectRatio.getValue(for: monitor)
@@ -49,7 +50,7 @@ func workspaceTilingRect(_ workspace: Workspace) -> Rect {
     if let width = window.singleWindowManualWidth {
         return alignedSingleWindowRect(available: available, width: width, minimumWidth: window.minimumLayoutSize.width, alignment: alignment)
     }
-    if let fraction = settings.fullscreenWidth {
+    if let fraction = settings.loneWindowWidth ?? settings.fullscreenWidth {
         return windowWidthRect(available: available, fraction: fraction,
                                minimumWidth: window.minimumLayoutSize.width, alignment: alignment)
     }

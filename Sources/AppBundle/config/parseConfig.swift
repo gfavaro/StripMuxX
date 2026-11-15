@@ -79,6 +79,7 @@ private let configParser: [String: any ParserProtocol<Config>] = [
         }
     },
     "fullscreen-width": Parser(\.fullscreenWidth, parseFullscreenWidth),
+    "lone-window-width": Parser(\.loneWindowWidth, parseFullscreenWidth),
     "display": Parser(\.displayWindowSettings, parseDisplayWindowSettings),
     "single-window-aspect-ratio": Parser(\.singleWindowAspectRatio, parseSingleWindowAspectRatio),
     "gaps": Parser(\.gaps, parseGaps),
