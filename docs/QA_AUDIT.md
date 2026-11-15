@@ -1,7 +1,7 @@
 # StripMuxX QA, regression and stability audit — 2026-11-14
 
-**Verdict: PASS WITH WARNINGS.** `make check` passes (507 XCTest cases, 53 Python
-checks). Six defects were fixed; one P1 and several P2 risks remain, and the physical
+**Verdict: PASS WITH WARNINGS.** `make check` passes (508 XCTest cases, 53 Python
+checks). Seven defects were fixed; one P1 (unchecked pushes) and several P2 risks remain, and the physical
 checks in [not executed](#7-not-executed) still need you at the desktop.
 
 ## 1. Environment
@@ -40,7 +40,8 @@ broken on purpose, the test was seen to fail, and the code was restored.
 | --- | --- | --- | --- |
 | Initial `make check` | not reached | schema check failed | **FAIL**: `lone-window-width` missing from schema |
 | After schema fix | 504 run, **6 failures** | pass | FAIL |
-| Final `make check` | **507 run, 0 failures** | 53 run, 0 failures | **PASS** |
+| `make check` after fixes 1–6 | 507 run, 0 failures | 53 run, 0 failures | PASS |
+| Final `make check` (with fix 7) | **508 run, 0 failures** | 53 run, 0 failures | **PASS** |
 
 Compiler warnings: 31 unique, none errors. Notable: 9 unused `Task` results
 (fire-and-forget tasks whose errors are dropped), one main-actor property read from a
@@ -57,6 +58,8 @@ Compiler warnings: 31 unique, none errors. Notable: 9 unused `Task` results
 | 4 | Settings search for "single-window width" found nothing | The setting was renamed *Lone window width*; search matched titles only | `4f5fd111`: search aliases for earlier names | `SettingsSearchTest` |
 | 5 | Two tests asserted AppKit side effects, not behaviour | `needsDisplay` is not kept for a view outside a window and used to be set by unconditional frame reassignment; `performClick` needs `NSApp` | `ee4fbfb1`: assert the tile's icons; create `NSApp` in setup | Minimap suite passes alone and in full |
 | 6 | Three tests contradicted intended defaults | 8 pt side gaps, 0.5 default column width, and an edge-preview test whose claims never matched the geometry it shipped with | `993e9519`: corrected expectations; 50-column stress case | `ScrollingGeometryTest` |
+
+| 7 | `edge-preview = 0` showed 40 pt slivers; desired frames never matched real ones | macOS moves a window placed wholly off its display back to show 40 pt, while honouring any sliver of 1 pt or more (measured, §8) | `41cd667f`: the layout keeps at least 1 pt on screen (`effectiveEdgePreview`) | `testAZeroPreviewStillLeavesOnePointSoMacOSDoesNotPullTheWindowBack`; confirmed on your windows with build 36 |
 
 Also: the Settings column section did not compile (`64d90510`, pushed earlier);
 an unused binding warning in `SingleWindowGeometry.swift` (`72576197`).
