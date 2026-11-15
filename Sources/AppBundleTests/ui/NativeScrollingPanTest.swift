@@ -57,8 +57,37 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertTrue(nativePanIgnoresNotification(kAXWindowMovedNotification as String), "Its own moves keep the permits")
         XCTAssertFalse(nativePanIgnoresNotification(kAXWindowMiniaturizedNotification as String), "Ownership changes still revoke")
         let metrics = workspace.scrollingMetrics
-        XCTAssertTrue(metrics.columns.contains { metrics.revealedOffset(for: $0, current: workspace.scrollingOffset) == workspace.scrollingOffset },
-            "The pan ends with a whole column revealed")
+        XCTAssertTrue(metrics.offsetRange.contains(workspace.scrollingOffset),
+            "The physical pan ends within the strip without snapping to a column")
+    }
+
+    func testPhysicalScrollReleaseKeepsCameraWhileDockCompletionCanRevealColumn() {
+        let (workspace, _) = fixture()
+        let metrics = workspace.scrollingMetrics
+        let target = metrics.columns[1]
+        let betweenColumns = metrics.clampedOffset(target.start - metrics.areaWidth * 0.3)
+        XCTAssertEqual(scrollingPanReleaseOffset(metrics: metrics, column: target,
+            current: betweenColumns, snapToColumn: false), betweenColumns, accuracy: 0.001)
+        XCTAssertEqual(scrollingPanReleaseOffset(metrics: metrics, column: target,
+            current: betweenColumns, snapToColumn: true),
+            metrics.focusedOffset(for: target, current: betweenColumns), accuracy: 0.001)
+        XCTAssertEqual(scrollingPanReleaseOffset(metrics: metrics, column: target,
+            current: -1000, snapToColumn: false), metrics.offsetRange.lowerBound, accuracy: 0.001)
+    }
+
+    func testPhysicalPanDoesNotSnapBackOnRelease() {
+        let (workspace, windows) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        XCTAssertTrue(pan.handle(scroll(-177, phase: 1, at: point)))
+        let draggedOffset = workspace.scrollingOffset
+        XCTAssertGreaterThan(draggedOffset, 0)
+        XCTAssertTrue(pan.handle(scroll(0, option: false, phase: 0, momentum: 3, at: point)))
+        XCTAssertEqual(workspace.scrollingOffset, draggedOffset, accuracy: 0.001,
+                       "Releasing a physical trackpad pan should never reposition its viewport")
+        XCTAssertFalse(pan.isPanning)
+        XCTAssertNotNil(focus.windowOrNil)
+        XCTAssertTrue(windows.contains { $0 === focus.windowOrNil })
     }
 
     func testANewPlainScrollEndsThePanAndReachesTheApp() {

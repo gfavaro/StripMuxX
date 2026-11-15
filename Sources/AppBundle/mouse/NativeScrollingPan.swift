@@ -237,7 +237,13 @@ final class NativeScrollingPan {
         guard let column = settleColumn else {
             return runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
         }
-        workspace.scrollingOffset = metrics.focusedOffset(for: column, current: workspace.scrollingOffset)
+        // A continuous two-finger pan is direct manipulation: the viewport must
+        // remain exactly where the gesture and macOS momentum left it. Selecting
+        // the nearest window should not introduce a second, command-like snap.
+        // Keep the deliberate column advancement for a committed Dock swipe.
+        workspace.scrollingOffset = scrollingPanReleaseOffset(
+            metrics: metrics, column: column, current: workspace.scrollingOffset,
+            snapToColumn: committedDockSwipe)
         if let window = column.node.mostRecentWindowRecursive, window.focusWindow() {
             workspace.lastScrollingFocusWindowId = window.windowId
             window.nativeFocus()
@@ -283,4 +289,13 @@ func settledDockSwipeColumn(in metrics: ScrollingWorkspaceMetrics, offset: CGFlo
     let next = current + (direction > 0 ? 1 : -1)
     guard metrics.columns.indices.contains(next) else { return nearest }
     return metrics.columns[next]
+}
+
+/// Preserve a physical scroll's final camera position. Only a committed
+/// three-finger Dock swipe needs a deliberate column reveal/snap.
+@MainActor
+func scrollingPanReleaseOffset(metrics: ScrollingWorkspaceMetrics, column: ScrollingColumnMetric,
+                               current: CGFloat, snapToColumn: Bool) -> CGFloat {
+    let clamped = metrics.clampedOffset(current)
+    return snapToColumn ? metrics.focusedOffset(for: column, current: clamped) : clamped
 }
