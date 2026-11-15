@@ -150,3 +150,12 @@ change to the pipeline is proposed without a measured gap.
 3. Offer an opt-in shortcut preset that avoids Option-letter keys (for example
    `modifiers.alt = 'left'` plus Ctrl-Option chords), without changing existing bindings.
 4. Run `make check` before every push.
+
+## 10. Post-audit delta (not part of the original PASS WITH WARNINGS verdict)
+
+After the baseline audit, further commits added logical focus-on-close fallback,
+non-interactive native-window drag placeholders, minimap insertion hints, and
+three-finger gesture diagnostics. These changes are **not** covered by the
+original 508/53 test evidence. See [single-pass beta verification](BETA_VERIFICATION.md)
+for required final automated and physical checks. Do not carry forward the old
+PASS verdict to newer commits until the final workflow completes.
