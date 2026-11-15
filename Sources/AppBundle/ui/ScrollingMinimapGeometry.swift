@@ -19,8 +19,11 @@ struct ScrollingMinimapGeometry {
         // compressing only the vertical axis. Never expand beyond bounds.
         let narrowest = metrics.columns.map(\.width).min() ?? .infinity
         let minimumScale = 32 / max(narrowest, 1)
+        // Only relax aspect ratios at the height cap. Ordinary map previews
+        // (including geometry tests using a fixed panel size) remain proportional.
+        let heightCapped = bounds.height >= 96 && minimumScale > verticalScale
         let canFitMinimum = bounds.width + 0.01 >= span * minimumScale
-        let xScale = canFitMinimum ? max(fittedScale, minimumScale) : fittedScale
+        let xScale = heightCapped && canFitMinimum ? max(fittedScale, minimumScale) : fittedScale
         let yScale = min(xScale, verticalScale)
         let originX = bounds.midX - span * xScale / 2
         let height = metrics.geometry.area.height * yScale
