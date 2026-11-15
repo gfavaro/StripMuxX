@@ -51,8 +51,9 @@ func parseLayoutCmdArgs(_ args: StrArrSlice) -> ParsedCmd<LayoutCmdArgs> {
     parseSpecificCmdArgs(LayoutCmdArgs(rawArgs: args), args).map {
         check(!$0.toggleBetween.val.isEmpty)
         return $0
-    }.filter("--for-next-detected-window allows exactly one layout argument") {
-        !$0.forNextDetectedWindow || $0.toggleBetween.val.count == 1
+    }.filter("--for-next-detected-window supports only tiling or floating") {
+        !$0.forNextDetectedWindow || ($0.toggleBetween.val.count == 1 &&
+            $0.toggleBetween.val[0] != .freeSize)
     }
 }
 
