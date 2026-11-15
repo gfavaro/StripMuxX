@@ -53,6 +53,81 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertEqual(workspace.scrollingMetrics.columns[0].width, after, accuracy: 1)
     }
 
+    func testMomentumAfterAResizeLiftStaysWithTheGestureAndChangesNothing() {
+        let (workspace, _) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        func resize(_ dx: CGFloat, phase: Int64, momentum: Int64 = 0, keys: Bool = true) -> NativeScrollingPan.Scroll {
+            .init(deltaX: dx, deltaY: 0, isContinuous: true, optionOnly: false, resizeOnly: keys,
+                  phase: phase, momentumPhase: momentum, point: point)
+        }
+        XCTAssertTrue(pan.handle(resize(90, phase: 1)))
+        XCTAssertTrue(pan.handle(resize(40, phase: 2)))
+        XCTAssertTrue(pan.handle(resize(0, phase: 4)), "Lifting the fingers ends the resize")
+        let width = workspace.scrollingMetrics.columns[0].width
+        let offset = workspace.scrollingOffset
+        // macOS then streams momentum, with or without the modifiers still held.
+        for (momentum, keys) in [(Int64(1), true), (2, true), (2, false), (2, false), (3, false)] {
+            XCTAssertTrue(pan.handle(resize(60, phase: 0, momentum: momentum, keys: keys)),
+                          "Momentum of the resize must not reach the app under the pointer")
+        }
+        XCTAssertEqual(workspace.scrollingMetrics.columns[0].width, width, accuracy: 0.5, "Momentum never resizes")
+        XCTAssertEqual(workspace.scrollingOffset, offset, "Momentum never pans")
+        XCTAssertFalse(pan.isPanning)
+        XCTAssertFalse(pan.handle(scroll(30, option: false, phase: 1, at: point)), "A new plain scroll reaches the app")
+    }
+
+    func testFiveThousandRandomScrollEventsKeepEveryInvariant() {
+        let (workspace, windows) = fixture()
+        windows[2].scrollingColumnWidth = 0.2
+        let other = Workspace.get(byName: "not-showing")
+        let bystander = TestWindow.new(id: 97900, parent: other.rootTilingContainer)
+        bystander.scrollingColumnWidth = 0.4
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        var seed: UInt64 = 0x5EED
+        func next(_ bound: Int) -> Int {
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            return Int((seed >> 33) % UInt64(bound))
+        }
+        let phases: [Int64] = [0, 1, 2, 2, 2, 4]
+        for step in 0..<5_000 {
+            let keys = next(4) // 0 plain, 1 Option, 2 Option+Shift, 3 Option (again)
+            let momentum: Int64 = next(5) == 0 ? Int64([1, 2, 2, 3][next(4)]) : 0
+            let dx = CGFloat(next(5) == 0 ? 0 : next(401) - 200)
+            let dy = CGFloat(next(6) == 0 ? next(201) - 100 : 0)
+            let event = NativeScrollingPan.Scroll(deltaX: dx, deltaY: dy, isContinuous: next(10) != 0,
+                optionOnly: keys == 1 || keys == 3, resizeOnly: keys == 2,
+                phase: momentum == 0 ? phases[next(phases.count)] : 0, momentumPhase: momentum, point: point)
+            let wasIdle = !pan.isPanning
+            let focusBefore = focus.windowOrNil
+            // Part of a resize gesture: one already resizing, or one this event starts.
+            let inResize = pan.isPanning && pan.lastDecision == "resizing column"
+            let consumed = pan.handle(event)
+            let resizing = inResize || (wasIdle && pan.isPanning && pan.lastDecision == "resizing column")
+            if wasIdle, keys == 0, momentum == 0, event.phase == 1 {
+                XCTAssertFalse(consumed, "step \(step): a plain new scroll belongs to the app")
+            }
+            if resizing, consumed { XCTAssertTrue(focus.windowOrNil === focusBefore, "step \(step): resizing never moves focus") }
+            let metrics = workspace.scrollingMetrics
+            // The stored offset may trail a resize until the next layout clamps it; what
+            // windows are placed by is the geometry's clamped offset, which must be in range.
+            XCTAssertTrue(metrics.offsetRange.contains(metrics.geometry.clampedOffset), "step \(step): placed viewport in range")
+            let swallowedMomentum = wasIdle && !pan.isPanning && consumed
+            if !resizing, consumed, !swallowedMomentum, abs(metrics.clampedOffset(workspace.scrollingOffset) - workspace.scrollingOffset) >= 0.5 {
+                XCTFail("step \(step): a pan left the stored viewport out of range")
+            }
+            for column in metrics.columns {
+                XCTAssertGreaterThan(column.width, 0, "step \(step)")
+                XCTAssertLessThanOrEqual(column.width, metrics.areaWidth + 0.5, "step \(step): width within the display")
+            }
+            XCTAssertEqual(bystander.scrollingColumnWidth, 0.4, "step \(step): another desktop is never touched")
+            if step % 250 == 249 { pan.cancel() }
+        }
+        pan.cancel()
+        XCTAssertFalse(pan.isPanning)
+    }
+
     func testOnlyOptionHorizontalTrackpadScrollOverAScrollingDesktopPans() {
         let (workspace, _) = fixture()
         let pan = NativeScrollingPan()

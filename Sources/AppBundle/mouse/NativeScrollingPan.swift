@@ -27,6 +27,9 @@ final class NativeScrollingPan {
     var isPanning: Bool { workspace != nil }
     private var lastDirection: CGFloat = 0
     private var resizingColumn = false
+    /// After a resize ends with the fingers, macOS still streams that gesture's momentum.
+    /// It belongs to the resize: swallow it, changing nothing, until it ends.
+    private var absorbingResizeMomentum = false
     private weak var resizeWindow: Window?
     private var idleTask: Task<Void, Never>?
     /// Why the last Option scroll did or did not pan, for doctor.
@@ -77,6 +80,13 @@ final class NativeScrollingPan {
 
     /// Returns whether the event belongs to a pan and must not reach the app.
     func handle(_ scroll: Scroll) -> Bool {
+        if absorbingResizeMomentum {
+            if scroll.momentumPhase != 0 {
+                if scroll.momentumPhase == 3 { absorbingResizeMomentum = false }
+                return true
+            }
+            absorbingResizeMomentum = false
+        }
         if let workspace {
             // A stale Space, display or session cannot own any further scroll events.
             // Do not focus another column while cancelling a superseded interaction.
@@ -93,6 +103,7 @@ final class NativeScrollingPan {
                 // coasting should never continue to alter a window's size.
                 if scroll.phase == 4 || scroll.momentumPhase != 0 {
                     settle()
+                    absorbingResizeMomentum = scroll.momentumPhase != 3
                     return true
                 }
                 if scroll.phase == 1 && !scroll.resizeOnly {
