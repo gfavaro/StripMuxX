@@ -19,10 +19,10 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     weak var scrollingPinnedNode: TreeNode?
     var scrollingPinSide = ScrollingPinCmdArgs.Side.left
     var lastScrollingFocusWindowId: UInt32?
-    /// Last two explicitly/observably focused window IDs, limited to this desktop.
-    /// These are hints only: native macOS focus always wins on reconciliation.
-    var lastFocusedWindowID: UInt32?
-    var previousFocusedWindowID: UInt32?
+    /// Weak identities prevent a recycled WindowServer ID from inheriting old
+    /// focus history. These are hints only; native macOS focus still wins.
+    weak var lastFocusedWindow: Window?
+    weak var previousFocusedWindow: Window?
     /// Where the strip was before an attached sheet pulled it aside, to settle back.
     var scrollingSheetReveal: ScrollingSheetReveal?
     var scrollingAnchorWindowId: UInt32?

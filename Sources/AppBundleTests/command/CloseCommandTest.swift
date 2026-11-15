@@ -29,7 +29,7 @@ final class CloseCommandTest: XCTestCase {
         _ = first.focusWindow()
         _ = second.focusWindow()
         _ = third.focusWindow()
-        XCTAssertEqual(workspace.previousFocusedWindowID, second.windowId)
+        XCTAssertTrue(workspace.previousFocusedWindow === second)
         try await CloseCommand(args: CloseCmdArgs(rawArgs: [])).run(.defaultEnv, .emptyStdin)
         XCTAssertEqual(focus.windowOrNil?.windowId, second.windowId)
     }

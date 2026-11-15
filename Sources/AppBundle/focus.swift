@@ -68,10 +68,10 @@ enum FocusChangeOrigin: Equatable { case explicit, native }
           snapshot.displays.contains(where: { layouts.activeWorkspace(on: $0.identifier) === newFocus.workspace }),
           newFocus.windowOrNil?.nativeLayoutEligible != false else { return false }
     let workspace = newFocus.workspace
-    if let nextID = newFocus.windowOrNil?.windowId,
-       workspace.lastFocusedWindowID != nextID {
-        workspace.previousFocusedWindowID = workspace.lastFocusedWindowID
-        workspace.lastFocusedWindowID = nextID
+    if let candidate = newFocus.windowOrNil,
+       workspace.lastFocusedWindow !== candidate {
+        workspace.previousFocusedWindow = workspace.lastFocusedWindow
+        workspace.lastFocusedWindow = candidate
     }
     runtime.focus.requested = newFocus.frozen
     if origin == .native { runtime.focus.lastKnown = newFocus.frozen }
@@ -89,7 +89,7 @@ func restoreLogicalFocusAfterWindowClosed(_ closedID: UInt32, in workspace: Work
         $0.windowId != closedID && $0.nativeLayoutEligible && $0.participatesInWorkspaceFocus
     }
     guard !eligible.isEmpty else { return false }
-    let preferred = eligible.first(where: { $0.windowId == workspace.previousFocusedWindowID })
+    let preferred = eligible.first(where: { $0 === workspace.previousFocusedWindow })
     let chosen = preferred ?? eligible.first(where: { $0 === workspace.mostRecentWorkspaceFocusableWindowRecursive }) ?? eligible[0]
     return setFocus(to: LiveFocus(windowOrNil: chosen, workspace: workspace), origin: .native)
 }
