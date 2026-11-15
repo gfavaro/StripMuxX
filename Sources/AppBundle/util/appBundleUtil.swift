@@ -19,7 +19,8 @@ func isLockScreenApp(_ app: NSRunningApplication?) -> Bool {
     if let known = objc_getAssociatedObject(app, &lockScreenAnswerKey) as? Bool { return known }
     var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
     guard proc_pidpath(app.processIdentifier, &path, UInt32(path.count)) > 0 else { return false }
-    let answer = String(cString: path) == lockScreenExecutablePath
+    let executable = String(decoding: path.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self)
+    let answer = executable == lockScreenExecutablePath
     objc_setAssociatedObject(app, &lockScreenAnswerKey, answer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     return answer
 }
