@@ -56,7 +56,10 @@ struct LayoutCommand: Command {
                 window.freeSizeRect = rect
                 group.scrollingColumnFixedWidth = rect.width
             case .floating:
-                if window.freeSizeRect != nil {
+                if let preferred = window.freeSizeRect {
+                    // Floating is independent of the strip but keeps the free-size
+                    // dimensions the user chose instead of restoring an old size.
+                    window.lastFloatingSize = preferred.size
                     window.freeSizeRect = nil
                     window.freeSizePreviousColumnWidth = nil
                     window.freeSizePreviousFixedWidth = nil
