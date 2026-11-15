@@ -244,6 +244,37 @@ final class NativeTilingTest: WorkspaceTestCase {
         XCTAssertEqual(windows[2].scrollingColumnWidth, 0.6)
     }
 
+    func testQuittingRightAfterAStripChangeStillSavesIt() async throws {
+        let workspace = nativeWorkspace()
+        let a = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+        let b = TestWindow.new(id: 2, parent: workspace.rootTilingContainer)
+        for window in [a, b] {
+            window.restartIdentity = RestartWindowIdentity(bundleId: "fixture", pid: 99,
+                launchDate: Date(timeIntervalSince1970: 1), title: "\(window.windowId)")
+            window.scrollingColumnWidth = 0.8
+        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("layout.json")
+        let persistence = NativeLayoutPersistence(url: url)
+        let previous = runtime.native.persistence
+        runtime.native.persistence = persistence
+        defer { runtime.native.persistence = previous; TrayMenuModel.shared.isEnabled = true }
+        await persistence.reconcile(runtime.native.layouts)
+        await persistence.save(runtime.native.layouts)
+        workspace.scrollingOffset = 280
+        runtime.native.tiling.assumeReconciledForTests()
+        runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
+        // Let the layout run, then quit (or `enable off`) inside the 350 ms save debounce.
+        try await Task.sleep(for: .milliseconds(100))
+        await stopNativeTilingAndRestoreFrames()
+        let records = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        let spaces = try XCTUnwrap(records["spaces"] as? [String: [String: Any]])
+        let desktop = try XCTUnwrap(spaces["desktop-a"])
+        XCTAssertEqual(try XCTUnwrap(desktop["scrollingOffset"] as? Double), 280, accuracy: 1,
+                       "A change made just before quitting must not be lost")
+    }
+
     func testScrollingOnlyRelayoutPersistsViewportWithoutNativeRead() async throws {
         let workspace = nativeWorkspace()
         let a = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)

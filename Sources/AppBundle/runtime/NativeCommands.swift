@@ -79,6 +79,7 @@ extension NativeWorkspaceLifecycle {
 /// Stops tiling before the writes, so no layout moves a window back while it is being restored.
 @MainActor
 func stopNativeTilingAndRestoreFrames() async {
+    await runtime.native.tiling.flushPendingScrollingPersistence()
     await NativeOriginalFrames.shared.restore {
         TrayMenuModel.shared.isEnabled = false
         runtime.native.tiling.invalidate("disabled")

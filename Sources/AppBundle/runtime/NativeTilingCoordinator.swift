@@ -222,6 +222,15 @@ final class NativeTilingCoordinator {
         }
     }
 
+    /// Writes a strip change still waiting out the save debounce. Quitting and
+    /// `enable off` invalidate tiling, which would otherwise drop it unsaved.
+    func flushPendingScrollingPersistence() async {
+        guard let pending = scrollingPersistenceTask else { return }
+        pending.cancel()
+        scrollingPersistenceTask = nil
+        await runtime.native.persistence.save(runtime.native.layouts)
+    }
+
     private func scheduleScrollingPersistence() {
         scrollingPersistenceTask?.cancel()
         let version = generation
