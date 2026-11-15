@@ -25,6 +25,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case widthPresets = "scrolling.width-presets"
     case fullscreenWidth = "fullscreen-width"
     case loneWidth = "lone-window-width"
+    case loneAlignment = "single-window-alignment"
     case centerFocused = "scrolling.center-focused-column"
     case keepHeight = "scrolling.keep-window-height"
     case gapHorizontal = "gaps.inner.horizontal"
@@ -50,6 +51,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .widthPresets: "Column size shortcuts"
             case .fullscreenWidth: "Managed fullscreen width"
             case .loneWidth: "Lone window width"
+            case .loneAlignment: "Single window alignment"
             case .centerFocused: "When focusing a column"
             case .keepHeight: "Keep opening window height"
             case .gapHorizontal: "Horizontal window spacing"
@@ -63,7 +65,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     var page: SettingsSidebarItem {
         switch self {
             case .startAtLogin, .autoReload, .restoreLayouts, .restoreFrames: .general
-            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .loneWidth, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
+            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .loneWidth, .loneAlignment, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
             case .gapHorizontal, .gapOuterLeft: .appearance
             case .appearance, .menuBar: .appearance
         }
@@ -75,6 +77,7 @@ extension SettingsControl {
     var aliases: String {
         switch self {
             case .loneWidth: "single-window single window"
+            case .loneAlignment: "position centered left right"
             default: ""
         }
     }

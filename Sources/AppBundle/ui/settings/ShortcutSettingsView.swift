@@ -178,8 +178,22 @@ struct ShortcutSettingsView: View {
                         }
                     }
                 }
-                Section("Everyday") {
-                    ForEach(pages.filter { !$0.isAdvanced }) { item in
+                Section("Get started") {
+                    ForEach([SettingsSidebarItem.general, .windows, .shortcuts].filter { pages.contains($0) }) { item in
+                        NavigationLink(value: SettingsSidebarSelection.page(item)) {
+                            Label(item.label, systemImage: item.icon)
+                        }
+                    }
+                }
+                Section("Organize") {
+                    ForEach([SettingsSidebarItem.workspaces, .displays].filter { pages.contains($0) }) { item in
+                        NavigationLink(value: SettingsSidebarSelection.page(item)) {
+                            Label(item.label, systemImage: item.icon)
+                        }
+                    }
+                }
+                Section("Personalize") {
+                    ForEach([SettingsSidebarItem.appearance].filter { pages.contains($0) }) { item in
                         NavigationLink(value: SettingsSidebarSelection.page(item)) {
                             Label(item.label, systemImage: item.icon)
                         }

@@ -11,6 +11,7 @@ final class SettingsSearchTest: XCTestCase {
         XCTAssertEqual(settingsControlSearchResults("column size shortcuts"), [.widthPresets])
         XCTAssertEqual(settingsControlSearchResults("single-window width"), [.loneWidth], "The setting's earlier name still finds it")
         XCTAssertEqual(settingsControlSearchResults("fullscreen width"), [.fullscreenWidth])
+        XCTAssertEqual(settingsControlSearchResults("single window alignment"), [.loneAlignment])
         XCTAssertEqual(settingsControlSearchResults("left screen spacing"), [.gapOuterLeft])
     }
 
