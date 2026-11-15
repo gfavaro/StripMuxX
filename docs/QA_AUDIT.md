@@ -258,3 +258,48 @@ swipes and Space switches mid-gesture (no synthetic Dock gestures); Option+two-f
 pan; Mission Control; switching and moving across desktops (one desktop); two
 displays and disconnect; sleep/wake; restart and layout restoration (restart not
 permitted); VoiceOver, Reduce Motion, keyboard-only Settings; installer rollback.
+
+---
+
+# Gesture and persistence audit — 2026-11-15
+
+Tested at `471410c5` plus the two fixes below (installed as build 44). Baseline
+`make check`: 533 XCTest, 59 Python, 0 failures, 26 warnings. After the fixes:
+**536 XCTest, 59 Python, 0 failures.**
+
+## Fixes
+
+| Defect | Evidence | Fix |
+| --- | --- | --- |
+| Momentum after an Option+Shift resize scrolled the app under the pointer sideways | Regression test: 5 of 5 momentum events leaked | `fb185d71`: swallow the resize's momentum until it ends |
+| A strip change made within 350 ms of quit or `enable off` was lost | Regression test: saved offset 0 instead of 280 | `6f30df73`: flush the pending save before tiling stops |
+
+## Automated (executed)
+
+- `testFiveThousandRandomScrollEventsKeepEveryInvariant`: seeded random phases,
+  momentum, missing lift events, modifier changes, reversals, zero and vertical
+  deltas. After every event: an idle plain scroll is never consumed; focus never moves
+  during a resize; the placed viewport stays in range; widths stay within the display;
+  another desktop is never touched. Passes.
+- Persistence: invalidated pending saves are written at the next accepted observation;
+  same-app pairing, late or missing windows and the 90 s grace period have existing tests.
+
+## Physical (executed on this Mac, synthetic CGEvents to a disposable fixture app)
+
+| Check | Result |
+| --- | --- |
+| Plain horizontal scroll reaches the app | 7/7 |
+| Option pan consumed, strip moves | 0/12 reached the app; strip moved 440 pt |
+| Option + vertical scroll reaches the app | 7/7 |
+| Option+Shift resize, lift, momentum (3 runs) | 0/15 reached the app each run; width +120 pt per run (momentum never resized); focus unchanged |
+| Plain scroll after a resize | 5/5 |
+
+**P2:** if the fingers rest more than 250 ms mid-resize, the idle timer ends the
+gesture and the zero-delta lift event reaches the app. No momentum follows a still
+lift, so nothing scrolls; closing it would mean changing the idle timer.
+
+## Not executed
+
+Three-finger Dock swipes (no reliable synthesis), quit and `enable off` on the live
+desktop (would move work windows; covered by the regression test), multiple desktops
+and displays (one of each), Atlas VM runs.
