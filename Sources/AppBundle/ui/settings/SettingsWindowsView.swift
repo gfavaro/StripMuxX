@@ -20,6 +20,7 @@ struct ShortcutBehaviorSettingsView: View {
     @State private var showsLearnedMinimums = false
     @State private var showsCustomColumnSizes = false
     @State private var showsAdvancedNavigation = false
+    @State private var showsSingleWindowOptions = false
     @Environment(\.settingsSearchTarget) private var searchTarget
 
     @SettingsDraft("single-window-alignment", load: { config.singleWindowAlignment }) private var singleWindowAlignment: SingleWindowAlignment
@@ -31,7 +32,10 @@ struct ShortcutBehaviorSettingsView: View {
             SettingsSection("New windows") {
                 SettingsToggle("Tile new windows automatically", id: "automatically-tile-new-windows", isOn: $automaticallyTileNewWindows, help: "A new window becomes a column right of the focused one. Off leaves new windows floating.") { persistRootBool("automatically-tile-new-windows", automaticallyTileNewWindows) }
             }
-            SettingsSection("Single window and managed fullscreen") {
+            scrollingSettingsSection
+            DisclosureGroup("Single-window and fullscreen sizing", isExpanded: $showsSingleWindowOptions) {
+                SettingsSection("When one window is open") {
+
                 SettingsStepper("Lone window width", id: "lone-window-width", value: Binding(
                     get: { Int((loneWindowWidth * 100).rounded()) },
                     set: { loneWindowWidth = Double($0) / 100 }), range: 10...100,
@@ -46,7 +50,6 @@ struct ShortcutBehaviorSettingsView: View {
                 }
                 Text("These widths are independent. Per-display overrides may take priority. Native macOS fullscreen creates a separate Space.")
                     .font(.callout).foregroundStyle(.secondary)
-                    .font(.callout).foregroundStyle(.secondary)
                 if let width = focus.workspace.windowWidthSettings.loneWindowWidth ?? focus.workspace.windowWidthSettings.fullscreenWidth {
                     Text("Current desktop: \(Int((width * 100).rounded()))% lone window · \(focus.workspace.windowWidthSettings.singleWindowAlignment?.rawValue ?? "center") · \(focus.workspace.workspaceMonitor.name)")
                         .font(.callout).foregroundStyle(.secondary)
@@ -54,15 +57,16 @@ struct ShortcutBehaviorSettingsView: View {
                     Text("The current desktop uses the legacy aspect-ratio setting. Saving a width switches to percentage sizing.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
+                SettingsLoneWindowPreview(fraction: loneWindowWidth, alignment: singleWindowAlignment)
+                    .padding(.vertical, 4)
                 SettingsPicker("Alignment", id: "single-window-alignment", selection: $singleWindowAlignment,
                     help: "Position a lone tiled window within the available area after gaps.") {
                     Text("Centered").tag(SingleWindowAlignment.center)
                     Text("Left").tag(SingleWindowAlignment.left)
                     Text("Right").tag(SingleWindowAlignment.right)
                 } onChange: { persistRootString("single-window-alignment", singleWindowAlignment.rawValue) }
-
+                }
             }
-            scrollingSettingsSection
             DisclosureGroup("Advanced: learned application minimums", isExpanded: $showsLearnedMinimums) {
                 learnedMinimumsSection
             }
@@ -129,6 +133,11 @@ struct ShortcutBehaviorSettingsView: View {
                                   value: String(Double(scrollingColumnWidth) / 100))
                 }
                 SettingsColumnPresetPicker(values: presetValuesBinding)
+                SettingsStepper("Offscreen column preview", id: "scrolling.edge-preview",
+                                value: $edgePreview, range: 0...40,
+                                help: "Visible edge of a column outside the current viewport.", unit: "pt") {
+                    persistConfig(section: "scrolling", key: "edge-preview", value: String(edgePreview))
+                }
                 DisclosureGroup("Custom column sizes", isExpanded: $showsCustomColumnSizes) {
                     SettingsStepper("Exact default width", id: "scrolling.column-width.custom",
                                     value: $scrollingColumnWidth, range: 10...100,
@@ -211,11 +220,6 @@ struct ShortcutBehaviorSettingsView: View {
                     persistConfig(section: "scrolling", key: "minimap-enabled",
                                   value: scrollingMinimapEnabled ? "true" : "false")
                 }
-                SettingsStepper("Offscreen column preview", id: "scrolling.edge-preview",
-                                value: $edgePreview, range: 0...40,
-                                help: "Visible edge of a column outside the current viewport.", unit: "pt") {
-                    persistConfig(section: "scrolling", key: "edge-preview", value: String(edgePreview))
-                }
                 SettingsTextField("Hold to show minimap", id: "scrolling.minimap-hold-modifiers",
                                   text: $minimapHoldModifiers,
                                   help: "Optional keys: ctrl, alt, cmd, shift; empty turns this off.",
@@ -232,6 +236,8 @@ struct ShortcutBehaviorSettingsView: View {
     private func revealSearchedControl() {
         switch searchTarget?.id {
             case "scrolling.gesture-sensitivity": showsAdvancedNavigation = true
+            case "lone-window-width", "fullscreen-width", "single-window-alignment":
+                showsSingleWindowOptions = true
             case "scrolling.width-presets.custom", "scrolling.column-width.custom":
                 showsCustomColumnSizes = true
             default: break
@@ -295,4 +301,44 @@ private func scrollingPresetError(_ text: String) -> String? {
 private func scrollingSensitivityError(_ text: String) -> String? {
     guard let value = Double(text), value.isFinite, value > 0 else { return "Enter a finite value greater than zero." }
     return nil
+}
+
+func settingsLoneWindowPreviewFrame(in bounds: CGRect, fraction: Double, alignment: SingleWindowAlignment) -> CGRect {
+    let width = bounds.width * min(max(fraction, 0.1), 1)
+    let x: CGFloat
+    switch alignment {
+        case .left: x = bounds.minX
+        case .right: x = bounds.maxX - width
+        case .center: x = bounds.midX - width / 2
+    }
+    return CGRect(x: x, y: bounds.minY, width: width, height: bounds.height)
+}
+
+/// Noninteractive diagram showing how a single tiled column is positioned.
+private struct SettingsLoneWindowPreview: View {
+    let fraction: Double
+    let alignment: SingleWindowAlignment
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Single-window preview").font(.caption.weight(.medium))
+            GeometryReader { geometry in
+                let area = CGRect(x: 8, y: 8, width: max(geometry.size.width - 16, 0),
+                                  height: max(geometry.size.height - 16, 0))
+                let window = settingsLoneWindowPreviewFrame(in: area, fraction: fraction, alignment: alignment)
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.secondary.opacity(0.3)))
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.accentColor.opacity(0.22))
+                        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.accentColor, lineWidth: 1.5))
+                        .frame(width: window.width, height: window.height)
+                        .position(x: window.midX, y: window.midY)
+                }
+            }
+            .frame(height: 76)
+            .accessibilityHidden(true)
+            SettingsDescription("Illustration only; display-specific overrides may differ.")
+        }
+    }
 }

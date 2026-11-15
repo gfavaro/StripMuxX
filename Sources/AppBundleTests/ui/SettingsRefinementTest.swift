@@ -5,6 +5,21 @@ import XCTest
 @MainActor
 final class SettingsRefinementTest: WorkspaceTestCase {
 
+
+    func testSingleWindowDiagramAlignsAndClampsWindowWidth() {
+        let bounds = CGRect(x: 10, y: 20, width: 400, height: 70)
+        let left = settingsLoneWindowPreviewFrame(in: bounds, fraction: 0.5, alignment: .left)
+        let center = settingsLoneWindowPreviewFrame(in: bounds, fraction: 0.5, alignment: .center)
+        let right = settingsLoneWindowPreviewFrame(in: bounds, fraction: 0.5, alignment: .right)
+        XCTAssertEqual(left.minX, 10)
+        XCTAssertEqual(center.midX, bounds.midX)
+        XCTAssertEqual(right.maxX, bounds.maxX)
+        XCTAssertEqual(left.width, 200)
+        XCTAssertEqual(settingsLoneWindowPreviewFrame(in: bounds, fraction: 2, alignment: .center), bounds)
+        XCTAssertEqual(settingsLoneWindowPreviewFrame(in: bounds, fraction: 0, alignment: .center).width, 40)
+    }
+
+
     func testStoredNavigationIdentifiersRestoreAndUnknownValuesFallBack() {
         for page in SettingsSidebarItem.allCases {
             XCTAssertEqual(SettingsSidebarItem.restored(page.rawValue), page)
