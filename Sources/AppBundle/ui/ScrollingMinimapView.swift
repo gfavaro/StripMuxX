@@ -10,6 +10,12 @@ struct ScrollingMinimapTile: Equatable {
     var pinned: ScrollingPinCmdArgs.Side? = nil
 }
 
+/// Insertion index relative to tiles other than the tile currently dragged.
+/// Uses the same rule for the visual preview and for the committed reorder.
+func scrollingMinimapInsertionIndex(_ draggedMidX: CGFloat, otherMidpoints: [CGFloat]) -> Int {
+    otherMidpoints.filter { $0 < draggedMidX }.count
+}
+
 @MainActor
 final class ScrollingMinimapView: NSView {
     override var isFlipped: Bool { true }
@@ -183,7 +189,7 @@ final class ScrollingMinimapView: NSView {
     private func dropTile(_ dropped: ScrollingMinimapButton, at midX: CGFloat) {
         dropIndicator.isHidden = true
         let others = buttons.filter { $0 !== dropped }
-        let index = others.filter { $0.frame.midX < midX }.count
+        let index = scrollingMinimapInsertionIndex(midX, otherMidpoints: others.map { $0.frame.midX })
         guard let current = buttons.firstIndex(where: { $0 === dropped }) else { return }
         if index != current { reordered?(dropped.model.id, index) }
         else { dropped.frame.origin.x = geometry.map { $0.tiles[current].minX } ?? dropped.frame.origin.x }
@@ -194,7 +200,7 @@ final class ScrollingMinimapView: NSView {
     private func showDropPreview(for dropped: ScrollingMinimapButton, at midX: CGFloat) {
         let others = buttons.filter { $0 !== dropped }
         guard !others.isEmpty else { dropIndicator.isHidden = true; return }
-        let index = others.filter { $0.frame.midX < midX }.count
+        let index = scrollingMinimapInsertionIndex(midX, otherMidpoints: others.map { $0.frame.midX })
         let targetX: CGFloat
         if index == 0 { targetX = others[0].frame.minX }
         else if index == others.count { targetX = others[others.count - 1].frame.maxX }

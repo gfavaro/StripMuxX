@@ -121,6 +121,15 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
             contentOffset: 100, contentWidth: 1600), 0)
     }
 
+    func testMinimapDragInsertionSlotsMatchReorderOnBothEdges() {
+        let centers: [CGFloat] = [40, 100, 160, 220]
+        XCTAssertEqual(scrollingMinimapInsertionIndex(-10, otherMidpoints: centers), 0)
+        XCTAssertEqual(scrollingMinimapInsertionIndex(40, otherMidpoints: centers), 0)
+        XCTAssertEqual(scrollingMinimapInsertionIndex(75, otherMidpoints: centers), 1)
+        XCTAssertEqual(scrollingMinimapInsertionIndex(130, otherMidpoints: centers), 2)
+        XCTAssertEqual(scrollingMinimapInsertionIndex(300, otherMidpoints: centers), 4)
+    }
+
     func testMinimapDragPreviewIsHiddenOnReset() throws {
         let (workspace, windows) = fixture(count: 4)
         let models = windows.map {
