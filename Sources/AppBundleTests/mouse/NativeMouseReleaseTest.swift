@@ -35,6 +35,14 @@ final class NativeMouseReleaseTest: XCTestCase {
         XCTAssertEqual(root.children.compactMap { ($0 as? Window)?.windowId }, [31002, 31001])
     }
 
+    func testPreviewAndDropUseSameDestinationRule() async throws {
+        let (first, second) = try await layout()
+        let target = try XCTUnwrap(second.lastAppliedLayoutPhysicalRect)
+        XCTAssertTrue(nativeMouseSwapTarget(for: first, at: target.center) === second)
+        XCTAssertNil(nativeMouseSwapTarget(for: first, at: CGPoint(x: -999, y: -999)))
+        XCTAssertNil(nativeMouseSwapTarget(for: first, at: first.lastAppliedLayoutPhysicalRect!.center))
+    }
+
     func testClickAndDropOnEmptySpaceChangeNothing() async throws {
         let (first, _) = try await layout()
         let root = focus.workspace.rootTilingContainer

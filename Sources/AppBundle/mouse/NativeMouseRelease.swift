@@ -23,10 +23,19 @@ func adoptNativeMouseRelease(_ window: Window, actual: Rect, pointer: CGPoint) -
         return resized ? .resized : .none
     }
     guard hypot(actual.center.x - target.center.x, actual.center.y - target.center.y) > 30,
-          let drop = workspace.allLeafWindowsRecursive.first(where: {
-              $0 !== window && $0.parent is TilingContainer && $0.nativeLayoutEligible &&
-                  $0.lastAppliedLayoutPhysicalRect?.contains(pointer) == true
-          }) else { return .none }
+          let drop = nativeMouseSwapTarget(for: window, at: pointer) else { return .none }
     swapNodes(window, drop)
     return .swapped(with: drop.windowId)
+}
+
+/// Shared target selection for the non-interactive drag preview and real drop.
+/// Only uses already accepted layout geometry; does not query Accessibility.
+@MainActor
+func nativeMouseSwapTarget(for dragged: Window, at pointer: CGPoint) -> Window? {
+    guard let workspace = dragged.nodeWorkspace, workspace.isVisible,
+          dragged.parent is TilingContainer else { return nil }
+    return workspace.allLeafWindowsRecursive.first {
+        $0 !== dragged && $0.parent is TilingContainer && $0.nativeLayoutEligible &&
+        $0.lastAppliedLayoutPhysicalRect?.contains(pointer) == true
+    }
 }
