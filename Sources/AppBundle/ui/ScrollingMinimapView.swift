@@ -8,7 +8,12 @@ struct ScrollingMinimapTile: Equatable {
     let count: Int
     /// The edge a pinned column sits at; it stays outside the strip.
     var pinned: ScrollingPinCmdArgs.Side? = nil
+    /// A free-size column keeps its own window size; drawn with a dashed edge.
+    var freeSize = false
 }
+
+/// Height the floating row adds to the minimap when the desktop has floating windows.
+let scrollingMinimapFloatingRowHeight: CGFloat = 32
 
 /// Insertion index relative to tiles other than the tile currently dragged.
 /// Uses the same rule for the visual preview and for the committed reorder.
@@ -24,6 +29,9 @@ final class ScrollingMinimapView: NSView {
     var reordered: ((ObjectIdentifier, Int) -> Void)?
     var hoverChanged: ((Bool) -> Void)?
     var dismissRequested: (() -> Void)?
+    /// A floating window's chip clicked: its window ID.
+    var floatingSelected: ((UInt32) -> Void)?
+    private var floatingChips: [ScrollingMinimapFloatingChip] = []
     private var tracking: NSTrackingArea?
     private var buttons: [ScrollingMinimapButton] = []
     private var pinnedButton: ScrollingMinimapButton?
@@ -40,6 +48,7 @@ final class ScrollingMinimapView: NSView {
     private var previousViewportMidX: CGFloat?
     private let dropIndicator = NSView()
     private var heading = ""
+    private var subheading = ""
     private var focusedTitle = ""
     private var columnPosition = ""
     private var positionTrack: CGRect = .zero
@@ -78,12 +87,17 @@ final class ScrollingMinimapView: NSView {
     }
 
     func update(workspaceName: String, models: [ScrollingMinimapTile], pinned: ScrollingMinimapTile? = nil,
+                floating: [ScrollingMinimapFloatingWindow] = [],
                 icons: [Int32: NSImage], metrics: ScrollingWorkspaceMetrics, offset: CGFloat, focused: ObjectIdentifier?) {
-        heading = "\(workspaceName) · \(models.count) \(models.count == 1 ? "group" : "groups")" +
+        heading = workspaceName
+        subheading = "\(models.count) \(models.count == 1 ? "column" : "columns")" +
+            (floating.isEmpty ? "" : " · \(floating.count) floating") +
             (pinned.map { " · \($0.title) pinned \($0.pinned == .right ? "right" : "left")" } ?? "")
-        focusedTitle = (models + (pinned.map { [$0] } ?? [])).first { $0.id == focused }?.title ?? "Click a group to reveal it"
+        focusedTitle = (models + (pinned.map { [$0] } ?? [])).first { $0.id == focused }?.title
+            ?? floating.first { $0.focused }?.title ?? "Click a column to reveal it"
         let activeIndex = models.firstIndex { $0.id == focused }
-        columnPosition = activeIndex.map { "\($0 + 1) / \(models.count)" } ?? "\(models.count) groups"
+        columnPosition = activeIndex.map { "\($0 + 1) of \(models.count)" } ?? ""
+        updateFloatingChips(floating, icons: icons)
         let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
         // A pinned column keeps its edge here too, beside the strip rather than on it.
         let pinnedWidth: CGFloat = pinned == nil ? 0 : min(max(rowHeight * 0.75, 32), 96)
@@ -156,6 +170,36 @@ final class ScrollingMinimapView: NSView {
         updateViewportFrame()
         viewport.needsDisplay = true
         needsDisplay = true
+    }
+
+    private func updateFloatingChips(_ floating: [ScrollingMinimapFloatingWindow], icons: [Int32: NSImage]) {
+        if floatingChips.map(\.model.windowId) != floating.map(\.windowId) {
+            floatingChips.forEach { $0.removeFromSuperview() }
+            floatingChips = floating.map { model in
+                let chip = ScrollingMinimapFloatingChip(model: model)
+                chip.target = self
+                chip.action = #selector(selectFloating(_:))
+                addSubview(chip)
+                return chip
+            }
+        }
+        // One row above the footer, left to right after its label; chips that do not fit are hidden.
+        var x: CGFloat = 80
+        let y = bounds.height - 23 - scrollingMinimapFloatingRowHeight + 2
+        for (chip, model) in zip(floatingChips, floating) {
+            chip.configure(model, icon: icons[model.pid])
+            let width = min(170, max(84, chip.preferredWidth))
+            chip.isHidden = x + width > bounds.width - 16
+            let target = CGRect(x: x, y: y, width: width, height: 24)
+            if chip.frame != target { chip.frame = target }
+            x += width + 6
+        }
+        floatingLabelVisible = !floating.isEmpty
+    }
+    private var floatingLabelVisible = false
+
+    @objc private func selectFloating(_ sender: ScrollingMinimapFloatingChip) {
+        floatingSelected?(sender.model.windowId)
     }
 
     private func updatePinnedButton(_ model: ScrollingMinimapTile?, icons: [Int32: NSImage], focused: ObjectIdentifier?, frame: CGRect) {
@@ -287,23 +331,38 @@ final class ScrollingMinimapView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        drawMinimapText(heading, in: CGRect(x: 16, y: 9, width: bounds.width - 116, height: 17),
-                        font: .systemFont(ofSize: 11, weight: .semibold), color: .labelColor)
-        drawMinimapText(columnPosition, in: CGRect(x: bounds.width - 100, y: 9, width: 84, height: 17),
-                        font: .monospacedDigitSystemFont(ofSize: 10, weight: .medium),
-                        color: .secondaryLabelColor, alignment: .right)
+        let headingFont = NSFont.systemFont(ofSize: 12, weight: .semibold)
+        let headingWidth = min((heading as NSString).size(withAttributes: [.font: headingFont]).width + 2, bounds.width * 0.5)
+        drawMinimapText(heading, in: CGRect(x: 16, y: 8, width: headingWidth, height: 17), font: headingFont, color: .labelColor)
+        drawMinimapText(subheading, in: CGRect(x: 16 + headingWidth + 8, y: 9.5, width: bounds.width - headingWidth - 130, height: 15),
+                        font: .systemFont(ofSize: 10.5), color: .secondaryLabelColor)
+        if !columnPosition.isEmpty {
+            // The focused column's place, in a pill at the top right.
+            let font = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .semibold)
+            let width = (columnPosition as NSString).size(withAttributes: [.font: font]).width + 16
+            let pill = CGRect(x: bounds.width - 16 - width, y: 7, width: width, height: 18)
+            NSColor.controlAccentColor.withAlphaComponent(0.18).setFill()
+            NSBezierPath(roundedRect: pill, xRadius: 9, yRadius: 9).fill()
+            drawMinimapText(columnPosition, in: pill.insetBy(dx: 8, dy: 2.5), font: font,
+                            color: .controlAccentColor, alignment: .center)
+        }
+        if floatingLabelVisible {
+            drawMinimapText("Floating", in: CGRect(x: 16, y: bounds.height - 23 - scrollingMinimapFloatingRowHeight + 7,
+                            width: 60, height: 14), font: .systemFont(ofSize: 10, weight: .semibold), color: .secondaryLabelColor)
+        }
         if !positionTrack.isEmpty {
-            NSColor.labelColor.withAlphaComponent(0.12).setFill()
+            NSColor.labelColor.withAlphaComponent(0.08).setFill()
             NSBezierPath(roundedRect: positionTrack, xRadius: 2, yRadius: 2).fill()
-            NSColor.controlAccentColor.withAlphaComponent(0.9).setFill()
+            NSColor.controlAccentColor.withAlphaComponent(0.7).setFill()
             NSBezierPath(roundedRect: positionThumb, xRadius: 2, yRadius: 2).fill()
         }
-        drawMinimapText("Selected · " + focusedTitle,
+        drawMinimapText(focusedTitle,
                         in: CGRect(x: 16, y: bounds.height - 23, width: bounds.width * 0.55, height: 16),
                         font: .systemFont(ofSize: 10, weight: .medium), color: .labelColor)
         let navigationHint = config.scrolling.threeFingerSwipe && config.scrolling.gestureEnabled
-            ? "Click to reveal · Three-finger swipe"
-            : config.scrolling.gestureEnabled ? "Click to reveal · ⌥ + two-finger scroll" : "Click to reveal · Arrow keys"
+            ? "Click to reveal · drag to reorder · three-finger swipe"
+            : config.scrolling.gestureEnabled ? "Click to reveal · drag to reorder · ⌥ two-finger scroll"
+            : "Click to reveal · drag to reorder · arrow keys"
         drawMinimapText(navigationHint, in: CGRect(x: bounds.width * 0.58, y: bounds.height - 23,
                         width: bounds.width * 0.42 - 16, height: 16), font: .systemFont(ofSize: 10),
                         color: .secondaryLabelColor, alignment: .right)
@@ -414,63 +473,136 @@ final class ScrollingMinimapButton: NSButton {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let tile = bounds.insetBy(dx: 1.5, dy: 1.5)
-        let path = NSBezierPath(roundedRect: tile, xRadius: 7, yRadius: 7)
-        (focused ? NSColor.controlAccentColor.withAlphaComponent(0.36)
-            : isHighlighted ? NSColor.controlAccentColor.withAlphaComponent(0.24)
-            : NSColor.controlBackgroundColor.withAlphaComponent(0.75)).setFill()
+        // A miniature window: a card with a title bar, the app's icon and its title.
+        let tile = bounds.insetBy(dx: 2, dy: 2)
+        let path = NSBezierPath(roundedRect: tile, xRadius: 8, yRadius: 8)
+        let accent = NSColor.controlAccentColor
+        (focused ? accent.withAlphaComponent(0.22)
+            : isHighlighted ? accent.withAlphaComponent(0.14)
+            : NSColor.labelColor.withAlphaComponent(0.07)).setFill()
         path.fill()
-        (focused ? NSColor.controlAccentColor : NSColor.separatorColor).setStroke()
-        path.lineWidth = focused ? 2.5 : NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? 2 : 1
+        if tile.width >= 24 {
+            // Title bar, divided once per window of a stack.
+            let bar = CGRect(x: tile.minX, y: tile.minY, width: tile.width, height: 7)
+            NSGraphicsContext.saveGraphicsState()
+            path.addClip()
+            (focused ? accent.withAlphaComponent(0.35) : NSColor.labelColor.withAlphaComponent(0.08)).setFill()
+            bar.fill()
+            if model.count > 1 {
+                NSColor.labelColor.withAlphaComponent(0.12).setFill()
+                let rows = min(model.count, 4)
+                for row in 1 ..< rows {
+                    let y = bar.maxY + (tile.height - bar.height) * CGFloat(row) / CGFloat(rows)
+                    CGRect(x: tile.minX + 6, y: y - 0.5, width: tile.width - 12, height: 1).fill()
+                }
+            }
+            NSGraphicsContext.restoreGraphicsState()
+        }
+        let increaseContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+        (focused ? accent : NSColor.labelColor.withAlphaComponent(increaseContrast ? 0.5 : 0.16)).setStroke()
+        path.lineWidth = focused ? 2 : increaseContrast ? 1.5 : 1
+        if model.freeSize { path.setLineDash([4, 3], count: 2, phase: 0) }
         path.stroke()
         if keyboardSelected {
-            let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 8, yRadius: 8)
-            NSColor.controlAccentColor.setStroke()
-            ring.lineWidth = 2.5
+            let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
+            accent.setStroke()
+            ring.lineWidth = 2
             ring.stroke()
         }
         guard bounds.width >= 18 else { return }
+        let showsTitle = bounds.width >= 56 && bounds.height >= 48
+        let side: CGFloat = bounds.width >= 56 ? 20 : 16
         let count = bounds.width >= 80 ? icons.count : min(icons.count, 1)
+        let iconsWidth = CGFloat(count) * side + CGFloat(max(count - 1, 0)) * 3
+        let iconY = showsTitle ? max(tile.minY + 12, tile.midY - side - 2) : tile.midY - side / 2 + 3
         for (index, icon) in icons.prefix(count).enumerated() {
-            let x = bounds.width >= 48 ? 8 + CGFloat(index) * 18 : (bounds.width - 16) / 2
+            let x = (bounds.width - iconsWidth) / 2 + CGFloat(index) * (side + 3)
             let image: NSImage
             if icon.isTemplate {
-                image = NSImage(size: CGSize(width: 16, height: 16), flipped: false) { rect in
+                image = NSImage(size: CGSize(width: side, height: side), flipped: false) { rect in
                     icon.draw(in: rect)
                     NSColor.labelColor.setFill()
                     rect.fill(using: .sourceIn)
                     return true
                 }
             } else { image = icon }
-            image.draw(in: CGRect(x: x, y: 9, width: 16, height: 16), from: .zero, operation: .sourceOver,
-                      fraction: 1, respectFlipped: true, hints: nil)
+            image.draw(in: CGRect(x: x, y: iconY, width: side, height: side), from: .zero, operation: .sourceOver,
+                      fraction: focused ? 1 : 0.9, respectFlipped: true, hints: nil)
         }
         if model.pinned != nil, let pin = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: "Pinned") {
-            let badge = NSImage(size: CGSize(width: 11, height: 11), flipped: false) { rect in
+            let badge = NSImage(size: CGSize(width: 10, height: 10), flipped: false) { rect in
                 pin.draw(in: rect)
-                NSColor.controlAccentColor.setFill()
+                accent.setFill()
                 rect.fill(using: .sourceIn)
                 return true
             }
-            badge.draw(in: CGRect(x: bounds.width - 16, y: 5, width: 11, height: 11), from: .zero, operation: .sourceOver,
+            badge.draw(in: CGRect(x: bounds.width - 15, y: 11, width: 10, height: 10), from: .zero, operation: .sourceOver,
                        fraction: 1, respectFlipped: true, hints: nil)
         }
-        if bounds.width >= 48 {
-            drawMinimapText(model.title, in: CGRect(x: 8, y: 34, width: bounds.width - 16, height: 16),
-                            font: .systemFont(ofSize: 10, weight: focused ? .medium : .regular), color: .labelColor)
+        if model.count > 1, bounds.width >= 40 {
+            let font = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .semibold)
+            drawMinimapText("\(model.count)", in: CGRect(x: tile.minX + 6, y: tile.minY + 9, width: 20, height: 12),
+                            font: font, color: .secondaryLabelColor)
         }
-        if model.count > 1, bounds.width >= 65 {
-            let glyph = CGRect(x: bounds.width - 29, y: 9, width: 20, height: 16)
-            NSColor.secondaryLabelColor.setStroke()
-            // A stack: a tile divided top and bottom.
-            do {
-                NSBezierPath(roundedRect: glyph.insetBy(dx: 1, dy: 1), xRadius: 2, yRadius: 2).stroke()
-                let split = NSBezierPath()
-                split.move(to: CGPoint(x: glyph.minX + 1, y: glyph.midY))
-                split.line(to: CGPoint(x: glyph.maxX - 1, y: glyph.midY))
-                split.stroke()
-            }
+        if showsTitle {
+            drawMinimapText(model.title, in: CGRect(x: 7, y: iconY + side + 5, width: bounds.width - 14, height: 14),
+                            font: .systemFont(ofSize: 10, weight: focused ? .semibold : .regular),
+                            color: focused ? .labelColor : .secondaryLabelColor, alignment: .center)
         }
+    }
+}
+
+/// A floating window, listed under the strip so it can be found.
+struct ScrollingMinimapFloatingWindow: Equatable {
+    let windowId: UInt32
+    let pid: Int32
+    let title: String
+    var focused = false
+}
+
+@MainActor
+final class ScrollingMinimapFloatingChip: NSButton {
+    override var isFlipped: Bool { true }
+    private(set) var model: ScrollingMinimapFloatingWindow
+    private var icon: NSImage?
+
+    init(model: ScrollingMinimapFloatingWindow) {
+        self.model = model
+        super.init(frame: .zero)
+        title = ""
+        isBordered = false
+        setAccessibilityHelp("Focus this floating window")
+    }
+    required init?(coder: NSCoder) { nil }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    var preferredWidth: CGFloat {
+        (model.title as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 10)]).width + 36
+    }
+
+    func configure(_ model: ScrollingMinimapFloatingWindow, icon: NSImage?) {
+        guard self.model != model || self.icon !== icon else { return }
+        self.model = model
+        self.icon = icon
+        toolTip = model.title
+        setAccessibilityLabel(model.title)
+        setAccessibilityValue(model.focused ? "Focused" : "")
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let chip = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 12, yRadius: 12)
+        (model.focused ? NSColor.controlAccentColor.withAlphaComponent(0.22)
+            : isHighlighted ? NSColor.controlAccentColor.withAlphaComponent(0.14)
+            : NSColor.labelColor.withAlphaComponent(0.07)).setFill()
+        chip.fill()
+        (model.focused ? NSColor.controlAccentColor : NSColor.labelColor.withAlphaComponent(0.16)).setStroke()
+        chip.lineWidth = model.focused ? 1.5 : 1
+        chip.stroke()
+        icon?.draw(in: CGRect(x: 6, y: 4, width: 16, height: 16), from: .zero, operation: .sourceOver,
+                   fraction: 1, respectFlipped: true, hints: nil)
+        drawMinimapText(model.title, in: CGRect(x: 26, y: 5, width: bounds.width - 34, height: 14),
+                        font: .systemFont(ofSize: 10, weight: model.focused ? .semibold : .regular), color: .labelColor)
     }
 }
 
@@ -478,12 +610,12 @@ final class ScrollingMinimapButton: NSButton {
 private final class ScrollingMinimapViewport: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func draw(_ dirtyRect: NSRect) {
-        let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 9, yRadius: 9)
-        NSColor.labelColor.withAlphaComponent(0.035).setFill()
+        // The part of the strip on screen: a soft accent frame around those columns.
+        let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 10, yRadius: 10)
+        NSColor.controlAccentColor.withAlphaComponent(0.06).setFill()
         outline.fill()
-        NSColor.labelColor.withAlphaComponent(0.42).setStroke()
+        NSColor.controlAccentColor.withAlphaComponent(0.6).setStroke()
         outline.lineWidth = 1.5
-        outline.setLineDash([3, 3], count: 2, phase: 0)
         outline.stroke()
     }
 }

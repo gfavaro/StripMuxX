@@ -59,7 +59,9 @@ series of commits. See [implementation status](SCROLL_FEEL_IMPLEMENTATION_STATUS
 `layout floating` lifts the focused window off the strip and `layout tiling` puts it
 back; `layout floating tiling` toggles. `layout floating --for-next-detected-window`
 floats only the next window that opens. Window rules (`on-window-detected`) can float
-windows by app or title. `fullscreen` widens a window over the desktop without
+windows by app or title. Floating windows stay on their desktop: the minimap lists
+them under the strip (click one to focus it), and `focus floating` (Alt-Shift-V)
+focuses each in turn, then returns to the strip. `fullscreen` widens a window over the desktop without
 leaving the strip; `macos-native-fullscreen` gives it a macOS fullscreen Space.
 
 ## Lone ultrawide window

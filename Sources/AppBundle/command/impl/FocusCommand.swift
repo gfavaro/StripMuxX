@@ -74,7 +74,21 @@ struct FocusCommand: Command {
                     }
                 }
                 return windows[targetIndex].focusWindow()
+            case .floating:
+                return focusNextFloating(after: target.windowOrNil, in: workspace, io)
         }
+    }
+
+    /// From the strip, the first floating window; from a floating window, the next one;
+    /// after the last, back to the strip's most recent window.
+    @MainActor private func focusNextFloating(after current: Window?, in workspace: Workspace, _ io: CmdIo) -> Bool {
+        let floating = workspace.floatingWindows.sorted { $0.windowId < $1.windowId }
+        guard !floating.isEmpty else { return io.err("No floating windows on this desktop") }
+        guard let current, let index = floating.firstIndex(where: { $0 === current }) else {
+            return floating[0].focusWindow()
+        }
+        if let next = floating.getOrNil(atIndex: index + 1) { return next.focusWindow() }
+        return workspace.rootTilingContainer.mostRecentWorkspaceFocusableWindowRecursive?.focusWindow() ?? true
     }
 
     /// Past the strip's first or last column: stop, wrap, or continue onto the next display.

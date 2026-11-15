@@ -1,12 +1,14 @@
 public enum FocusTargetArg: Equatable, Sendable {
     case direction(CardinalDirection)
     case dfsRelative(DfsNextPrev)
+    /// The desktop's floating windows in turn, then back to the strip.
+    case floating
 }
 
 extension FocusTargetArg: CaseIterable {
     public static var allCases: [FocusTargetArg] {
         CardinalDirection.allCases.map { .direction($0) } +
-            DfsNextPrev.allCases.map { .dfsRelative($0) }
+            DfsNextPrev.allCases.map { .dfsRelative($0) } + [.floating]
     }
 }
 
@@ -18,6 +20,8 @@ extension FocusTargetArg: RawRepresentable {
             self = .direction(direction)
         } else if let nextPrev = DfsNextPrev(rawValue: rawValue) {
             self = .dfsRelative(nextPrev)
+        } else if rawValue == "floating" {
+            self = .floating
         } else {
             return nil
         }
@@ -27,6 +31,7 @@ extension FocusTargetArg: RawRepresentable {
         switch self {
             case .direction(let direction): direction.rawValue
             case .dfsRelative(let nextPrev): nextPrev.rawValue
+            case .floating: "floating"
         }
     }
 }

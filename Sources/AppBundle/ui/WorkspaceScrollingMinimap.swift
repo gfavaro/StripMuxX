@@ -101,7 +101,9 @@ final class WorkspaceScrollingMinimap: NSObject {
         let index = workspace.workspaceMonitor.monitorAppKitNsScreenScreensId
         guard screens.indices.contains(index - 1) else { dismiss(); return }
         let width = min(680, max(1, screens[index - 1].visibleFrame.width - 48))
+        let floatingWindows = workspace.floatingWindows.filter(\.nativeLayoutEligible).sorted { $0.windowId < $1.windowId }
         let height = scrollingMinimapRowHeight(metrics: workspace.scrollingMetrics) + 80
+            + (floatingWindows.isEmpty ? 0 : scrollingMinimapFloatingRowHeight)
         guard let frame = scrollingMinimapFrame(size: CGSize(width: width, height: height),
             visibleFrames: screens.map(\.visibleFrame), screenIndex: index) else { dismiss(); return }
         let panel = self.panel ?? makePanel()
@@ -127,6 +129,11 @@ final class WorkspaceScrollingMinimap: NSObject {
             view = ScrollingMinimapView(frame: effect.bounds)
             view.autoresizingMask = [.width, .height]
             view.selected = { [weak self] id in self?.selectGroup(id) }
+            view.floatingSelected = { [weak self] id in
+                guard let self, let window = Window.get(byId: id), window.focusWindow() else { return }
+                runtime.native.focusDidMove(to: window)
+                if let workspace = self.workspace { self.show(workspace) }
+            }
             view.hoverChanged = { [weak self] hovered in
                 guard let self else { return }
                 self.lifetime.hover(hovered, at: self.now)
@@ -160,6 +167,7 @@ final class WorkspaceScrollingMinimap: NSObject {
         let groups = workspace.scrollingStripUnits
         let pinnedColumn = workspace.pinnedScrollingColumn
         let representatives = (groups + (pinnedColumn.map { [$0] } ?? [])).compactMap(\.mostRecentWindowRecursive)
+            + floatingWindows
         func tile(_ group: TreeNode) -> ScrollingMinimapTile {
             let windows = group.allLeafWindowsRecursive
             let window = group.mostRecentWindowRecursive
@@ -172,16 +180,26 @@ final class WorkspaceScrollingMinimap: NSObject {
                 }
             }
             let title = window.flatMap { member -> String? in
-                guard let name = cachedWindowTitle(for: member) ?? member.app.name else { return nil }
-                return member.freeSizeRect == nil ? name : "Free-size · " + name
-            } ?? "Empty group"
+                cachedWindowTitle(for: member) ?? member.app.name
+            } ?? "Empty column"
             return ScrollingMinimapTile(id: ObjectIdentifier(group),
-                title: title, applications: pids, count: windows.count)
+                title: title, applications: pids, count: windows.count,
+                freeSize: windows.count == 1 && windows[0].freeSizeRect != nil)
         }
         let models = groups.map(tile)
         var pinned = pinnedColumn.map(tile)
         pinned?.pinned = workspace.scrollingPinSide
-        view.update(workspaceName: userFacingDesktopName(workspace), models: models, pinned: pinned, icons: icons,
+        let floating = floatingWindows.map { window in
+            if icons[window.app.pid] == nil {
+                icons[window.app.pid] = (window.app as? MacApp)?.nsApp.icon
+                    ?? NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
+            }
+            return ScrollingMinimapFloatingWindow(windowId: window.windowId, pid: window.app.pid,
+                title: cachedWindowTitle(for: window) ?? window.app.name ?? "Window",
+                focused: focus.windowOrNil === window)
+        }
+        view.update(workspaceName: userFacingDesktopName(workspace), models: models, pinned: pinned,
+                    floating: floating, icons: icons,
                     metrics: workspace.scrollingMetrics, offset: workspace.scrollingOffset,
                     focused: focus.windowOrNil.flatMap { $0.nodeWorkspace === workspace ? ObjectIdentifier($0.topLevelWorkspaceGroup) : nil })
         refreshTitles(representatives, in: workspace)

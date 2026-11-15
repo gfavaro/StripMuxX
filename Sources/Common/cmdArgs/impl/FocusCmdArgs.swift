@@ -60,9 +60,13 @@ public enum FocusCmdTarget {
     case windowId(UInt32)
     case dfsIndex(UInt32)
     case dfsRelative(DfsNextPrev)
+    case floating
 
     var requiresWorkspaceBoundaries: Bool {
-        if case .dfsRelative = self { true } else { false }
+        switch self {
+            case .dfsRelative, .floating: true
+            default: false
+        }
     }
 }
 
@@ -72,6 +76,7 @@ extension FocusCmdArgs {
             return switch targetArg {
                 case .direction(let dir): .direction(dir)
                 case .dfsRelative(let nextPrev): .dfsRelative(nextPrev)
+                case .floating: .floating
             }
         }
         if let windowId {
@@ -105,7 +110,7 @@ func parseFocusCmdArgs(_ args: StrArrSlice) -> ParsedCmd<FocusCmdArgs> {
         .filter("--dfs-index is incompatible with other options") {
             $0.dfsIndex == nil || $0 == FocusCmdArgs(rawArgs: args, dfsIndex: $0.dfsIndex.orDie())
         }
-        .filter("(dfs-next|dfs-prev) only supports --boundaries workspace") {
+        .filter("(dfs-next|dfs-prev|floating) only supports --boundaries workspace") {
             $0.target.requiresWorkspaceBoundaries.implies($0.boundaries == .workspace)
         }
 }

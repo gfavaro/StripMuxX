@@ -50,6 +50,26 @@ final class ScrollingStripFeaturesTest: XCTestCase {
         XCTAssertEqual(windows[1].lastAppliedLayoutPhysicalRect?.height, full.height, "Never taller than the column")
     }
 
+    func testFocusFloatingCyclesTheFloatingWindowsThenReturnsToTheStrip() async throws {
+        let (workspace, windows) = try await strip()
+        _ = windows[2].focusWindow()
+        let second = TestWindow.new(id: 8191, parent: workspace)
+        let first = TestWindow.new(id: 8190, parent: workspace)
+        var exit = try await run("focus floating")
+        XCTAssertEqual(exit, 0)
+        XCTAssertTrue(focus.windowOrNil === first)
+        exit = try await run("focus floating")
+        XCTAssertEqual(exit, 0)
+        XCTAssertTrue(focus.windowOrNil === second)
+        exit = try await run("focus floating")
+        XCTAssertEqual(exit, 0)
+        XCTAssertTrue(focus.windowOrNil === windows[2], "Back to the strip where it was")
+        first.unbindFromParent()
+        second.unbindFromParent()
+        exit = try await run("focus floating")
+        XCTAssertNotEqual(exit, 0, "Nothing floats on this desktop")
+    }
+
     func testFreeSizeColumnKeepsNativeHeightWhileViewportPans() async throws {
         let (workspace, windows) = try await strip()
         let first = windows[0]

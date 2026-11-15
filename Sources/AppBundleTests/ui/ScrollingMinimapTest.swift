@@ -355,6 +355,30 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertTrue(dismissed)
     }
 
+    func testFloatingWindowsGetChipsThatFocusThem() throws {
+        let (workspace, windows) = fixture(count: 3)
+        let metrics = workspace.scrollingMetrics
+        let models = windows.map { ScrollingMinimapTile(id: ObjectIdentifier($0), title: "Window", applications: [], count: 1) }
+        let height = scrollingMinimapRowHeight(metrics: metrics) + 80 + scrollingMinimapFloatingRowHeight
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 640, height: height))
+        var picked: UInt32?
+        view.floatingSelected = { picked = $0 }
+        let floating = [ScrollingMinimapFloatingWindow(windowId: 501, pid: 1, title: "Calculator"),
+                        ScrollingMinimapFloatingWindow(windowId: 502, pid: 2, title: "Settings", focused: true)]
+        view.update(workspaceName: "Desktop", models: models, floating: floating, icons: [:], metrics: metrics,
+                    offset: metrics.offsetRange.lowerBound, focused: nil)
+        let chips = view.subviews.compactMap { $0 as? ScrollingMinimapFloatingChip }
+        XCTAssertEqual(chips.map(\.model.title), ["Calculator", "Settings"])
+        let scroll = try XCTUnwrap(minimapDescendants(of: view).compactMap { $0 as? NSScrollView }.first)
+        XCTAssertGreaterThan(chips[0].frame.minY, scroll.frame.maxY, "Below the strip")
+        XCTAssertLessThan(chips[0].frame.maxY, view.bounds.height - 23, "Above the footer")
+        chips[1].performClick(nil)
+        XCTAssertEqual(picked, 502)
+        view.update(workspaceName: "Desktop", models: models, icons: [:], metrics: metrics,
+                    offset: metrics.offsetRange.lowerBound, focused: nil)
+        XCTAssertTrue(view.subviews.compactMap { $0 as? ScrollingMinimapFloatingChip }.isEmpty)
+    }
+
     func testCompactMinimapHasHeaderPositionBarAndSelectedFooter() throws {
         let (workspace, windows) = fixture(count: 5)
         let metrics = workspace.scrollingMetrics
