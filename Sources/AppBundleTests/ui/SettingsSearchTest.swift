@@ -9,7 +9,8 @@ final class SettingsSearchTest: XCTestCase {
         XCTAssertEqual(settingsControlSearchResults("minimap"), [.minimap, .minimapHold])
         XCTAssertTrue(settingsControlSearchResults("sidebar").isEmpty)
         XCTAssertEqual(settingsControlSearchResults("column size shortcuts"), [.widthPresets])
-        XCTAssertEqual(settingsControlSearchResults("single-window width"), [.fullscreenWidth])
+        XCTAssertEqual(settingsControlSearchResults("single-window width"), [.loneWidth], "The setting's earlier name still finds it")
+        XCTAssertEqual(settingsControlSearchResults("fullscreen width"), [.fullscreenWidth])
         XCTAssertEqual(settingsControlSearchResults("left screen spacing"), [.gapOuterLeft])
     }
 

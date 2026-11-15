@@ -70,11 +70,21 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     }
 }
 
+extension SettingsControl {
+    /// Earlier names people still search for.
+    var aliases: String {
+        switch self {
+            case .loneWidth: "single-window single window"
+            default: ""
+        }
+    }
+}
+
 func settingsControlSearchResults(_ query: String) -> [SettingsControl] {
     let terms = query.split(whereSeparator: \.isWhitespace).map(String.init)
     guard !terms.isEmpty else { return [] }
     return SettingsControl.allCases.filter { control in
-        let searchable = "\(control.title) \(control.id) \(control.page.label)"
+        let searchable = "\(control.title) \(control.id) \(control.page.label) \(control.aliases)"
         return terms.allSatisfy { searchable.localizedStandardContains($0) }
     }
 }
