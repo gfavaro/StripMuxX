@@ -38,8 +38,16 @@ func resizeColumn(of window: Window, toWidth requested: CGFloat, in workspace: W
     let maximum = max(metrics.areaWidth - column.frameStartInset - column.frameEndInset, lower)
     let actual = min(max(requested, lower), maximum)
     if abs(actual - column.width) >= 0.5 {
-        group.scrollingColumnFixedWidth = nil
-        group.scrollingColumnWidth = min(max((actual + column.frameStartInset + column.frameEndInset) / max(metrics.areaWidth, 1), 0.1), 1)
+        if let free = window.freeSizeRect, group === window {
+            // Free-size width is an absolute native size. Never replace it with
+            // a fractional tiled width during shortcuts or trackpad resize.
+            window.freeSizeRect = Rect(topLeftX: free.topLeftX, topLeftY: free.topLeftY,
+                                       width: actual, height: free.height)
+            group.scrollingColumnFixedWidth = actual
+        } else {
+            group.scrollingColumnFixedWidth = nil
+            group.scrollingColumnWidth = min(max((actual + column.frameStartInset + column.frameEndInset) / max(metrics.areaWidth, 1), 0.1), 1)
+        }
     }
     return actual
 }
