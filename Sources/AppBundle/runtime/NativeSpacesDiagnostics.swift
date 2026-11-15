@@ -46,6 +46,7 @@ func nativeSpacesDiagnosticReport() -> String {
     lines.append("Original frames: \(NativeOriginalFrames.shared.count) kept; last restore: \(NativeOriginalFrames.shared.lastRestore)")
     lines.append("Last mouse release: \(runtime.native.tiling.lastMouseRelease)")
     lines.append("Scrolling pan: last \(NativeScrollingPan.shared.lastDecision)")
+    lines.append("Three-finger swipe: \(NativeScrollingPan.shared.lastDockSwipeReport)")
     lines.append("Chrome refreshes after observations: \(NativeObservationChrome.shared.refreshes) for \(NativeObservationChrome.shared.requests) completed reads")
     lines.append("Scrolling pan layouts: \(runtime.native.tiling.scrollingLayoutTiming)")
     let frameRequests = NativeFrameWriteMetrics.shared

@@ -17,6 +17,11 @@ final class NativeScrollingPan {
     private var gestureMonitor: String?
     private var dockSwipeProgress: Double = 0
     private var dockSwipeSign: Double = 1
+    /// Purely observational: understand reports of wide columns being hard to exit.
+    private var dockSwipeStartingColumn: ObjectIdentifier?
+    private var dockSwipeStartingWidth: CGFloat = 0
+    private var dockSwipeMaximumProgress: Double = 0
+    private(set) var lastDockSwipeReport = "none"
     private(set) var isDockSwipeActive = false
     var isPanning: Bool { workspace != nil }
     private var lastDirection: CGFloat = 0
@@ -134,6 +139,11 @@ final class NativeScrollingPan {
         isDockSwipeActive = true
         dockSwipeSign = positive ? 1 : -1
         dockSwipeProgress = 0
+        dockSwipeMaximumProgress = 0
+        let metrics = target.scrollingMetrics
+        let startingColumn = nearestScrollingColumn(in: metrics, offset: target.scrollingOffset, direction: 0)
+        dockSwipeStartingColumn = startingColumn.map { ObjectIdentifier($0.node) }
+        dockSwipeStartingWidth = startingColumn?.width ?? 0
         lastDirection = 0
         target.scrollingGestureMotionActive = true
         target.scrollingGestureSessionID = UUID()
@@ -148,6 +158,7 @@ final class NativeScrollingPan {
         let next = max(0, min(1, progress))
         let delta = next - dockSwipeProgress
         dockSwipeProgress = next
+        dockSwipeMaximumProgress = max(dockSwipeMaximumProgress, next)
         if abs(delta) > 0.00001 {
             // Positive Dock progress corresponds to fingers moving left.
             pan(workspace, by: -CGFloat(delta * dockSwipeSign) * workspace.scrollingMetrics.areaWidth)
@@ -180,6 +191,18 @@ final class NativeScrollingPan {
         idleTask?.cancel()
         idleTask = nil
         guard let workspace else { return }
+        if isDockSwipeActive {
+            let metrics = workspace.scrollingMetrics
+            let arrived = nearestScrollingColumn(in: metrics, offset: workspace.scrollingOffset, direction: lastDirection)
+            let changed = arrived.map { ObjectIdentifier($0.node) != dockSwipeStartingColumn } ?? false
+            lastDockSwipeReport = String(format: "max progress %.2f, starting width %.2f viewports, selected different column %@, finished %@",
+                dockSwipeMaximumProgress,
+                Double(dockSwipeStartingWidth / max(metrics.areaWidth, 1)),
+                changed ? "yes" : "no", focusNearest ? "yes" : "no")
+        }
+        dockSwipeStartingColumn = nil
+        dockSwipeStartingWidth = 0
+        dockSwipeMaximumProgress = 0
         self.workspace = nil
         gestureEpoch = nil
         gestureMonitor = nil
