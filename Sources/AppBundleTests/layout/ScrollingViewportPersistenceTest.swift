@@ -43,6 +43,47 @@ final class ScrollingViewportPersistenceTest: WorkspaceTestCase {
         XCTAssertEqual(workspace.lastScrollingFocusWindowId, first.windowId)
     }
 
+    func testFreeSizeFrameSurvivesSnapshotAndRestore() throws {
+        let workspace = focus.workspace
+        let window = TestWindow.new(id: 73021, parent: workspace.rootTilingContainer)
+        window.freeSizeRect = Rect(topLeftX: 180, topLeftY: 90, width: 740, height: 390)
+        window.freeSizePreviousColumnWidth = 0.5
+        window.scrollingColumnFixedWidth = 740
+        let data = try JSONEncoder().encode(FrozenStrip(workspace))
+        let record = try JSONDecoder().decode(FrozenStrip.self, from: data)
+
+        window.freeSizeRect = nil
+        window.scrollingColumnFixedWidth = nil
+        restoreStrip(record, to: workspace, windowsById: [73021: window])
+
+        XCTAssertEqual(window.freeSizeRect?.width, 740)
+        XCTAssertEqual(window.freeSizeRect?.height, 390)
+        XCTAssertEqual(window.freeSizeRect?.topLeftY, 90)
+        XCTAssertEqual(window.scrollingColumnFixedWidth, 740)
+        XCTAssertEqual(window.freeSizePreviousColumnWidth, 0.5)
+    }
+
+    func testOldWindowSnapshotWithoutFreeSizeFieldsRestoresAsTiled() throws {
+        let workspace = focus.workspace
+        let window = TestWindow.new(id: 73022, parent: workspace.rootTilingContainer)
+        let data = try JSONEncoder().encode(FrozenStrip(workspace))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var root = try XCTUnwrap(object["root"] as? [String: Any])
+        var children = try XCTUnwrap(root["children"] as? [[String: Any]])
+        var member = try XCTUnwrap(children[0]["window"] as? [String: Any])
+        member.removeValue(forKey: "freeSizeFrame")
+        member.removeValue(forKey: "freeSizePreviousColumnWidth")
+        member.removeValue(forKey: "freeSizePreviousFixedWidth")
+        children[0]["window"] = member
+        root["children"] = children
+        object["root"] = root
+        let legacy = try JSONSerialization.data(withJSONObject: object)
+        let record = try JSONDecoder().decode(FrozenStrip.self, from: legacy)
+
+        restoreStrip(record, to: workspace, windowsById: [73022: window])
+        XCTAssertNil(window.freeSizeRect)
+    }
+
     func testOldSnapshotWithoutViewportStillDecodes() throws {
         let workspace = focus.workspace
         let window = TestWindow.new(id: 73003, parent: workspace.rootTilingContainer)
