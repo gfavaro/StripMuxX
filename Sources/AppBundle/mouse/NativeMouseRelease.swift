@@ -13,6 +13,19 @@ enum NativeMouseReleaseOutcome: Equatable {
 func adoptNativeMouseRelease(_ window: Window, actual: Rect, pointer: CGPoint) -> NativeMouseReleaseOutcome {
     guard window.parent is TilingContainer, let workspace = window.nodeWorkspace, workspace.isVisible,
           let target = window.lastAppliedLayoutPhysicalRect else { return .none }
+    if let preferred = window.freeSizeRect {
+        // The user owns both dimensions and the vertical position of a free-size
+        // strip column. A native resize updates its preference instead of being
+        // interpreted as a tiled resize or a drag/swap.
+        if abs(actual.width - target.width) > 5 || abs(actual.height - target.height) > 5 ||
+           abs(actual.topLeftY - preferred.topLeftY) > 5 {
+            guard actual.width > 0, actual.height > 0 else { return .none }
+            window.freeSizeRect = actual
+            window.topLevelWorkspaceGroup.scrollingColumnFixedWidth = actual.width
+            return .resized
+        }
+        return .none
+    }
     if abs(actual.width - target.width) > 5 || abs(actual.height - target.height) > 5 {
         var resized = false
         if abs(actual.width - target.width) > 5 {
