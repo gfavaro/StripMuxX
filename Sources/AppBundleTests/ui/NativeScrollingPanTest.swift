@@ -34,6 +34,25 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
               momentumPhase: momentum, point: point)
     }
 
+    func testOptionShiftGestureResizesFocusedColumnWithoutPanning() {
+        let (workspace, windows) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        let before = workspace.scrollingMetrics.columns[0].width
+        let offset = workspace.scrollingOffset
+        let start = NativeScrollingPan.Scroll(deltaX: 90, deltaY: 0, isContinuous: true,
+            optionOnly: false, resizeOnly: true, phase: 1, momentumPhase: 0, point: point)
+        XCTAssertTrue(pan.handle(start))
+        XCTAssertEqual(workspace.scrollingOffset, offset)
+        let after = workspace.scrollingMetrics.columns[0].width
+        XCTAssertGreaterThan(after, before)
+        XCTAssertTrue(windows[0] === focus.windowOrNil)
+        XCTAssertTrue(pan.handle(.init(deltaX: 0, deltaY: 0, isContinuous: true,
+            optionOnly: false, resizeOnly: true, phase: 4, momentumPhase: 0, point: point)))
+        XCTAssertFalse(pan.isPanning)
+        XCTAssertEqual(workspace.scrollingMetrics.columns[0].width, after, accuracy: 1)
+    }
+
     func testOnlyOptionHorizontalTrackpadScrollOverAScrollingDesktopPans() {
         let (workspace, _) = fixture()
         let pan = NativeScrollingPan()

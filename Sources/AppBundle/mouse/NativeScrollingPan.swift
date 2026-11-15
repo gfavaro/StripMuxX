@@ -26,6 +26,8 @@ final class NativeScrollingPan {
     private(set) var isDockSwipeActive = false
     var isPanning: Bool { workspace != nil }
     private var lastDirection: CGFloat = 0
+    private var resizingColumn = false
+    private weak var resizeWindow: Window?
     private var idleTask: Task<Void, Never>?
     /// Why the last Option scroll did or did not pan, for doctor.
     private(set) var lastDecision = "none"
@@ -35,6 +37,7 @@ final class NativeScrollingPan {
         let deltaY: CGFloat
         let isContinuous: Bool
         let optionOnly: Bool
+        var resizeOnly: Bool = false
         let phase: Int64
         let momentumPhase: Int64
         let point: CGPoint
@@ -55,6 +58,7 @@ final class NativeScrollingPan {
                     deltaY: CGFloat(event.getDoubleValueField(.scrollWheelEventPointDeltaAxis1)),
                     isContinuous: event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0,
                     optionOnly: flags == .maskAlternate,
+                    resizeOnly: flags == [.maskAlternate, .maskShift],
                     phase: event.getIntegerValueField(.scrollWheelEventScrollPhase),
                     momentumPhase: event.getIntegerValueField(.scrollWheelEventMomentumPhase),
                     point: event.location)
@@ -84,6 +88,26 @@ final class NativeScrollingPan {
                 lastDecision = "gesture cancelled: desktop or session changed"
                 return false
             }
+            if resizingColumn {
+                // Direct resize ends with the fingers, not with kinetic momentum:
+                // coasting should never continue to alter a window's size.
+                if scroll.phase == 4 || scroll.momentumPhase != 0 {
+                    settle()
+                    return true
+                }
+                if scroll.phase == 1 && !scroll.resizeOnly {
+                    cancel()
+                    return false
+                }
+                guard scroll.resizeOnly, let window = resizeWindow,
+                      window.nodeWorkspace === workspace, window.parent is TilingContainer else {
+                    cancel()
+                    return false
+                }
+                resizeFocusedColumn(window, in: workspace, by: scroll.deltaX)
+                settleWhenIdle()
+                return true
+            }
             // A new non-Option gesture belongs to the foreground app. Never snap
             // focus to another window as a side effect of that unrelated gesture.
             if scroll.momentumPhase == 0, scroll.phase == 1, !scroll.optionOnly {
@@ -100,7 +124,8 @@ final class NativeScrollingPan {
             }
             return true
         }
-        guard scroll.optionOnly, scroll.isContinuous, scroll.momentumPhase == 0 else { return false }
+        guard (scroll.optionOnly || scroll.resizeOnly), scroll.isContinuous,
+              scroll.momentumPhase == 0 else { return false }
         guard config.scrolling.gestureEnabled, TrayMenuModel.shared.isEnabled else {
             lastDecision = "scrolling gestures or StripMuxX are off"; return false
         }
@@ -109,15 +134,31 @@ final class NativeScrollingPan {
               let target = nativeActiveDesktop(on: monitor), target.isVisible else {
             lastDecision = "no desktop under the pointer"; return false
         }
+        let resizing = scroll.resizeOnly
+        let resizingWindow = focus.windowOrNil
+        if resizing {
+            guard let resizingWindow, resizingWindow.nodeWorkspace === target,
+                  resizingWindow.parent is TilingContainer, !resizingWindow.isFullscreen,
+                  resizingWindow.nativeLayoutEligible else {
+                lastDecision = "resize needs a focused tiled window on this desktop"
+                return false
+            }
+        }
         workspace = target
+        resizingColumn = resizing
+        resizeWindow = resizing ? resizingWindow : nil
         gestureEpoch = target.scrollingSessionEpoch
         gestureMonitor = target.workspaceMonitor.displayUUID
         lastDirection = 0
-        lastDecision = "panning"
+        lastDecision = resizing ? "resizing column" : "panning"
         target.scrollingGestureMotionActive = true
         // A session streams window moves without per-step readback.
         target.scrollingGestureSessionID = UUID()
-        pan(target, by: scroll.deltaX)
+        if resizing, let resizingWindow {
+            resizeFocusedColumn(resizingWindow, in: target, by: scroll.deltaX)
+        } else {
+            pan(target, by: scroll.deltaX)
+        }
         settleWhenIdle()
         return true
     }
@@ -131,6 +172,27 @@ final class NativeScrollingPan {
         workspace.scrollingOffset = next
         nativePanTiming.measure("minimap show") { _ = WorkspaceScrollingMinimap.shared.show(workspace, duringGesture: true) }
         nativePanTiming.measure("relayout request") { runtime.native.tiling.relayoutVisibleScrolling(target: workspace) }
+    }
+
+    /// An explicit Option+Shift two-finger scroll resizes the focused column
+    /// without claiming ordinary app scrolling or the Option-only pan gesture.
+    private func resizeFocusedColumn(_ window: Window, in workspace: Workspace, by deltaX: CGFloat) {
+        guard deltaX.isFinite, abs(deltaX) > 0.01,
+              let column = workspace.scrollingMetrics.columns.first(where: {
+                  $0.node === window.topLevelWorkspaceGroup
+              }) else { return }
+        let requested = max(minimumTiledResizeWeight,
+                            column.width + deltaX * CGFloat(config.scrolling.gestureSensitivity))
+        guard abs(requested - column.width) >= 0.5 else { return }
+        let applied: CGFloat?
+        if singleWindowWidthTarget(in: workspace) === window {
+            applied = applySingleWindowManualResize(window, width: requested) ? requested : nil
+        } else {
+            applied = resizeColumn(of: window, toWidth: requested, in: workspace)
+        }
+        guard applied != nil else { return }
+        _ = WorkspaceScrollingMinimap.shared.show(workspace, duringGesture: true)
+        runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
     }
 
     /// A macOS-recognized three-finger Dock swipe drives the same viewport and
@@ -206,6 +268,10 @@ final class NativeScrollingPan {
         idleTask?.cancel()
         idleTask = nil
         guard let workspace else { return }
+        let wasResizing = resizingColumn
+        resizingColumn = false
+        resizeWindow = nil
+        if wasResizing { focusNearest = false }
         let committedDockSwipe = isDockSwipeActive && dockSwipeCommitted && focusNearest
         let metricsAtRelease = workspace.scrollingMetrics
         let settleColumn = settledDockSwipeColumn(in: metricsAtRelease, offset: workspace.scrollingOffset,
