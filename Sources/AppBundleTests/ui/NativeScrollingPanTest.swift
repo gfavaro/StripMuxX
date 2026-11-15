@@ -169,6 +169,19 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
             current: -1000, snapToColumn: false), metrics.offsetRange.lowerBound, accuracy: 0.001)
     }
 
+    func testPhysicalPanReleaseKeepsOriginalFocusEvenWhenNearestColumnChanges() {
+        let (workspace, windows) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        _ = windows[0].focusWindow()
+        XCTAssertTrue(pan.handle(scroll(-650, phase: 1, at: point)))
+        let offset = workspace.scrollingOffset
+        XCTAssertGreaterThan(offset, 0)
+        XCTAssertTrue(pan.handle(scroll(0, option: false, phase: 0, momentum: 3, at: point)))
+        XCTAssertTrue(focus.windowOrNil === windows[0], "Physical pan moves the viewport, never native focus")
+        XCTAssertEqual(workspace.scrollingOffset, offset, accuracy: 0.001)
+    }
+
     func testPhysicalPanDoesNotSnapBackOnRelease() {
         let (workspace, windows) = fixture()
         let pan = NativeScrollingPan()
