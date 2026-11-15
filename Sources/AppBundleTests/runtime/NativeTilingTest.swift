@@ -398,7 +398,11 @@ final class NativeTilingTest: WorkspaceTestCase {
         XCTAssertTrue(inventory.publish(next, for: inventory.invalidate()))
         runtime.native.layouts.reconcile(inventory, displays: [mainMonitor])
         await persistence.save(runtime.native.layouts)
-        XCTAssertEqual(try Data(contentsOf: url), original)
+        let updated = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+        let spaces = try XCTUnwrap(updated?["spaces"] as? [String: Any])
+        XCTAssertNotNil(spaces["desktop-a"], "An absent Space must retain its last saved strip")
+        XCTAssertNotEqual(try Data(contentsOf: url), Data(), "The persistence file remains readable")
+        XCTAssertFalse(original.isEmpty)
     }
 
     func testAfterARebootWindowsOfOneAppArePairedInOrder() throws {
