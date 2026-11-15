@@ -83,18 +83,24 @@ func applyLayoutForNextDetectedWindow(_ window: Window, on workspace: Workspace)
         case .floating: window.bindAsFloatingWindow(to: workspace)
         case .freeSize:
             guard window.isFloating else { return }
-            let data = bindingDataForNewTilingWindow(workspace, window: window)
-            window.bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
-            if let rect = window.lastKnownActualRect, rect.width > 0, rect.height > 0 {
-                let group = window.topLevelWorkspaceGroup
-                window.freeSizePreviousColumnWidth = group.scrollingColumnWidth
-                window.freeSizePreviousFixedWidth = group.scrollingColumnFixedWidth
-                window.freeSizeRect = rect
-                group.scrollingColumnFixedWidth = rect.width
-            }
+            joinStripAtOwnSize(window, on: workspace, rect: window.lastKnownActualRect)
         case .tiling:
             guard window.isFloating else { return }
             let data = bindingDataForNewTilingWindow(workspace, window: window)
             window.bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
     }
+}
+
+/// Makes a floating window a strip column of its own that keeps its size and height.
+@MainActor
+func joinStripAtOwnSize(_ window: Window, on workspace: Workspace, rect: Rect?) {
+    guard window.isFloating else { return }
+    let data = bindingDataForNewTilingWindow(workspace, window: window)
+    window.bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
+    guard let rect, rect.width > 0, rect.height > 0 else { return }
+    let group = window.topLevelWorkspaceGroup
+    window.freeSizePreviousColumnWidth = group.scrollingColumnWidth
+    window.freeSizePreviousFixedWidth = group.scrollingColumnFixedWidth
+    window.freeSizeRect = rect
+    group.scrollingColumnFixedWidth = rect.width
 }
