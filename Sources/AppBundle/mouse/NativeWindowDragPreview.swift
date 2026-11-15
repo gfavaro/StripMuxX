@@ -11,6 +11,7 @@ final class NativeWindowDragPreview {
     private var sessionEpoch: UInt64 = 0
     private var homePanel: NSPanel?
     private var destinationPanel: NSPanel?
+    private var dragEventMonitor: Any?
 
     func begin(at point: CGPoint) {
         hide()
@@ -24,6 +25,12 @@ final class NativeWindowDragPreview {
         workspace = space
         originalPoint = point
         sessionEpoch = space.scrollingSessionEpoch
+        // Observe only a qualified drag, not every left-drag event systemwide.
+        dragEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.moved(to: mouseLocation)
+            }
+        }
     }
 
     func moved(to point: CGPoint) {
@@ -46,6 +53,8 @@ final class NativeWindowDragPreview {
     }
 
     func hide() {
+        if let dragEventMonitor { NSEvent.removeMonitor(dragEventMonitor) }
+        dragEventMonitor = nil
         dragged = nil
         workspace = nil
         homePanel?.orderOut(nil)

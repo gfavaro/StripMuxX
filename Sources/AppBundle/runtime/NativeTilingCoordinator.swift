@@ -33,7 +33,6 @@ final class NativeTilingCoordinator {
     private var generation: UInt64 = 0
     private var shortcutsInstalled = false
     private var mouseMonitor: Any?
-    private var dragMonitor: Any?
     private let dragPreview = NativeWindowDragPreview()
 
     /// Tests stand in for an accepted observation of the desktops they set up.
@@ -45,7 +44,7 @@ final class NativeTilingCoordinator {
     }
 
     func invalidate(_ reason: String = "other") {
-        dragPreview.hide()
+        if !holdsForMouseRelease { dragPreview.hide() }
         nativePanTiming.count("invalidate: \(reason)")
         generation &+= 1
         ready = false
@@ -64,9 +63,7 @@ final class NativeTilingCoordinator {
         invalidate()
         MacApp.cancelPendingFocus()
         if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
-        if let dragMonitor { NSEvent.removeMonitor(dragMonitor) }
         mouseMonitor = nil
-        dragMonitor = nil
         dragPreview.hide()
     }
 
@@ -138,18 +135,7 @@ final class NativeTilingCoordinator {
                 }
             }
         }
-        if dragMonitor == nil && !isUnitTest {
-            let owner = runtime
-            dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak owner] _ in
-                Task { @MainActor [weak owner] in
-                    guard let owner else { return }
-                    owner.withValue {
-                        owner.native.tiling.dragPreview.moved(to: mouseLocation)
-                    }
-                }
-            }
-        }
-        if !shortcutsInstalled {
+         if !shortcutsInstalled {
             shortcutsInstalled = true
             try? await activateMode(mainModeId, runCallbacks: false)
         }
