@@ -325,7 +325,7 @@ final class NativeTilingCoordinator {
                 return command.args.boundaries == .workspace && command.args.boundariesAction != .wrapAroundAllMonitors
             case let command as LayoutCommand:
                 return !command.args.forNextDetectedWindow && command.args.toggleBetween.val.allSatisfy {
-                    $0 == .tiling || $0 == .floating
+                    $0 == .tiling || $0 == .floating || $0 == .freeSize
                 }
             default: return false
         }
