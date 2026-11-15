@@ -50,22 +50,6 @@ final class ScrollingStripFeaturesTest: XCTestCase {
         XCTAssertEqual(windows[1].lastAppliedLayoutPhysicalRect?.height, full.height, "Never taller than the column")
     }
 
-    func testAFloatingWindowJoinsTheStripAtItsOwnSize() async throws {
-        let (workspace, windows) = try await strip()
-        let floating = TestWindow.new(id: 8199, parent: workspace)
-        let own = Rect(topLeftX: 300, topLeftY: 120, width: 640, height: 420)
-        joinStripAtOwnSize(floating, on: workspace, rect: own)
-        XCTAssertFalse(floating.isFloating)
-        XCTAssertTrue(floating.parent === workspace.rootTilingContainer)
-        XCTAssertEqual(workspace.rootTilingContainer.children.firstIndex { $0 === floating }, 1, "Right of the focused column")
-        try await workspace.layoutWorkspace()
-        let placed = try XCTUnwrap(floating.lastAppliedLayoutPhysicalRect)
-        XCTAssertEqual(placed.width, 640, accuracy: 0.5)
-        XCTAssertEqual(placed.height, 420, accuracy: 0.5)
-        XCTAssertEqual(windows[0].lastAppliedLayoutPhysicalRect?.width ?? 0,
-                       try XCTUnwrap(workspace.scrollingMetrics.columns.first).width, accuracy: 0.5)
-    }
-
     func testFreeSizeColumnKeepsNativeHeightWhileViewportPans() async throws {
         let (workspace, windows) = try await strip()
         let first = windows[0]

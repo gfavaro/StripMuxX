@@ -539,16 +539,6 @@ final class MacApp: AbstractApp {
         } ?? .window
     }
 
-    /// A standard window at the normal level of a regular app, which floats only because the
-    /// dialog heuristic guessed so (no fullscreen button: Settings, Calculator, rule-floated).
-    /// Alerts, file pickers, panels and accessory-app windows are not.
-    func isStandardWindow(_ windowId: UInt32, _ windowLevel: MacOsWindowLevel?) async throws -> Bool {
-        guard !isAccessoryApp, windowLevel == nil || windowLevel == .normalWindow else { return false }
-        return try await withWindow(windowId) { window, job in
-            window.get(Ax.subroleAttr) == kAXStandardWindowSubrole
-        } == true
-    }
-
     func isDialogHeuristic(_ windowId: UInt32, _ windowLevel: MacOsWindowLevel?) async throws -> Bool {
         try await withWindow(windowId) { [appId, isAccessoryApp] window, job in
             window.isDialogHeuristic(appId, windowLevel, accessory: isAccessoryApp)

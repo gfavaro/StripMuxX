@@ -48,13 +48,7 @@ window is in a vertical stack, it first becomes a separate column.
 
 `layout tiling` returns a free-size window to normal tiled sizing;
 `layout floating` removes it from the strip and preserves its preferred
-dimensions.
-
-Windows that would otherwise float by themselves join the strip this way when they
-open: standard windows without a fullscreen button (System Settings, Calculator,
-utility windows) and windows floated by an `on-window-detected` rule. Alerts, file
-pickers, panels and menu-bar apps' windows still float. Only `layout floating` keeps
-a window off the strip.
+dimensions. This mode is opt-in: existing floating rules are unchanged.
 
 Free-size geometry is included in the native Space restoration snapshot.
 The implementation has **not been compiled or physically validated** in this

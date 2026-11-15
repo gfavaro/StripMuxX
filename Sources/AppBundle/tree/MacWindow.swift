@@ -79,9 +79,7 @@ final class MacWindow: Window {
             return existing.nativeLayoutEligible ? existing : nil
         }
         let rect = try await macApp.getAxRect(windowId)
-        let level = getWindowLevel(for: windowId)
-        let type = try await macApp.getAxUiElementWindowType(windowId, level)
-        let standard = type == .popup ? false : try await macApp.isStandardWindow(windowId, level)
+        let type = try await macApp.getAxUiElementWindowType(windowId, getWindowLevel(for: windowId))
         let native = try await macApp.readNativeState(windowId)
         try Task.checkCancellation()
         guard layouts.accepts(registration),
@@ -107,11 +105,6 @@ final class MacWindow: Window {
         window.restartIdentity = try? await macApp.getRestartWindowIdentity(windowId)
         applyLayoutForNextDetectedWindow(window, on: workspace)
         try await applyNativeWindowDetectedRules(window) { layouts.accepts(registration) }
-        // Nothing floats off the strip by itself: a standard window that would float joins
-        // it at its own size. Only `layout floating` keeps a window off the strip.
-        if window.isFloating, standard, layouts.accepts(registration) {
-            joinStripAtOwnSize(window, on: workspace, rect: rect)
-        }
         runtime.native.stateChanges.notify() // Wakes a palette pick awaiting adoption.
         runtime.native.tiling.windowAdopted(window)
         return window
