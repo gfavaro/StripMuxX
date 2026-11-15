@@ -273,10 +273,10 @@ private final class ScrollingMinimapTileCanvas: NSView {
 }
 
 @MainActor
-private final class ScrollingMinimapButton: NSButton {
+final class ScrollingMinimapButton: NSButton {
     override var isFlipped: Bool { true }
     private(set) var model: ScrollingMinimapTile
-    private var icons: [NSImage] = []
+    private(set) var icons: [NSImage] = []
     private var focused = false
     private var keyboardSelected = false
     private var configured = false

@@ -5,6 +5,12 @@ import XCTest
 
 @MainActor
 final class ScrollingMinimapTest: WorkspaceTestCase {
+    override func setUp() async throws {
+        try await super.setUp()
+        // Button clicks are sent through NSApp; a filtered run may start before anything creates it.
+        _ = NSApplication.shared
+    }
+
     private func fixture(count: Int = 3) -> (Workspace, [TestWindow]) {
         let workspace = focus.workspace
         let windows = (0..<count).map { TestWindow.new(id: UInt32(95500 + $0), parent: workspace.rootTilingContainer) }
@@ -228,14 +234,15 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         view.update(workspaceName: "Desktop", models: models, icons: [:], metrics: metrics,
                     offset: 0, focused: models[0].id)
         let scroll = try XCTUnwrap(minimapDescendants(of: view).compactMap { $0 as? NSScrollView }.first)
-        let tile = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? NSButton }.first)
-        tile.needsDisplay = false
+        let tile = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? ScrollingMinimapButton }.first)
+        XCTAssertTrue(tile.icons.isEmpty)
         let image = try XCTUnwrap(NSImage(systemSymbolName: "star.fill", accessibilityDescription: nil))
         view.update(workspaceName: "Desktop", models: models, icons: [99: image], metrics: metrics,
                     offset: 0, focused: models[0].id)
-        let refreshed = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? NSButton }.first)
+        let refreshed = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? ScrollingMinimapButton }.first)
         XCTAssertTrue(tile === refreshed, "Updated icons should reuse the original button")
-        XCTAssertTrue(refreshed.needsDisplay, "A late-arriving icon must redraw its tile")
+        // What the tile draws, not AppKit's needsDisplay flag, which a view outside a window does not keep.
+        XCTAssertTrue(refreshed.icons.first === image, "A late-arriving icon must reach its tile")
     }
 
     func testRenderAccessibleTilesInLightAndDarkLayouts() throws {
