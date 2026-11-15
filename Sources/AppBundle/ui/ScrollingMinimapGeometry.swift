@@ -10,16 +10,27 @@ struct ScrollingMinimapGeometry {
         let start = metrics.offsetRange.lowerBound
         let end = max(metrics.totalWidth, metrics.offsetRange.upperBound + metrics.areaWidth)
         let span = max(end - start, 1)
-        let scale = min(max(bounds.width, 0) / span, max(bounds.height, 0) / max(metrics.geometry.area.height, 1))
-        let originX = bounds.midX - span * scale / 2
-        let height = metrics.geometry.area.height * scale
+        let displayHeight = max(metrics.geometry.area.height, 1)
+        let verticalScale = max(bounds.height, 0) / displayHeight
+        let fittedScale = min(max(bounds.width, 0) / span, verticalScale)
+        // Normally the map preserves window proportions. When one unusually
+        // narrow column would make the panel excessively tall, the capped row
+        // uses horizontal scrolling instead: keep a 32 pt hit target while
+        // compressing only the vertical axis. Never expand beyond bounds.
+        let narrowest = metrics.columns.map(\.width).min() ?? .infinity
+        let minimumScale = 32 / max(narrowest, 1)
+        let canFitMinimum = bounds.width + 0.01 >= span * minimumScale
+        let xScale = canFitMinimum ? max(fittedScale, minimumScale) : fittedScale
+        let yScale = min(xScale, verticalScale)
+        let originX = bounds.midX - span * xScale / 2
+        let height = metrics.geometry.area.height * yScale
         let originY = bounds.midY - height / 2
         tiles = metrics.columns.map { column in
-            CGRect(x: originX + (column.start - start) * scale, y: originY,
-                   width: column.width * scale, height: height)
+            CGRect(x: originX + (column.start - start) * xScale, y: originY,
+                   width: column.width * xScale, height: height)
         }
-        viewport = CGRect(x: originX + (metrics.clampedOffset(offset) - start) * scale,
-                          y: originY, width: metrics.areaWidth * scale, height: height)
+        viewport = CGRect(x: originX + (metrics.clampedOffset(offset) - start) * xScale,
+                          y: originY, width: metrics.areaWidth * xScale, height: height)
     }
 
     /// Gaps and narrow tiles remain selectable across the entire map strip.
@@ -33,12 +44,14 @@ struct ScrollingMinimapGeometry {
     }
 }
 
-/// The same scale applies to both axes. Grow the row for unusually narrow
-/// columns to retain 32-point targets without stretching their window shapes.
+/// Keep ordinary columns proportional, but cap the panel when one very
+/// narrow column would otherwise force an oversized floating overlay.
+/// In that extreme case horizontal scrolling preserves 32 pt tile targets.
 func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics, preferredHeight: CGFloat = 58,
-                               minimumTileWidth: CGFloat = 32) -> CGFloat {
+                               minimumTileWidth: CGFloat = 32, maximumHeight: CGFloat = 96) -> CGFloat {
     guard let narrowest = metrics.columns.map(\.width).min() else { return preferredHeight }
-    return max(preferredHeight, ceil(minimumTileWidth * max(metrics.geometry.area.height, 1) / max(narrowest, 1)))
+    let natural = ceil(minimumTileWidth * max(metrics.geometry.area.height, 1) / max(narrowest, 1))
+    return min(maximumHeight, max(preferredHeight, natural))
 }
 
 func scrollingMinimapContentWidth(metrics: ScrollingWorkspaceMetrics, visibleWidth: CGFloat,
@@ -46,7 +59,9 @@ func scrollingMinimapContentWidth(metrics: ScrollingWorkspaceMetrics, visibleWid
     let start = metrics.offsetRange.lowerBound
     let end = max(metrics.totalWidth, metrics.offsetRange.upperBound + metrics.areaWidth)
     let scale = scrollingMinimapRowHeight(metrics: metrics, minimumTileWidth: minimumTileWidth) / max(metrics.geometry.area.height, 1)
-    return max(visibleWidth, max(end - start, 1) * scale)
+    let narrowest = metrics.columns.map(\.width).min() ?? .infinity
+    let horizontalScale = max(scale, minimumTileWidth / max(narrowest, 1))
+    return max(visibleWidth, max(end - start, 1) * horizontalScale)
 }
 
 /// Scroll one small step per drag event near a minimap edge; never scroll

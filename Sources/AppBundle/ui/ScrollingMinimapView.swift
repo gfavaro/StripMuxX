@@ -389,11 +389,12 @@ final class ScrollingMinimapButton: NSButton {
     override func draw(_ dirtyRect: NSRect) {
         let tile = bounds.insetBy(dx: 1.5, dy: 1.5)
         let path = NSBezierPath(roundedRect: tile, xRadius: 7, yRadius: 7)
-        (focused || isHighlighted ? NSColor.controlAccentColor.withAlphaComponent(0.24)
+        (focused ? NSColor.controlAccentColor.withAlphaComponent(0.36)
+            : isHighlighted ? NSColor.controlAccentColor.withAlphaComponent(0.24)
             : NSColor.controlBackgroundColor.withAlphaComponent(0.75)).setFill()
         path.fill()
         (focused ? NSColor.controlAccentColor : NSColor.separatorColor).setStroke()
-        path.lineWidth = focused || NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? 2 : 1
+        path.lineWidth = focused ? 2.5 : NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? 2 : 1
         path.stroke()
         if keyboardSelected {
             let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 8, yRadius: 8)
@@ -451,10 +452,10 @@ private final class ScrollingMinimapViewport: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func draw(_ dirtyRect: NSRect) {
         let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 9, yRadius: 9)
-        NSColor.labelColor.withAlphaComponent(0.04).setFill()
+        NSColor.labelColor.withAlphaComponent(0.09).setFill()
         outline.fill()
-        NSColor.labelColor.withAlphaComponent(0.7).setStroke()
-        outline.lineWidth = 1.5
+        NSColor.labelColor.withAlphaComponent(0.9).setStroke()
+        outline.lineWidth = 2
         outline.setLineDash([4, 3], count: 2, phase: 0)
         outline.stroke()
     }

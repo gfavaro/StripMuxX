@@ -65,6 +65,41 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertNil(map.column(at: CGPoint(x: -1, y: 29)))
     }
 
+    func testExtremelyNarrowColumnCapsPanelHeightWhileKeepingTilesClickable() {
+        let (workspace, windows) = fixture(count: 8)
+        for (index, window) in windows.enumerated() {
+            window.scrollingColumnWidth = index == 0 ? 0.1 : 0.5
+        }
+        let metrics = workspace.scrollingMetrics
+        let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
+        XCTAssertLessThanOrEqual(rowHeight, 96)
+        XCTAssertGreaterThanOrEqual(rowHeight, 58)
+        let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
+        let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
+            bounds: CGRect(x: 0, y: 0, width: contentWidth, height: rowHeight))
+        XCTAssertGreaterThanOrEqual(geometry.tiles[0].width, 31.99)
+        XCTAssertEqual(geometry.tiles.count, 8)
+        XCTAssertLessThanOrEqual(geometry.viewport.height, 96)
+        for (index, tile) in geometry.tiles.enumerated() {
+            XCTAssertEqual(geometry.column(at: CGPoint(x: tile.midX, y: tile.midY)), index)
+        }
+    }
+
+    func testNormalMinimapProportionsStayIntactBelowHeightCap() {
+        let (workspace, windows) = fixture(count: 3)
+        windows.forEach { $0.scrollingColumnWidth = 0.5 }
+        let metrics = workspace.scrollingMetrics
+        let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
+        XCTAssertEqual(rowHeight, 58)
+        let width = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
+        let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
+            bounds: CGRect(x: 0, y: 0, width: width, height: rowHeight))
+        for (tile, column) in zip(geometry.tiles, metrics.columns) {
+            XCTAssertEqual(tile.width / tile.height,
+                           column.width / metrics.geometry.area.height, accuracy: 0.001)
+        }
+    }
+
     func testUnequalDenseMinimapTilesStayAtLeastThirtyTwoPointsAndDoNotOverlap() {
         let (workspace, windows) = fixture(count: 40)
         for (index, window) in windows.enumerated() {
