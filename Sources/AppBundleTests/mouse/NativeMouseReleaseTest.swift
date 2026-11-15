@@ -25,6 +25,21 @@ final class NativeMouseReleaseTest: XCTestCase {
         XCTAssertEqual(first.lastAppliedLayoutPhysicalRect?.width ?? 0, wider.width, accuracy: 1)
     }
 
+    func testFreeSizeNativeResizeUpdatesPreferredFrameInsteadOfTiledGeometry() async throws {
+        let (first, second) = try await layout()
+        let old = try XCTUnwrap(first.lastAppliedLayoutPhysicalRect)
+        first.freeSizeRect = old
+        first.scrollingColumnFixedWidth = old.width
+        let changed = Rect(topLeftX: old.minX, topLeftY: old.minY + 35,
+            width: old.width + 90, height: max(old.height - 75, 100))
+        XCTAssertEqual(adoptNativeMouseRelease(first, actual: changed, pointer: changed.center), .resized)
+        XCTAssertEqual(first.freeSizeRect, changed)
+        XCTAssertEqual(first.scrollingColumnFixedWidth, changed.width)
+        XCTAssertNil(second.freeSizeRect)
+        try await focus.workspace.layoutWorkspace()
+        XCTAssertEqual(first.lastAppliedLayoutPhysicalRect?.height, changed.height, accuracy: 1)
+    }
+
     func testDropOntoAnotherTileSwapsThem() async throws {
         let (first, second) = try await layout()
         let root = focus.workspace.rootTilingContainer
