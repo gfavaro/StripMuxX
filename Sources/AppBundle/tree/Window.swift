@@ -18,8 +18,6 @@ open class Window: TreeNode, Hashable {
     @MainActor var freeSizeRect: Rect?
     @MainActor var freeSizePreviousColumnWidth: CGFloat?
     @MainActor var freeSizePreviousFixedWidth: CGFloat?
-    /// Floated with `layout floating`. Other floating windows join the strip at their own size.
-    @MainActor var keptFloating = false
     // Width chosen by the user for a lone tile on ultrawide, persisted with its layout.
     var singleWindowManualWidth: CGFloat?
     var isFullscreen: Bool = false

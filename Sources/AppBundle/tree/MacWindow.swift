@@ -109,7 +109,7 @@ final class MacWindow: Window {
         try await applyNativeWindowDetectedRules(window) { layouts.accepts(registration) }
         // Nothing floats off the strip by itself: a standard window that would float joins
         // it at its own size. Only `layout floating` keeps a window off the strip.
-        if window.isFloating, !window.keptFloating, standard, layouts.accepts(registration) {
+        if window.isFloating, standard, layouts.accepts(registration) {
             joinStripAtOwnSize(window, on: workspace, rect: rect)
         }
         runtime.native.stateChanges.notify() // Wakes a palette pick awaiting adoption.

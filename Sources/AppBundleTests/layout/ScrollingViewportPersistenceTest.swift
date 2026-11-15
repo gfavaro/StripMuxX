@@ -43,27 +43,6 @@ final class ScrollingViewportPersistenceTest: WorkspaceTestCase {
         XCTAssertEqual(workspace.lastScrollingFocusWindowId, first.windowId)
     }
 
-    func testOnlyAWindowFloatedOnPurposeFloatsAgainAfterRestore() throws {
-        let workspace = focus.workspace
-        let auto = TestWindow.new(id: 73031, parent: workspace)
-        let kept = TestWindow.new(id: 73032, parent: workspace)
-        kept.keptFloating = true
-        let record = try JSONDecoder().decode(FrozenStrip.self, from: JSONEncoder().encode(FrozenStrip(workspace)))
-        XCTAssertEqual(record.floating.count, 2)
-
-        // After a restart both open on the strip at their own size, as adoption places them.
-        let own = Rect(topLeftX: 200, topLeftY: 100, width: 500, height: 300)
-        kept.keptFloating = false
-        joinStripAtOwnSize(auto, on: workspace, rect: own)
-        joinStripAtOwnSize(kept, on: workspace, rect: own)
-        restoreStrip(record, to: workspace, windowsById: [73031: auto, 73032: kept])
-
-        XCTAssertFalse(auto.isFloating)
-        XCTAssertEqual(auto.freeSizeRect, own)
-        XCTAssertTrue(kept.isFloating)
-        XCTAssertTrue(kept.keptFloating)
-    }
-
     func testFreeSizeFrameSurvivesSnapshotAndRestore() throws {
         let workspace = focus.workspace
         let window = TestWindow.new(id: 73021, parent: workspace.rootTilingContainer)
