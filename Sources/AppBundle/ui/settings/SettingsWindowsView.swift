@@ -304,7 +304,7 @@ private func scrollingSensitivityError(_ text: String) -> String? {
 }
 
 func settingsLoneWindowPreviewFrame(in bounds: CGRect, fraction: Double, alignment: SingleWindowAlignment) -> CGRect {
-    let width = bounds.width * min(max(fraction, 0.1), 1)
+    let width = bounds.width * CGFloat(min(max(fraction, 0.1), 1))
     let x: CGFloat
     switch alignment {
         case .left: x = bounds.minX
