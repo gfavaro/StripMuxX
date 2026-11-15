@@ -4,8 +4,8 @@ import Common
 /// Pans the strip with Option + two-finger horizontal trackpad scroll, because
 /// macOS keeps three- and four-finger swipes for switching Spaces.
 /// Scroll events, including macOS's own momentum after lifting, move the viewport
-/// directly and are consumed; when they stop, the column nearest the middle is
-/// revealed and focused.
+/// directly and are consumed; on release focus follows the nearest column
+/// without shifting the camera again.
 @MainActor
 final class NativeScrollingPan {
     static let shared = NativeScrollingPan()
@@ -90,8 +90,14 @@ final class NativeScrollingPan {
                 cancel()
                 return false
             }
-            pan(workspace, by: scroll.deltaX)
-            if scroll.momentumPhase == 3 { settle() } else { settleWhenIdle() }
+            // Finger lift may precede macOS momentum by a few frames.
+            // Don't settle the camera or focus while waiting for that handoff.
+            if scroll.momentumPhase == 3 {
+                settle()
+            } else {
+                pan(workspace, by: scroll.deltaX)
+                settleWhenIdle(awaitingMomentum: scroll.phase == 4)
+            }
             return true
         }
         guard scroll.optionOnly, scroll.isContinuous, scroll.momentumPhase == 0 else { return false }
@@ -174,11 +180,13 @@ final class NativeScrollingPan {
         settle()
     }
 
-    /// Devices without scroll phases end a pan after a pause.
-    private func settleWhenIdle() {
+    /// Backstop for phase-less devices and interrupted momentum streams.
+    /// Allow longer for the touch-to-momentum handoff.
+    private func settleWhenIdle(awaitingMomentum: Bool = false) {
         idleTask?.cancel()
         idleTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(180))
+            do { try await Task.sleep(for: .milliseconds(awaitingMomentum ? 420 : 250)) }
+            catch { return }
             guard !Task.isCancelled else { return }
             self?.settle()
         }

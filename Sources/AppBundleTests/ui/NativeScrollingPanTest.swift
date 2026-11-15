@@ -90,6 +90,23 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertTrue(windows.contains { $0 === focus.windowOrNil })
     }
 
+    func testTouchEndAndMomentumHandoffKeepContinuousViewport() {
+        let (workspace, _) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        XCTAssertTrue(pan.handle(scroll(-135, phase: 1, at: point)))
+        let touched = workspace.scrollingOffset
+        XCTAssertTrue(pan.handle(scroll(0, phase: 4, at: point)))
+        XCTAssertTrue(pan.isPanning)
+        XCTAssertEqual(workspace.scrollingOffset, touched, accuracy: 0.001)
+        XCTAssertTrue(pan.handle(scroll(-45, option: false, phase: 0, momentum: 2, at: point)))
+        let coasted = workspace.scrollingOffset
+        XCTAssertGreaterThan(coasted, touched)
+        XCTAssertTrue(pan.handle(scroll(0, option: false, phase: 0, momentum: 3, at: point)))
+        XCTAssertFalse(pan.isPanning)
+        XCTAssertEqual(workspace.scrollingOffset, coasted, accuracy: 0.001)
+    }
+
     func testANewPlainScrollEndsThePanAndReachesTheApp() {
         let (workspace, _) = fixture()
         let pan = NativeScrollingPan()
