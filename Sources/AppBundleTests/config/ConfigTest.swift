@@ -41,6 +41,15 @@ final class ConfigTest: XCTestCase {
         XCTAssertTrue(actions.contains(where: { $0.id == "fullscreen" && $0.commandScript == "fullscreen" }))
     }
 
+    func testErgonomicPresetParsesAndPreservesActionCount() throws {
+        let url = projectRoot.appending(component: "resources/shortcut-presets/ergonomic-default.toml")
+        let text = try String(contentsOf: url, encoding: .utf8)
+        let parsed = parseConfig(text)
+        XCTAssertTrue(parsed.errors.isEmpty, "\(parsed.errors)")
+        XCTAssertEqual(parsed.config.modes[mainModeId]?.bindings.count,
+                       defaultConfig.modes[mainModeId]?.bindings.count)
+    }
+
     func testParseDefaultConfig() throws {
         let toml = try String(contentsOf: projectRoot.appending(component: "resources/default-config.toml"), encoding: .utf8)
         let (config, errors) = parseConfig(toml)
