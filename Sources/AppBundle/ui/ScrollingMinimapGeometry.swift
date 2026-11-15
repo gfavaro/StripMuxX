@@ -13,7 +13,10 @@ struct ScrollingMinimapGeometry {
         // width and the viewport sits over the columns on screen. A short strip is capped
         // so the visible part never takes more than most of the panel, and centred.
         let xScale = min(max(bounds.width, 0) / span,
-                         scrollingMinimapMaximumViewportShare * max(bounds.width, 0) / max(metrics.areaWidth, 1))
+                         scrollingMinimapMaximumViewportShare * max(bounds.width, 0) / max(metrics.areaWidth, 1),
+                         // The compact cap gives way to keep every column clickable (32 pt).
+                         max(scrollingMinimapMaximumTypicalTileWidth / max(scrollingMinimapTypicalColumnWidth(metrics), 1),
+                             32 / max(metrics.columns.map(\.width).min() ?? 1, 1)))
         let originX = bounds.midX - span * xScale / 2
         tiles = metrics.columns.map { column in
             CGRect(x: originX + (column.start - start) * xScale, y: bounds.minY,
@@ -43,8 +46,16 @@ func scrollingMinimapSpan(_ metrics: ScrollingWorkspaceMetrics) -> CGFloat {
     return max(max(metrics.totalWidth, metrics.offsetRange.upperBound + metrics.areaWidth) - start, 1)
 }
 
+/// A typical column is drawn no wider than this; a few columns stay compact and centred.
+let scrollingMinimapMaximumTypicalTileWidth: CGFloat = 110
+
+func scrollingMinimapTypicalColumnWidth(_ metrics: ScrollingWorkspaceMetrics) -> CGFloat {
+    let widths = metrics.columns.map(\.width).sorted()
+    return widths.isEmpty ? metrics.areaWidth : widths[widths.count / 2]
+}
+
 /// One fixed row height: room for an icon and a title, whatever the windows' shapes.
-func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 72 }
+func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 60 }
 
 /// The strip fills the visible width. When that would make typical columns too narrow
 /// to read (56 pt) or any column too narrow to click (32 pt), the canvas grows and scrolls.
