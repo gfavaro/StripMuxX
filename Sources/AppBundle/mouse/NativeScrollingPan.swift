@@ -200,7 +200,9 @@ final class NativeScrollingPan {
                             column.width + deltaX * CGFloat(config.scrolling.gestureSensitivity))
         guard abs(requested - column.width) >= 0.5 else { return }
         let applied: CGFloat?
-        if singleWindowWidthTarget(in: workspace) === window {
+        if window.freeSizeRect != nil {
+            applied = resizeColumn(of: window, toWidth: requested, in: workspace)
+        } else if singleWindowWidthTarget(in: workspace) === window {
             applied = applySingleWindowManualResize(window, width: requested) ? requested : nil
         } else {
             applied = resizeColumn(of: window, toWidth: requested, in: workspace)
