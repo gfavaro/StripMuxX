@@ -171,9 +171,12 @@ final class WorkspaceScrollingMinimap: NSObject {
                         ?? NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
                 }
             }
+            let title = window.map { member in
+                let name = cachedWindowTitle(for: member) ?? member.app.name
+                return member.freeSizeRect == nil ? name : "Free-size · " + name
+            } ?? "Empty group"
             return ScrollingMinimapTile(id: ObjectIdentifier(group),
-                title: window.flatMap { cachedWindowTitle(for: $0) ?? $0.app.name } ?? "Empty group",
-                applications: pids, count: windows.count)
+                title: title, applications: pids, count: windows.count)
         }
         let models = groups.map(tile)
         var pinned = pinnedColumn.map(tile)
