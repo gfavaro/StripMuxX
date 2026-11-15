@@ -22,6 +22,7 @@
     "single-window-alignment": {"enum": ["center", "left", "right"]},
     "single-window-aspect-ratio": {"$ref": "#/$defs/dynamicNumber", "deprecated": true},
     "fullscreen-width": {"$ref": "#/$defs/fullscreenWidth"},
+    "lone-window-width": {"$ref": "#/$defs/fullscreenWidth"},
     "display": {"type": "object", "patternProperties": {"^.+$": {"$ref": "#/$defs/windowWidthSettings"}}, "additionalProperties": false},
     "gaps": {"$ref": "#/$defs/gaps"},
     "menu-bar": {"type": "object", "properties": {"indicator": {"enum": ["icon", "workspace"]}, "icon-appearance": {"enum": ["color", "monochrome"]}}, "additionalProperties": false},
@@ -39,6 +40,6 @@
     "dynamicInt": {"oneOf": [{"type": "integer"}, {"type": "array", "items": {"type": "object", "additionalProperties": {"type": "integer"}}}]},
     "gaps": {"type": "object", "properties": {"inner": {"type": "object", "properties": {"horizontal": {"$ref": "#/$defs/dynamicInt"}, "vertical": {"$ref": "#/$defs/dynamicInt"}}, "additionalProperties": false}, "outer": {"type": "object", "properties": {"left": {"$ref": "#/$defs/dynamicInt"}, "right": {"$ref": "#/$defs/dynamicInt"}, "top": {"$ref": "#/$defs/dynamicInt"}, "bottom": {"$ref": "#/$defs/dynamicInt"}}, "additionalProperties": false}}, "additionalProperties": false},
     "fullscreenWidth": {"type": "number", "minimum": 0.1, "maximum": 1.0},
-    "windowWidthSettings": {"type": "object", "properties": {"fullscreen-width": {"$ref": "#/$defs/fullscreenWidth"}, "single-window-alignment": {"enum": ["center", "left", "right"]}}, "additionalProperties": false}
+    "windowWidthSettings": {"type": "object", "properties": {"fullscreen-width": {"$ref": "#/$defs/fullscreenWidth"}, "lone-window-width": {"$ref": "#/$defs/fullscreenWidth"}, "single-window-alignment": {"enum": ["center", "left", "right"]}}, "additionalProperties": false}
   }
 }
