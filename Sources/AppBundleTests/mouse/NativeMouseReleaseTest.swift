@@ -35,6 +35,15 @@ final class NativeMouseReleaseTest: XCTestCase {
         XCTAssertEqual(root.children.compactMap { ($0 as? Window)?.windowId }, [31002, 31001])
     }
 
+    func testDragOverlayCoordinatesIncludeVerticalMonitorOffsets() {
+        let window = Rect(topLeftX: -1200, topLeftY: -220, width: 700, height: 400)
+        let converted = nativeDragOverlayFrame(for: window, primaryScreenTop: 1080)
+        XCTAssertEqual(converted.minX, -1200)
+        XCTAssertEqual(converted.minY, 900)
+        XCTAssertEqual(converted.width, 700)
+        XCTAssertEqual(converted.height, 400)
+    }
+
     func testPreviewAndDropUseSameDestinationRule() async throws {
         let (first, second) = try await layout()
         let target = try XCTUnwrap(second.lastAppliedLayoutPhysicalRect)

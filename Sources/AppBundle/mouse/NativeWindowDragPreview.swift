@@ -76,14 +76,20 @@ final class NativeWindowDragPreview {
         destinationPanel?.orderOut(nil)
     }
 
-    private func show(_ panel: NSPanel, rect: Rect, under id: UInt32) {
+    private func show(_ panel: NSPanel, rect: Rect, under _: UInt32) {
         // Layout uses top-left global coordinates; AppKit windows use bottom-left.
-        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
-        let frame = CGRect(x: rect.minX, y: primaryHeight - rect.maxY,
-                           width: rect.width, height: rect.height)
+        // CGWindow/AX coordinates are top-left-relative to the primary
+        // display. AppKit global coordinates are bottom-left-relative to
+        // that same display. Use maxY, not height, for offset displays.
+        guard let primary = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ??
+                NSScreen.main else { return }
+        let frame = nativeDragOverlayFrame(for: rect, primaryScreenTop: primary.frame.maxY)
         guard frame.width > 0, frame.height > 0 else { return }
         if !panel.isVisible || panel.frame != frame { panel.setFrame(frame, display: true) }
-        panel.order(.below, relativeTo: Int(id))
+        // NSWindow.order(relativeTo:) expects an NSWindow number, not a
+        // CGWindowID from another application. A nonactivating floating
+        // overlay with ignored mouse input is both visible and safe.
+        panel.orderFrontRegardless()
     }
 
     private static func makePanel(color: NSColor, alpha: CGFloat) -> NSPanel {
@@ -94,7 +100,10 @@ final class NativeWindowDragPreview {
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
         panel.animationBehavior = .none
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
+        // Never join all Spaces: the overlay belongs to the desktop on
+        // which the drag began, not to the next desktop after switching.
+        panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle, .transient]
+        panel.level = .floating
         panel.contentView = NativeWindowDragOutline(color: color, opacity: alpha)
         return panel
     }
@@ -120,4 +129,10 @@ private final class NativeWindowDragOutline: NSView {
         path.lineWidth = 3
         path.stroke()
     }
+}
+
+/// Convert an already-observed physical AX frame to AppKit global coordinates.
+/// Pure function to cover displays with negative X origins and vertical offsets.
+func nativeDragOverlayFrame(for rect: Rect, primaryScreenTop: CGFloat) -> CGRect {
+    CGRect(x: rect.minX, y: primaryScreenTop - rect.maxY, width: rect.width, height: rect.height)
 }
