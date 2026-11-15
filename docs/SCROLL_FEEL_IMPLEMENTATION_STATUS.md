@@ -27,6 +27,31 @@
 - Gesture physics uses the existing macOS deltas and momentum; there is no new animation or scheduler rewrite.
 - Synthetic tests cannot validate real Dock gestures, window titlebars or display hotplug.
 
+## Memory hardening — 2026-11-15 (source-only, not compiled)
+
+The native-space persistence layer was reviewed for lost strip and window state:
+
+- After the restore grace period, a snapshot **stays protected** if zero saved
+  windows can be matched; opening a completely unrelated app cannot overwrite
+  the user's remembered strip.
+- A native inventory that temporarily omits a Space **does not delete** its
+  saved strip. This favors retention over automatically pruning snapshots of
+  desktops intentionally deleted by the user.
+- A saved floating window that reopens temporarily as tiled can be recovered
+  when the app has exactly one unmatched saved and live window. Multiple
+  ambiguous windows are not guessed or reordered.
+- Regression tests cover no-match expiry, temporarily absent Space UUIDs,
+  and an unambiguous floating window returning with a changed title.
+
+Limits: there is no native window movement or activation in these fixes.
+Ordinary floating windows remain outside the strip; their actual screen
+coordinates are managed by macOS (StripMuxX does not force them to saved
+absolute coordinates). After a *partial* restore with at least one match,
+missing windows can still be dropped after the grace period. Hardware tests,
+macOS restart validation, `make check`, and cross-monitor recovery were **not**
+executed in this commit series. Do not carry forward the previous QA PASS
+to this new HEAD.
+
 ## Validation required before release
 
 1. Run `make check` and resolve any Swift compiler and test failures.
