@@ -51,9 +51,12 @@ Do not create/delete Spaces or rearrange active work windows without permission.
   adoption still authorizes the actual swap.
 - Drag hints rely on the focused managed tile, a titlebar-area starting point,
   and the current observed layout. They are skipped rather than guessed.
-- Three-finger scrolling motion remains unchanged pending measurements of the
-  reported difficulty traversing large columns; the diagnostic line is
-  informational, not a fix.
+- Three-finger movement continues to track the fingers unchanged. A
+  **committed** Dock swipe now advances to the immediate neighboring column
+  on release if a wide column still occupies the viewport's nearest slot.
+  The release assistance is implemented and has unit regressions, but still
+  requires a real-trackpad acceptance test on 100% and oversized columns.
+  See [GESTURE_DRAG_BETA.md](GESTURE_DRAG_BETA.md).
 - No AX scheduler rewrite; measure actual slow operations before changing it.
 
 ## Release criteria
