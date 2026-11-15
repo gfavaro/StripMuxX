@@ -27,5 +27,3 @@
 xcuserdata/
 xcshareddata/
 
-# Rewritten by every build with the current commit (make generate)
-/Sources/Common/gitHashGenerated.swift

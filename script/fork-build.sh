@@ -29,15 +29,21 @@ make xcodeproj VERSION="$fork_version" BUILD_NUMBER="$fork_build_number" CODESIG
 mkdir -p .release
 fork_stage="$(mktemp -d "$PWD/.release/fork-build.XXXXXX")"
 trap 'echo "Build intermediates retained at: $fork_stage"' EXIT
+# The commit goes into the binaries' __TEXT,__smx_build section, as AeroSpace does,
+# so building never edits a source file. Common/buildInfo.swift reads it back.
+fork_build_info="$fork_stage/build-info.txt"
+printf '%s\n%s\n' "$(git rev-parse HEAD)" "$(git rev-parse --short HEAD)" > "$fork_build_info"
 xcodebuild -project WinMux.xcodeproj -scheme WinMux -configuration Release \
   -derivedDataPath "$PWD/.release/fork-derived" CODE_SIGNING_ALLOWED=NO \
+  OTHER_LDFLAGS="\$(inherited) -sectcreate __TEXT __smx_build $fork_build_info" \
   CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= SWIFT_EXEC="$fork_swift_compiler" build > "$fork_stage/xcodebuild.log" 2>&1 || {
     tail -80 "$fork_stage/xcodebuild.log" >&2; exit 1;
   }
 fork_app="$PWD/.release/fork-derived/Build/Products/Release/StripMuxX.app"
 test -d "$fork_app"
-swift build -c release --product stripmuxx
-fork_bin="$(swift build -c release --show-bin-path | tail -n 1)"
+fork_cli_ldflags=(-Xlinker -sectcreate -Xlinker __TEXT -Xlinker __smx_build -Xlinker "$fork_build_info")
+swift build -c release --product stripmuxx "${fork_cli_ldflags[@]}"
+fork_bin="$(swift build -c release --show-bin-path "${fork_cli_ldflags[@]}" | tail -n 1)"
 test -d "$fork_bin"
 # macOS normally uses case-insensitive volumes: stripmuxx would overwrite StripMuxX.
 ditto "$fork_bin/stripmuxx" "$fork_app/Contents/MacOS/stripmuxx-cli"
