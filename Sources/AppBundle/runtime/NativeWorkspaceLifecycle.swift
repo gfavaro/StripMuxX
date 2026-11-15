@@ -11,7 +11,7 @@ final class NativeWorkspaceLifecycle {
     let windows = NativeWindowReconciler()
     let tiling = NativeTilingCoordinator()
     let stateChanges = ChangeSignal()
-    let persistence = NativeLayoutPersistence()
+    var persistence = NativeLayoutPersistence()
     let navigation = NativeSpaceNavigator()
     let windowMoves = NativeWindowSpaceMoves()
     let activity = NativeActivityTracker()

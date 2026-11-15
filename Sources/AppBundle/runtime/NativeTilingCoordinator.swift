@@ -63,6 +63,8 @@ final class NativeTilingCoordinator {
     }
 
     func stop() {
+        scrollingPersistenceTask?.cancel()
+        scrollingPersistenceTask = nil
         invalidate()
         MacApp.cancelPendingFocus()
         if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
@@ -174,6 +176,7 @@ final class NativeTilingCoordinator {
     }
 
     private var scrollingLayoutTask: Task<Void, Never>?
+    private var scrollingPersistenceTask: Task<Void, Never>?
     private var scrollingLayoutPending = false
     private var scrollingLayoutRequests = ScrollingRelayoutSelection()
 
@@ -211,6 +214,23 @@ final class NativeTilingCoordinator {
                 }
             } while scrollingLayoutPending
             scrollingLayoutTask = nil
+            // Scrolling, column reordering and resizing bypass accept(), which
+            // is otherwise the only place that persists a desktop layout.
+            // Debounce disk writes while the fingers are moving, but record the
+            // final strip once a layout settles. Stale runs never save another Space.
+            scheduleScrollingPersistence()
+        }
+    }
+
+    private func scheduleScrollingPersistence() {
+        scrollingPersistenceTask?.cancel()
+        let version = generation
+        scrollingPersistenceTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
+            guard let self, !Task.isCancelled, self.ready, self.generation == version,
+                  !self.holdsForMouseRelease else { return }
+            await runtime.native.persistence.save(runtime.native.layouts)
+            self.scrollingPersistenceTask = nil
         }
     }
 
