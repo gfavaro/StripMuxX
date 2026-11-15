@@ -159,3 +159,102 @@ three-finger gesture diagnostics. These changes are **not** covered by the
 original 508/53 test evidence. See [single-pass beta verification](BETA_VERIFICATION.md)
 for required final automated and physical checks. Do not carry forward the old
 PASS verdict to newer commits until the final workflow completes.
+
+---
+
+# Final beta validation — 2026-11-15
+
+**Recommendation: PASS WITH WARNINGS.** No P0 or P1 defects found; no code changes
+were needed. Real trackpad gestures, multi-desktop and multi-display behaviour, and
+restart restoration were **not** exercised physically (see below); CI and the tests
+here do not validate real gestures.
+
+## Tested build
+
+| | |
+| --- | --- |
+| Commit | `eb05e65e06522746c9373cf33fa111f1a01f8967` on `main` (installed as build 38; identical code to build 37) |
+| Working tree | clean except the pre-existing `legal/LICENSE.txt` type change (symlink → identical file) |
+| Environment | macOS 27.2.1 (26B131), Apple Silicon, one built-in display (1710 pt wide), one desktop; Apple Swift 6.4.2 |
+| Commits reviewed since the first audit | 20 (`c519e658` … `eb05e65e`) |
+
+## Commands
+
+```sh
+make check
+python3 script/profile_runtime.py --pid $(pgrep -x StripMuxX) --seconds 30 --interval 5 --output <dir>
+stripmuxx focus left|right | focus --window-id N | close [--window-id N]   # against fixture windows
+stripmuxx doctor                                                           # frame-request counters
+dragtest <x> <y> <dx> full|nomouseup|up    # CGEvent mouse drag on a fixture title bar (scratch tool)
+```
+
+Fixture windows came from a disposable app (`LoadFixture`, scratchpad only) opening N
+plain windows; it was quit after each run. Your work windows were not moved, closed
+or focused except for restoring the original focus afterwards.
+
+## Automated results (executed)
+
+| Suite | Run | Passed | Failed | Skipped |
+| --- | --- | --- | --- | --- |
+| XCTest (`make check`) | 520 | 520 | 0 | 0 |
+| Python checks (`make check`) | 59 | 59 | 0 | 0 |
+| Compiler warnings | 29 unique | — | — | — |
+
+## Physical tests (executed on this Mac)
+
+| Area | Result |
+| --- | --- |
+| Close focused window after A → B → C | Focus went to B; frontmost app unchanged; Space unchanged |
+| Close unfocused windows (A, then C) while B focused | Focus stayed on B; no app activated |
+| Close an app's last window | Logical focus fell back to another app's window on the desktop while macOS kept the (now windowless) app frontmost; **nothing was activated** (P2 below) |
+| Drag a tiled window, normal mouse-up | 0 overlays after release; window returned to its tile |
+| Drag with mouse-up withheld | 1 overlay during the drag; 0 within 4 s (3 s expiry) |
+| First drag after focusing | No preview shown (likely the first press only focused the window); not reproduced on the next drag |
+
+## Performance (executed; 100 alternating `focus` commands per size)
+
+| Managed windows | p50 / p90 / p99 | Frame requests per command | Repeated targets | Main-process CPU per command | RSS | Idle 30 s: wakeups / CPU / footprint |
+| --- | --- | --- | --- | --- | --- | --- |
+| 6 (your apps) | 101 / 129 / 276 ms | 6.4 | 0 | 60 ms | 53 MiB | 32 / 0.001% / 22.7 MiB |
+| 21 | 93 / 102 / 138 ms | 21.6 | 0 | 61 ms | 53 MiB | 43 / 0.001% / 23.0 MiB |
+| 36 | 119 / 127 / 136 ms | 36.3 | 0 | 74 ms | 54 MiB | 33 / 0.001% / 23.0 MiB |
+| 51 | 147 / 157 / 172 ms | 51.5 | 0 | 88 ms | 54 MiB | 35 / 0.001% / 23.3 MiB |
+
+Latency includes a 26 ms CLI round trip. Requests are one per window per command:
+each focus change scrolls the strip, so every window gets a new target; no repeated
+targets were sent. Memory and idle cost stay flat up to 51 windows; no crash report.
+
+## Code inspection (not executed)
+
+- **Focus history** (`748410d3`, `e76ef93b`): weak window identities, so a recycled
+  WindowServer ID cannot inherit history; fallback runs only if the closed window was
+  the requested focus; `setFocus` changes logical focus only and refuses a workspace
+  that is not showing — it cannot activate an app or switch Spaces.
+- **Wide-column swipe assist** (`43c24957`): advances at most one adjacent column,
+  never reverses, stops at strip ends, and only on a *committed* Dock swipe; a
+  cancelled swipe takes `cancel()` (no focus, no assist). Space changes cancel the
+  gesture. Finger-following and Option+two-finger code paths unchanged.
+- **Drag preview** (`4961f1c1`, `3d2f14c1`): hidden on mouse-up, on any Space/window
+  invalidation and after 3 s without drag events; panels are app windows and go with
+  the process.
+
+## Issues
+
+**P0:** none. **P1:** none.
+
+**P2**
+- After an app's last window closes, StripMuxX's logical focus can name another app's
+  window while macOS keeps the windowless app frontmost, until the next native focus
+  change.
+- Focus latency 90–150 ms median (60–90 ms of main-process CPU per command), growing
+  about 1 ms per window; dominated by AX work, not redundant writes.
+- Earlier P2 items stand: outer-column widths, Option-letter shortcut shadowing
+  (an opt-in ergonomic preset now exists), dropped `Task` errors, 29 warnings.
+
+## Not executed physically
+
+Three-finger swipes at 33/50/100/150/200% widths, flicks, cancellation, 50-column
+swipes and Space switches mid-gesture (no synthetic Dock gestures); Option+two-finger
+pan; Mission Control; switching and moving across desktops (one desktop); two
+displays and disconnect; sleep/wake; restart and layout restoration (restart not
+permitted); VoiceOver, Reduce Motion, keyboard-only Settings; installer rollback.
