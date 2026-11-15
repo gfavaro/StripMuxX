@@ -55,7 +55,17 @@ func scrollingMinimapTypicalColumnWidth(_ metrics: ScrollingWorkspaceMetrics) ->
 }
 
 /// One fixed row height: room for an icon and a title, whatever the windows' shapes.
-func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 60 }
+func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 48 }
+
+/// The panel hugs the strip at its compact size: never narrower than its header and
+/// footer need, never wider than `maximum`.
+func scrollingMinimapPanelWidth(metrics: ScrollingWorkspaceMetrics, maximum: CGFloat) -> CGFloat {
+    let widths = metrics.columns.map(\.width)
+    guard let narrowest = widths.min() else { return min(320, maximum) }
+    let scale = max(scrollingMinimapMaximumTypicalTileWidth / max(scrollingMinimapTypicalColumnWidth(metrics), 1),
+                    32 / max(narrowest, 1))
+    return min(maximum, max(320, (scrollingMinimapSpan(metrics) * scale).rounded(.up) + 32))
+}
 
 /// The strip fills the visible width. When that would make typical columns narrower than
 /// their compact width or any column too narrow to click (32 pt), the canvas grows and scrolls.

@@ -337,9 +337,12 @@ final class ScrollingMinimapView: NSView {
             drawMinimapText("Floating", in: CGRect(x: 16, y: bounds.height - 23 - scrollingMinimapFloatingRowHeight + 7,
                             width: 60, height: 14), font: .systemFont(ofSize: 10, weight: .semibold), color: .secondaryLabelColor)
         }
+        // A compact panel keeps only the focused title; the hint needs a wide one.
+        let showsHint = bounds.width >= 520
         drawMinimapText(focusedTitle,
-                        in: CGRect(x: 16, y: bounds.height - 23, width: bounds.width * 0.55, height: 16),
+                        in: CGRect(x: 16, y: bounds.height - 23, width: showsHint ? bounds.width * 0.55 : bounds.width - 32, height: 16),
                         font: .systemFont(ofSize: 10, weight: .medium), color: .labelColor)
+        guard showsHint else { return }
         let navigationHint = config.scrolling.threeFingerSwipe && config.scrolling.gestureEnabled
             ? "Click to reveal · drag to reorder · three-finger swipe"
             : config.scrolling.gestureEnabled ? "Click to reveal · drag to reorder · ⌥ two-finger scroll"
@@ -491,7 +494,7 @@ final class ScrollingMinimapButton: NSButton {
             ring.stroke()
         }
         guard bounds.width >= 18 else { return }
-        let showsTitle = bounds.width >= 56 && bounds.height >= 48
+        let showsTitle = bounds.width >= 56 && bounds.height >= 56
         let side: CGFloat = bounds.width >= 56 ? 20 : 16
         let count = bounds.width >= 80 ? icons.count : min(icons.count, 1)
         let iconsWidth = CGFloat(count) * side + CGFloat(max(count - 1, 0)) * 3

@@ -100,7 +100,8 @@ final class WorkspaceScrollingMinimap: NSObject {
         let screens = NSScreen.screens
         let index = workspace.workspaceMonitor.monitorAppKitNsScreenScreensId
         guard screens.indices.contains(index - 1) else { dismiss(); return }
-        let width = min(680, max(1, screens[index - 1].visibleFrame.width - 48))
+        let width = scrollingMinimapPanelWidth(metrics: workspace.scrollingMetrics,
+                                               maximum: min(680, max(1, screens[index - 1].visibleFrame.width - 48)))
         let floatingWindows = workspace.floatingWindows.filter(\.nativeLayoutEligible).sorted { $0.windowId < $1.windowId }
         let height = scrollingMinimapRowHeight(metrics: workspace.scrollingMetrics) + 68
             + (floatingWindows.isEmpty ? 0 : scrollingMinimapFloatingRowHeight)

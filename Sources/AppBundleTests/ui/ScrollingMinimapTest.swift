@@ -69,16 +69,28 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         }
         let metrics = workspace.scrollingMetrics
         let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
-        XCTAssertEqual(rowHeight, 60, "A narrow column never changes the panel's height")
+        XCTAssertEqual(rowHeight, 48, "A narrow column never changes the panel's height")
         let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
         let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
             bounds: CGRect(x: 0, y: 0, width: contentWidth, height: rowHeight))
         XCTAssertGreaterThanOrEqual(geometry.tiles[0].width, 31.99)
         XCTAssertEqual(geometry.tiles.count, 8)
-        XCTAssertEqual(geometry.viewport.height, 60)
+        XCTAssertEqual(geometry.viewport.height, 48)
         for (index, tile) in geometry.tiles.enumerated() {
             XCTAssertEqual(geometry.column(at: CGPoint(x: tile.midX, y: tile.midY)), index)
         }
+    }
+
+    func testPanelHugsACompactStripButKeepsRoomForItsHeader() {
+        let (workspace, windows) = fixture(count: 4)
+        windows.forEach { $0.scrollingColumnWidth = 0.5 }
+        let width = scrollingMinimapPanelWidth(metrics: workspace.scrollingMetrics, maximum: 680)
+        XCTAssertEqual(width, 320, "Four compact tiles need less than the header's minimum")
+        let (many, _) = (workspace, (0..<20).map { TestWindow.new(id: UInt32(95600 + $0), parent: workspace.rootTilingContainer) })
+        XCTAssertEqual(scrollingMinimapPanelWidth(metrics: many.scrollingMetrics, maximum: 680), 680, "Capped; the map scrolls")
+        let geometry = ScrollingMinimapGeometry(metrics: workspace.scrollingMetrics, offset: 0,
+            bounds: CGRect(x: 0, y: 0, width: 288, height: 48))
+        XCTAssertGreaterThanOrEqual(geometry.tiles.first?.minX ?? -1, -0.5, "The strip fits its hugging panel")
     }
 
     func testTilesAreCompactAndCentred() {
@@ -127,7 +139,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         let first = try XCTUnwrap(buttons.first)
         let last = try XCTUnwrap(buttons.last)
         XCTAssertEqual(view.convert(first.bounds, from: first).minY, 29, accuracy: 0.5)
-        XCTAssertGreaterThanOrEqual(first.bounds.height, 50, "The label extends to y=50 and must fit inside the tile")
+        XCTAssertEqual(first.bounds.height, scrollingMinimapRowHeight(metrics: metrics), "Tiles fill the row")
         XCTAssertGreaterThan(scroll.contentView.bounds.minX, 0)
         XCTAssertTrue(scroll.documentVisibleRect.intersects(last.frame), "The map must follow the viewport at the strip end")
         view.resetPresentation()
