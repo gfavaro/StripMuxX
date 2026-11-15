@@ -171,8 +171,8 @@ final class WorkspaceScrollingMinimap: NSObject {
                         ?? NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
                 }
             }
-            let title = window.map { member in
-                let name = cachedWindowTitle(for: member) ?? member.app.name
+            let title = window.flatMap { member -> String? in
+                guard let name = cachedWindowTitle(for: member) ?? member.app.name else { return nil }
                 return member.freeSizeRect == nil ? name : "Free-size · " + name
             } ?? "Empty group"
             return ScrollingMinimapTile(id: ObjectIdentifier(group),

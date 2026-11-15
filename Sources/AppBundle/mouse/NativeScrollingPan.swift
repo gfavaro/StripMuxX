@@ -182,7 +182,8 @@ final class NativeScrollingPan {
         let next = metrics.clampedOffset(current - deltaX * CGFloat(config.scrolling.gestureSensitivity))
         // At the strip boundary or on an empty momentum event there is nothing
         // to reposition. Avoid queuing duplicate AX frames for a stationary camera.
-        guard abs(next - current) > 0.0001 else { return }
+        // Compared with the stored offset, so a pan still clamps one a resize left out of range.
+        guard abs(next - workspace.scrollingOffset) > 0.0001 else { return }
         lastDirection = next > current ? 1 : -1
         workspace.scrollingOffset = next
         nativePanTiming.measure("minimap show") { _ = WorkspaceScrollingMinimap.shared.show(workspace, duringGesture: true) }

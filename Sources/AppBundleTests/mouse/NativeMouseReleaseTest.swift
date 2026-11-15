@@ -37,7 +37,7 @@ final class NativeMouseReleaseTest: XCTestCase {
         XCTAssertEqual(first.scrollingColumnFixedWidth, changed.width)
         XCTAssertNil(second.freeSizeRect)
         try await focus.workspace.layoutWorkspace()
-        XCTAssertEqual(first.lastAppliedLayoutPhysicalRect?.height, changed.height, accuracy: 1)
+        XCTAssertEqual(first.lastAppliedLayoutPhysicalRect?.height ?? 0, changed.height, accuracy: 1)
     }
 
     func testDropOntoAnotherTileSwapsThem() async throws {

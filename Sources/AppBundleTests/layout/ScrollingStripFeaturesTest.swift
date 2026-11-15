@@ -60,7 +60,9 @@ final class ScrollingStripFeaturesTest: XCTestCase {
         try await workspace.layoutWorkspace()
         let before = try XCTUnwrap(first.lastAppliedLayoutPhysicalRect)
         XCTAssertEqual(before.height, 310, accuracy: 1)
-        XCTAssertEqual(before.width, 510, accuracy: 1)
+        // The window fills its fixed-width column, less the share of the gap it borders.
+        XCTAssertEqual(before.width, try XCTUnwrap(workspace.scrollingMetrics.columns.first).width, accuracy: 1)
+        XCTAssertEqual(before.width, 510, accuracy: 8)
 
         workspace.scrollingOffset = workspace.scrollingMetrics.clampedOffset(130)
         workspace.lastScrollingFocusWindowId = first.windowId
