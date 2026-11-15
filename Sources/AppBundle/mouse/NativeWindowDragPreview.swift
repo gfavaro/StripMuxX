@@ -12,6 +12,7 @@ final class NativeWindowDragPreview {
     private var homePanel: NSPanel?
     private var destinationPanel: NSPanel?
     private var dragEventMonitor: Any?
+    private var expiry: Task<Void, Never>?
 
     func begin(at point: CGPoint) {
         hide()
@@ -31,6 +32,7 @@ final class NativeWindowDragPreview {
                 self?.moved(to: mouseLocation)
             }
         }
+        armExpiry()
     }
 
     func moved(to point: CGPoint) {
@@ -38,6 +40,7 @@ final class NativeWindowDragPreview {
               workspace.isVisible, workspace.scrollingSessionEpoch == sessionEpoch,
               dragged.nodeWorkspace === workspace, dragged.nativeLayoutEligible,
               dragged.parent is TilingContainer else { hide(); return }
+        armExpiry()
         guard hypot(point.x - originalPoint.x, point.y - originalPoint.y) > 12 else { return }
         if let rect = dragged.lastAppliedLayoutPhysicalRect {
             if homePanel == nil { homePanel = Self.makePanel(color: .secondaryLabelColor, alpha: 0.45) }
@@ -52,7 +55,19 @@ final class NativeWindowDragPreview {
         if let destinationPanel { show(destinationPanel, rect: rect, under: dragged.windowId) }
     }
 
+    /// A missing mouse-up cannot leak a systemwide event observer or overlay.
+    private func armExpiry() {
+        expiry?.cancel()
+        expiry = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            guard !Task.isCancelled else { return }
+            self?.hide()
+        }
+    }
+
     func hide() {
+        expiry?.cancel()
+        expiry = nil
         if let dragEventMonitor { NSEvent.removeMonitor(dragEventMonitor) }
         dragEventMonitor = nil
         dragged = nil

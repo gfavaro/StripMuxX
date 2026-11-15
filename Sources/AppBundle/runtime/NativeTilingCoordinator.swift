@@ -44,7 +44,10 @@ final class NativeTilingCoordinator {
     }
 
     func invalidate(_ reason: String = "other") {
-        if !holdsForMouseRelease { dragPreview.hide() }
+        // A native Space/window lifecycle change can invalidate the drag's
+        // identity even while the mouse is down. Do not leave overlay panels
+        // on a different Space after that transition.
+        dragPreview.hide()
         nativePanTiming.count("invalidate: \(reason)")
         generation &+= 1
         ready = false
