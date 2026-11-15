@@ -32,6 +32,7 @@ final class ScrollingMinimapView: NSView {
     private var hovered = false
     private var previousOffset: CGFloat?
     private var previousViewportMidX: CGFloat?
+    private let dropIndicator = NSView()
     private var heading = ""
     private var focusedTitle = ""
 
@@ -51,6 +52,12 @@ final class ScrollingMinimapView: NSView {
             }
         addSubview(scrollView)
         addSubview(viewport)
+        dropIndicator.wantsLayer = true
+        dropIndicator.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
+        dropIndicator.layer?.cornerRadius = 2
+        dropIndicator.isHidden = true
+        dropIndicator.setAccessibilityElement(false)
+        addSubview(dropIndicator)
         tileCanvas.activate = { [weak self] index in self?.activateTile(at: index) }
         tileCanvas.dismiss = { [weak self] in self?.dismissRequested?() }
         tileCanvas.selectionChanged = { [weak self] index in self?.updateKeyboardSelection(index) }
@@ -90,6 +97,8 @@ final class ScrollingMinimapView: NSView {
                 button.target = self
                 button.action = #selector(selectTile(_:))
                 button.dropped = { [weak self] button, midX in self?.dropTile(button, at: midX) }
+                button.dragPreview = { [weak self] button, midX in self?.showDropPreview(for: button, at: midX) }
+                button.dragEnded = { [weak self] in self?.dropIndicator.isHidden = true }
                 button.autoScroll = { [weak self] location in self?.scrollDuringTileDrag(windowX: location) ?? 0 }
                 tileCanvas.addSubview(button)
                 return button
@@ -172,11 +181,33 @@ final class ScrollingMinimapView: NSView {
     override var acceptsFirstResponder: Bool { true }
     /// The place among the other tiles whose centre the dropped tile passed.
     private func dropTile(_ dropped: ScrollingMinimapButton, at midX: CGFloat) {
+        dropIndicator.isHidden = true
         let others = buttons.filter { $0 !== dropped }
         let index = others.filter { $0.frame.midX < midX }.count
         guard let current = buttons.firstIndex(where: { $0 === dropped }) else { return }
         if index != current { reordered?(dropped.model.id, index) }
         else { dropped.frame.origin.x = geometry.map { $0.tiles[current].minX } ?? dropped.frame.origin.x }
+    }
+
+    /// Shows the insertion slot in viewport coordinates, without moving any
+    /// managed window or changing the model before the mouse is released.
+    private func showDropPreview(for dropped: ScrollingMinimapButton, at midX: CGFloat) {
+        let others = buttons.filter { $0 !== dropped }
+        guard !others.isEmpty else { dropIndicator.isHidden = true; return }
+        let index = others.filter { $0.frame.midX < midX }.count
+        let targetX: CGFloat
+        if index == 0 { targetX = others[0].frame.minX }
+        else if index == others.count { targetX = others[others.count - 1].frame.maxX }
+        else { targetX = (others[index - 1].frame.maxX + others[index].frame.minX) / 2 }
+        let x = scrollView.frame.minX + targetX - scrollView.contentView.bounds.minX
+        guard x >= scrollView.frame.minX - 2, x <= scrollView.frame.maxX + 2 else {
+            dropIndicator.isHidden = true
+            return
+        }
+        let target = CGRect(x: x - 2, y: scrollView.frame.minY + 2,
+                            width: 4, height: max(scrollView.frame.height - 4, 0))
+        if dropIndicator.frame != target { dropIndicator.frame = target }
+        dropIndicator.isHidden = false
     }
 
     func beginKeyboardNavigation() {
@@ -195,6 +226,7 @@ final class ScrollingMinimapView: NSView {
         hovered = false
         previousOffset = nil
         previousViewportMidX = nil
+        dropIndicator.isHidden = true
     }
     override func keyDown(with event: NSEvent) {
         guard !buttons.isEmpty else { return }
@@ -285,6 +317,8 @@ final class ScrollingMinimapButton: NSButton {
     var dropped: ((ScrollingMinimapButton, CGFloat) -> Void)?
     /// Invoked only during a real pointer drag; returns the canvas scroll distance.
     var autoScroll: ((CGFloat) -> CGFloat)?
+    var dragPreview: ((ScrollingMinimapButton, CGFloat) -> Void)?
+    var dragEnded: (() -> Void)?
 
     /// A click activates the tile; a drag past a few points moves it to reorder columns.
     override func mouseDown(with event: NSEvent) {
@@ -296,6 +330,7 @@ final class ScrollingMinimapButton: NSButton {
         while let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
             let delta = next.locationInWindow.x - start.x
             if next.type == .leftMouseUp {
+                dragEnded?()
                 if dragging { dropped?(self, frame.midX) } else { _ = sendAction(action, to: target) }
                 return
             }
@@ -303,8 +338,10 @@ final class ScrollingMinimapButton: NSButton {
             if dragging {
                 scrollDisplacement += autoScroll?(next.locationInWindow.x) ?? 0
                 frame.origin.x = origin + delta + scrollDisplacement
+                dragPreview?(self, frame.midX)
             }
         }
+        dragEnded?()
     }
 
     init(model: ScrollingMinimapTile) {

@@ -121,6 +121,21 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
             contentOffset: 100, contentWidth: 1600), 0)
     }
 
+    func testMinimapDragPreviewIsHiddenOnReset() throws {
+        let (workspace, windows) = fixture(count: 4)
+        let models = windows.map {
+            ScrollingMinimapTile(id: ObjectIdentifier($0), title: "Window", applications: [], count: 1)
+        }
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 640, height: 120))
+        view.update(workspaceName: workspace.name, models: models, icons: [:],
+                    metrics: workspace.scrollingMetrics, offset: 0, focused: nil)
+        let scroll = try XCTUnwrap(minimapDescendants(of: view).compactMap { $0 as? NSScrollView }.first)
+        let buttons = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? NSButton })
+        XCTAssertEqual(buttons.count, 4)
+        view.resetPresentation()
+        XCTAssertEqual(scroll.documentView?.subviews.compactMap { $0 as? NSButton }.count, 4)
+    }
+
     func testPinnedColumnGetsItsOwnTileBesideTheStrip() throws {
         let (workspace, windows) = fixture(count: 4)
         let metrics = workspace.scrollingMetrics
