@@ -405,6 +405,23 @@ final class NativeTilingTest: WorkspaceTestCase {
         XCTAssertFalse(original.isEmpty)
     }
 
+    func testUniqueFloatingWindowRestoresEvenIfAppInitiallyOpensItAsTiled() throws {
+        let workspace = nativeWorkspace()
+        let original = TestWindow.new(id: 1, parent: workspace)
+        original.restartIdentity = RestartWindowIdentity(bundleId: "floating.app", pid: 21,
+            launchDate: Date(timeIntervalSince1970: 1), title: "original")
+        let record = NativePersistedLayout(workspace)
+        original.unbindFromParent()
+
+        let reopened = TestWindow.new(id: 2, parent: workspace.rootTilingContainer)
+        reopened.restartIdentity = RestartWindowIdentity(bundleId: "floating.app", pid: 22,
+            launchDate: Date(timeIntervalSince1970: 2), title: "changed title")
+        let store = NativeLayoutPersistence(url: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        XCTAssertTrue(store.restore(record, to: workspace))
+        XCTAssertTrue(reopened.parent === workspace, "An unambiguous saved floating window stays floating")
+        XCTAssertFalse(workspace.rootTilingContainer.allLeafWindowsRecursive.contains(reopened))
+    }
+
     func testAfterARebootWindowsOfOneAppArePairedInOrder() throws {
         let workspace = nativeWorkspace()
         let root = workspace.rootTilingContainer
