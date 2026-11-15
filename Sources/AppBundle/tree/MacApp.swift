@@ -346,7 +346,7 @@ final class MacApp: AbstractApp {
     /// Whether native tiling currently grants writes to the window.
     @MainActor
     func hasNativeWriteGrant(_ windowID: UInt32) -> Bool {
-        guard let launched = nsApp.launchDate else { return false }
+        guard let launched = nsApp.processLaunchDate else { return false }
         return runtime.native.writeAuthority.explicitFocusLease(windowID: windowID, pid: pid, processLaunchDate: launched) != nil
     }
 
@@ -356,7 +356,7 @@ final class MacApp: AbstractApp {
 
     @MainActor
     private func nativeFocusValidation(_ windowID: UInt32) -> (@Sendable (AXUIElement) throws -> Void)? {
-        guard let launched = nsApp.launchDate,
+        guard let launched = nsApp.processLaunchDate,
               let lease = runtime.native.writeAuthority.explicitFocusLease(
                 windowID: windowID, pid: pid, processLaunchDate: launched) else {
             return { _ in throw NativeSpaceWriteError.revoked }
@@ -372,7 +372,7 @@ final class MacApp: AbstractApp {
 
     @MainActor
     private func nativeFrameValidation(_ windowID: UInt32) -> (@Sendable (AXUIElement) throws -> Void)? {
-        guard let launched = nsApp.launchDate,
+        guard let launched = nsApp.processLaunchDate,
               let permit = runtime.native.writeAuthority.permit(windowID: windowID, pid: pid, processLaunchDate: launched) else {
             return { _ in throw NativeSpaceWriteError.revoked }
         }
@@ -388,7 +388,7 @@ final class MacApp: AbstractApp {
     /// The permit alone, with no AX or WindowServer reads: for gesture steps after a full check.
     @MainActor
     private func nativePermitCheck(_ windowID: UInt32) -> (@Sendable (AXUIElement) throws -> Void)? {
-        guard let launched = nsApp.launchDate,
+        guard let launched = nsApp.processLaunchDate,
               let permit = runtime.native.writeAuthority.permit(windowID: windowID, pid: pid, processLaunchDate: launched) else {
             return { _ in throw NativeSpaceWriteError.revoked }
         }

@@ -86,7 +86,7 @@ final class NativeWindowReconciler {
                 }
                 self.pendingWindowCount = eligible.filter { MacWindow.allWindowsMap[$0] == nil }.count
                 let identities = MacWindow.allWindows.compactMap { window -> NativeWindowWriteIdentity? in
-                    guard window.nativeLayoutEligible, eligible.contains(window.windowId), let launched = window.macApp.nsApp.launchDate,
+                    guard window.nativeLayoutEligible, eligible.contains(window.windowId), let launched = window.macApp.nsApp.processLaunchDate,
                           owner.native.layouts.registrationWorkspace(for: window.windowId) === window.nodeWorkspace else { return nil }
                     guard let display = owner.native.layouts.registrationDisplay(for: window.windowId),
                           case .desktop(let spaceID, let uuid?) = snapshot.eligibility(windowID: window.windowId, on: display) else { return nil }

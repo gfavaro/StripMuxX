@@ -170,7 +170,7 @@ public final class NativeSpaceWriteAuthority: @unchecked Sendable {
         guard case .desktop(let id, let uuid) = snapshot.eligibility(windowID: identity.windowID, on: identity.displayIdentifier),
               id == identity.spaceID, uuid == identity.spaceUUID,
               let running = NSRunningApplication(processIdentifier: identity.pid),
-              !running.isHidden, !running.isTerminated, running.launchDate == identity.processLaunchDate,
+              !running.isHidden, !running.isTerminated, running.processLaunchDate == identity.processLaunchDate,
               let rows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]],
               NativeSpaceTransitionGuard.allowsFrameOperations(windows: rows),
               let row = rows.first(where: { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value == identity.windowID }),
