@@ -178,8 +178,12 @@ final class NativeScrollingPan {
         let metrics = workspace.scrollingMetrics
         let current = metrics.clampedOffset(workspace.scrollingOffset)
         // Content follows the fingers: moving them left reveals columns to the right.
+        guard deltaX.isFinite else { return }
         let next = metrics.clampedOffset(current - deltaX * CGFloat(config.scrolling.gestureSensitivity))
-        if next != current { lastDirection = next > current ? 1 : -1 }
+        // At the strip boundary or on an empty momentum event there is nothing
+        // to reposition. Avoid queuing duplicate AX frames for a stationary camera.
+        guard abs(next - current) > 0.0001 else { return }
+        lastDirection = next > current ? 1 : -1
         workspace.scrollingOffset = next
         nativePanTiming.measure("minimap show") { _ = WorkspaceScrollingMinimap.shared.show(workspace, duringGesture: true) }
         nativePanTiming.measure("relayout request") { runtime.native.tiling.relayoutVisibleScrolling(target: workspace) }
