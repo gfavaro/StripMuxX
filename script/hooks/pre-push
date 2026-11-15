@@ -1,0 +1,11 @@
+#!/bin/sh
+# Optional developer safety gate. Install with: python3 script/install_git_hooks.py
+set -eu
+if [ "${STRIPMUXX_SKIP_PREPUSH_CHECK:-0}" = "1" ]; then
+  echo "StripMuxX: pre-push check bypassed (STRIPMUXX_SKIP_PREPUSH_CHECK=1)" >&2
+  exit 0
+fi
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+echo "StripMuxX: running make check before push…" >&2
+make check

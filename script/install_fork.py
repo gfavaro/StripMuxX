@@ -70,8 +70,10 @@ class NativeOperations:
 
     def config(self):
         doctor = self.cli('doctor')
-        if 'accessibility: granted' not in doctor or 'screen capture: granted' not in doctor:
-            raise RuntimeError('Required permissions are unavailable')
+        # Window tiling requires Accessibility; Screen Recording is optional
+        # for previews and must not block installation.
+        if 'accessibility: granted' not in doctor:
+            raise RuntimeError('Accessibility permission is unavailable')
         path = next((line.split('loaded:', 1)[1].strip() for line in doctor.splitlines() if 'loaded:' in line), None)
         if not path:
             raise RuntimeError('Could not resolve active config path')

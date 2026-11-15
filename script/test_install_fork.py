@@ -189,6 +189,37 @@ class InstallerTest(unittest.TestCase):
 
 
 class NativeOperationsTest(unittest.TestCase):
+    def testConfigPreflightDoesNotRequireScreenRecording(self):
+        ops = NativeOperations()
+        calls = []
+        ops.cli = lambda *args: (
+            calls.append(args) or
+            ('Permissions:\n  accessibility: granted\n  screen capture: missing\n'
+             'Configuration loaded: /tmp/test-stripmuxx-config.toml')
+        )
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'config.toml'
+            path.write_text('config-version = 2\n')
+            ops.cli = lambda *args: (
+                calls.append(args) or
+                ('Permissions:\n  accessibility: granted\n  screen capture: missing\n'
+                 f'Configuration loaded: {path}')
+            )
+            result = ops.config()
+            self.assertEqual(result['path'], str(path))
+            self.assertEqual(result['sha256'], __import__('hashlib').sha256(path.read_bytes()).hexdigest())
+            self.assertIn(('reload-config', '--dry-run', '--no-gui'), calls)
+
+    def testConfigPreflightStillRequiresAccessibility(self):
+        ops = NativeOperations()
+        ops.cli = lambda *args: (
+            'Permissions:\n  accessibility: MISSING (required)\n  screen capture: granted\n'
+            'Configuration loaded: /tmp/test-stripmuxx-config.toml'
+        )
+        with self.assertRaisesRegex(RuntimeError, 'Accessibility'):
+            ops.config()
+
+
     def testRelaunchKeepsTheRunningConfig(self):
         ops = NativeOperations()
         calls = []
