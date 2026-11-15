@@ -116,6 +116,47 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertTrue(enabled.config.scrolling.threeFingerSwipe)
     }
 
+    func testDockCompletionAssistsWideColumnButNeverSkips() {
+        let (workspace, windows) = fixture()
+        windows.forEach { $0.scrollingColumnWidth = 1.0 }
+        let metrics = workspace.scrollingMetrics
+        let first = metrics.columns[0]
+        let start = ObjectIdentifier(first.node)
+        let offset = metrics.clampedOffset(0.25 * metrics.areaWidth)
+        XCTAssertTrue(nearestScrollingColumn(in: metrics, offset: offset, direction: 1)?.node === first.node)
+        let chosen = settledDockSwipeColumn(in: metrics, offset: offset, direction: 1,
+                                            startingColumnID: start, advanceIfStuck: true)
+        XCTAssertTrue(chosen?.node === metrics.columns[1].node)
+        XCTAssertTrue(settledDockSwipeColumn(in: metrics, offset: offset, direction: 1,
+            startingColumnID: start, advanceIfStuck: false)?.node === first.node)
+        XCTAssertTrue(settledDockSwipeColumn(in: metrics, offset: offset, direction: 1,
+            startingColumnID: nil, advanceIfStuck: true)?.node === first.node)
+    }
+
+    func testDockCompletionDoesNotAdvanceWhenViewportAlreadyMovedToAnotherColumn() {
+        let (workspace, windows) = fixture()
+        windows.forEach { $0.scrollingColumnWidth = 0.7 }
+        let metrics = workspace.scrollingMetrics
+        let start = ObjectIdentifier(metrics.columns[0].node)
+        let targetOffset = metrics.centeredOffset(for: metrics.columns[1])
+        XCTAssertTrue(settledDockSwipeColumn(in: metrics, offset: targetOffset, direction: 1,
+            startingColumnID: start, advanceIfStuck: true)?.node === metrics.columns[1].node)
+    }
+
+    func testDockCompletionRespectsStripEdgesAndReverseDirection() {
+        let (workspace, _) = fixture()
+        let metrics = workspace.scrollingMetrics
+        let first = ObjectIdentifier(metrics.columns[0].node)
+        XCTAssertTrue(settledDockSwipeColumn(in: metrics, offset: 0, direction: -1,
+            startingColumnID: first, advanceIfStuck: true)?.node === metrics.columns[0].node)
+        XCTAssertTrue(settledDockSwipeColumn(in: metrics, offset: 0, direction: 0,
+            startingColumnID: first, advanceIfStuck: true)?.node === metrics.columns[0].node)
+        let last = metrics.columns[metrics.columns.count - 1]
+        let end = metrics.offsetRange.upperBound
+        XCTAssertTrue(settledDockSwipeColumn(in: metrics, offset: end, direction: 1,
+            startingColumnID: ObjectIdentifier(last.node), advanceIfStuck: true)?.node === last.node)
+    }
+
     func testADisplayShowingAFullscreenSpaceHasNoDesktopAndCreatesNone() {
         let desktop = nativeDesktop()
         var inventory = NativeWorkspaceInventory()

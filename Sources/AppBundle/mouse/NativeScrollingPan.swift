@@ -21,6 +21,7 @@ final class NativeScrollingPan {
     private var dockSwipeStartingColumn: ObjectIdentifier?
     private var dockSwipeStartingWidth: CGFloat = 0
     private var dockSwipeMaximumProgress: Double = 0
+    private var dockSwipeCommitted = false
     private(set) var lastDockSwipeReport = "none"
     private(set) var isDockSwipeActive = false
     var isPanning: Bool { workspace != nil }
@@ -165,7 +166,13 @@ final class NativeScrollingPan {
         }
     }
 
-    func endDockSwipe() { settle() }
+    /// The Dock's release decision is independent of viewport movement.
+    /// Committed swipes may advance one neighboring column if a wide tile
+    /// otherwise absorbs the entire finger-following displacement.
+    func endDockSwipe() {
+        dockSwipeCommitted = true
+        settle()
+    }
 
     /// Devices without scroll phases end a pan after a pause.
     private func settleWhenIdle() {
@@ -191,18 +198,26 @@ final class NativeScrollingPan {
         idleTask?.cancel()
         idleTask = nil
         guard let workspace else { return }
+        let committedDockSwipe = isDockSwipeActive && dockSwipeCommitted && focusNearest
+        let metricsAtRelease = workspace.scrollingMetrics
+        let settleColumn = settledDockSwipeColumn(in: metricsAtRelease, offset: workspace.scrollingOffset,
+            direction: lastDirection, startingColumnID: dockSwipeStartingColumn,
+            advanceIfStuck: committedDockSwipe)
         if isDockSwipeActive {
-            let metrics = workspace.scrollingMetrics
-            let arrived = nearestScrollingColumn(in: metrics, offset: workspace.scrollingOffset, direction: lastDirection)
-            let changed = arrived.map { ObjectIdentifier($0.node) != dockSwipeStartingColumn } ?? false
-            lastDockSwipeReport = String(format: "max progress %.2f, starting width %.2f viewports, selected different column %@, finished %@",
+            let nearest = nearestScrollingColumn(in: metricsAtRelease, offset: workspace.scrollingOffset, direction: lastDirection)
+            let moved = nearest.map { ObjectIdentifier($0.node) != dockSwipeStartingColumn } ?? false
+            let assisted = committedDockSwipe && !moved &&
+                settleColumn.map { ObjectIdentifier($0.node) != dockSwipeStartingColumn } == true
+            lastDockSwipeReport = String(format: "max progress %.2f, starting width %.2f viewports, nearest changed %@, advance assist %@, committed %@",
                 dockSwipeMaximumProgress,
-                Double(dockSwipeStartingWidth / max(metrics.areaWidth, 1)),
-                changed ? "yes" : "no", focusNearest ? "yes" : "no")
+                Double(dockSwipeStartingWidth / max(metricsAtRelease.areaWidth, 1)),
+                moved ? "yes" : "no", assisted ? "yes" : "no",
+                committedDockSwipe ? "yes" : "no")
         }
         dockSwipeStartingColumn = nil
         dockSwipeStartingWidth = 0
         dockSwipeMaximumProgress = 0
+        dockSwipeCommitted = false
         self.workspace = nil
         gestureEpoch = nil
         gestureMonitor = nil
@@ -219,7 +234,7 @@ final class NativeScrollingPan {
             return
         }
         let metrics = workspace.scrollingMetrics
-        guard let column = nearestScrollingColumn(in: metrics, offset: workspace.scrollingOffset, direction: lastDirection) else {
+        guard let column = settleColumn else {
             return runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
         }
         workspace.scrollingOffset = metrics.focusedOffset(for: column, current: workspace.scrollingOffset)
@@ -251,4 +266,21 @@ func nearestScrollingColumn(in metrics: ScrollingWorkspaceMetrics, offset: CGFlo
         if abs(a - b) < 0.5, direction != 0 { return direction > 0 ? lhs.start > rhs.start : lhs.start < rhs.start }
         return a < b
     }
+}
+
+
+/// A completed Dock swipe gets one adjacent-column fallback if an oversized
+/// column remains nearest after the finger-following pan. Never skip a column,
+/// reverse direction, or force a move when cancelled or at either strip edge.
+/// In-flight progress and two-finger scroll are deliberately unaffected.
+func settledDockSwipeColumn(in metrics: ScrollingWorkspaceMetrics, offset: CGFloat,
+                            direction: CGFloat, startingColumnID: ObjectIdentifier?,
+                            advanceIfStuck: Bool) -> ScrollingColumnMetric? {
+    let nearest = nearestScrollingColumn(in: metrics, offset: offset, direction: direction)
+    guard advanceIfStuck, let startingColumnID, direction != 0,
+          let current = metrics.columns.firstIndex(where: { ObjectIdentifier($0.node) == startingColumnID }),
+          let nearest, ObjectIdentifier(nearest.node) == startingColumnID else { return nearest }
+    let next = current + (direction > 0 ? 1 : -1)
+    guard metrics.columns.indices.contains(next) else { return nearest }
+    return metrics.columns[next]
 }
