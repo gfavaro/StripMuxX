@@ -25,8 +25,18 @@ struct CloseCommand: Command {
                 }
             } else {
                 let workspace = window.nodeWorkspace
+                let wasFrontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier == window.app.pid
                 window.closeAxWindow()
-                if let workspace { _ = restoreLogicalFocusAfterWindowClosed(window.windowId, in: workspace) }
+                if let workspace,
+                   restoreLogicalFocusAfterWindowClosed(window.windowId, in: workspace),
+                   wasFrontmost, !isUnitTest,
+                   let fallback = focus.windowOrNil as? MacWindow,
+                   fallback.app.pid != window.app.pid {
+                    // A last-window close can leave a windowless app frontmost.
+                    // Only an explicitly closed, previously frontmost window
+                    // may activate the logical fallback in another app.
+                    fallback.nativeFocus()
+                }
                 return true
             }
         }
