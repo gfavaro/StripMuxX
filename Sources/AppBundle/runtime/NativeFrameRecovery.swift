@@ -74,8 +74,7 @@ final class NativeFrameRecovery {
 
     private func check(_ id: UInt32) {
         let native = runtime.native
-        guard let window = Window.get(byId: id), window.parent is TilingContainer,
-              let workspace = window.nodeWorkspace, workspace.isVisible,
+        guard let window = Window.get(byId: id), frameRecoveryApplies(to: window),
               let tile = window.lastAppliedLayoutPhysicalRect else { budgets[id] = nil; return }
         // Our own writes and pans, the user's drags and a layout in progress are not the app's doing.
         guard native.tiling.ready, TrayMenuModel.shared.isEnabled,
@@ -84,6 +83,15 @@ final class NativeFrameRecovery {
         guard budgets[id, default: FrameRecoveryBudget()].shouldReapply(tile: tile, resting: windowRestsOnTile(frame, tile: tile)) else { return }
         native.observation?.requestRead(event: "nativeAppMovedWindow")
     }
+}
+
+/// Whether a window that moved is put back on its tile: a tiled window on a showing
+/// desktop whose column is in view. A column scrolled out of view is parked at the display
+/// edge, where macOS keeps part of every window on screen and moves it (by up to 40 points
+/// in testing); putting it back would only fight macOS on every layout.
+@MainActor
+func frameRecoveryApplies(to window: Window) -> Bool {
+    window.parent is TilingContainer && !window.isConcealedByScrolling && window.nodeWorkspace?.isVisible == true
 }
 
 /// Where WindowServer has the window, top-left origin, without asking its app.

@@ -31,3 +31,22 @@ final class NativeFrameRecoveryTest: XCTestCase {
         XCTAssertTrue((0..<10).allSatisfy { budget.shouldReapply(tile: tile, resting: false, now: start + .seconds(4 * $0)) })
     }
 }
+
+@MainActor
+final class NativeFrameRecoveryEligibilityTest: XCTestCase {
+    override func tearDown() async throws { setUpWorkspacesForTests() }
+
+    func testParkedColumnsAreNotPutBackButVisibleAndOnlyTiledOnesAre() async throws {
+        setUpWorkspacesForTests()
+        let workspace = focus.workspace
+        let windows = (0..<4).map { TestWindow.new(id: UInt32(9800 + $0), parent: workspace.rootTilingContainer) }
+        windows.forEach { $0.scrollingColumnWidth = 0.5 }
+        let floating = TestWindow.new(id: 9810, parent: workspace)
+        _ = windows[0].focusWindow()
+        try await workspace.layoutWorkspace()
+        XCTAssertTrue(frameRecoveryApplies(to: windows[0]), "A column in view is put back")
+        XCTAssertTrue(windows[3].isConcealedByScrolling, "Four half-width columns overflow the display")
+        XCTAssertFalse(frameRecoveryApplies(to: windows[3]), "A parked column is left where macOS keeps it")
+        XCTAssertFalse(frameRecoveryApplies(to: floating), "Floating windows are never put back")
+    }
+}
