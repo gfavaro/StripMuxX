@@ -184,4 +184,19 @@ final class ScrollingGeometryTest: XCTestCase {
             XCTAssertEqual(Set(geometry.stackingOrder).count, 50, "Every column appears once in the stacking order")
         }
     }
+
+    func testAZeroPreviewStillLeavesOnePointSoMacOSDoesNotPullTheWindowBack() {
+        XCTAssertEqual(effectiveEdgePreview(0), 1)
+        XCTAssertEqual(effectiveEdgePreview(14), 14)
+        let geometry = calculateScrollingWorkspaceGeometry(.init(
+            bounds: CGRect(x: 8, y: 0, width: 984, height: 700),
+            parkingBounds: CGRect(x: 0, y: 0, width: 1000, height: 700),
+            offset: 0,
+            columns: [0.6, 0.6, 0.6].map { .init(preferredWidth: $0, minimumWidth: 0) },
+            horizontalGap: 8, outerLeft: 8, outerRight: 8,
+            leftWall: false, rightWall: false, preview: effectiveEdgePreview(0)))
+        let parked = geometry.columns[2]
+        XCTAssertEqual(parked.visibility, .rightPreview)
+        XCTAssertEqual(parked.physicalFrame.minX, 999, "One point stays on the display")
+    }
 }

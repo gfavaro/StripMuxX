@@ -157,6 +157,13 @@ func calculateScrollingWorkspaceGeometry(_ input: ScrollingWorkspaceGeometryInpu
                                       columns: geometries, stackingOrder: order)
 }
 
+/// macOS keeps any sliver of a window on its display, down to one point, but moves a
+/// window placed wholly off the display back to show 40 points (measured on macOS 27.2,
+/// both edges). So a parked column always keeps at least one point on screen.
+func effectiveEdgePreview(_ configured: Int) -> CGFloat {
+    CGFloat(max(configured, 1))
+}
+
 struct ScrollingWorkspaceMetrics {
     let areaStart: CGFloat
     let areaWidth: CGFloat
@@ -302,7 +309,7 @@ extension Workspace {
             },
             horizontalGap: CGFloat(gaps.inner.horizontal),
             outerLeft: CGFloat(gaps.outer.left), outerRight: CGFloat(gaps.outer.right),
-            leftWall: leftWall, rightWall: rightWall, preview: CGFloat(config.scrolling.edgePreview), focusedColumnIndex: focusedIndex,
+            leftWall: leftWall, rightWall: rightWall, preview: effectiveEdgePreview(config.scrolling.edgePreview), focusedColumnIndex: focusedIndex,
             sheetOffset: scrollingSheetReveal?.revealed))
     }
 
