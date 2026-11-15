@@ -341,6 +341,66 @@ final class NativeTilingTest: WorkspaceTestCase {
         XCTAssertEqual(restoredGroup.children, [a, b])
     }
 
+    func testExpiredRestoreWithNoMatchingWindowNeverErasesSavedStrip() async throws {
+        let workspace = nativeWorkspace()
+        let savedWindow = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+        savedWindow.restartIdentity = RestartWindowIdentity(bundleId: "remembered.app", pid: 10,
+            launchDate: Date(timeIntervalSince1970: 1), title: "document")
+        savedWindow.scrollingColumnFixedWidth = 725
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("native.json")
+        let first = NativeLayoutPersistence(url: url)
+        await first.reconcile(runtime.native.layouts)
+        await first.save(runtime.native.layouts)
+        let original = try Data(contentsOf: url)
+
+        savedWindow.unbindFromParent()
+        let unrelated = TestWindow.new(id: 2, parent: workspace.rootTilingContainer)
+        unrelated.restartIdentity = RestartWindowIdentity(bundleId: "other.app", pid: 11,
+            launchDate: Date(timeIntervalSince1970: 2), title: "other")
+        let restored = NativeLayoutPersistence(url: url)
+        let start = ContinuousClock.now
+        restored.now = { start }
+        await restored.reconcile(runtime.native.layouts)
+        XCTAssertEqual(restored.pendingCount, 1)
+        restored.now = { start.advanced(by: .seconds(120)) }
+        await restored.reconcile(runtime.native.layouts)
+        XCTAssertEqual(restored.pendingCount, 1, "No match must not release saved layout for overwrite")
+        await restored.save(runtime.native.layouts)
+        XCTAssertEqual(try Data(contentsOf: url), original)
+
+        savedWindow.bind(to: workspace.rootTilingContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
+        await restored.reconcile(runtime.native.layouts)
+        XCTAssertEqual(restored.pendingCount, 0)
+        XCTAssertEqual(savedWindow.scrollingColumnFixedWidth, 725)
+    }
+
+    func testTemporarilyMissingSpaceDoesNotPruneItsPersistedLayout() async throws {
+        let workspace = nativeWorkspace()
+        let savedWindow = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+        savedWindow.restartIdentity = RestartWindowIdentity(bundleId: "remembered.app", pid: 10,
+            launchDate: Date(timeIntervalSince1970: 1), title: "document")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("native.json")
+        let persistence = NativeLayoutPersistence(url: url)
+        await persistence.reconcile(runtime.native.layouts)
+        await persistence.save(runtime.native.layouts)
+        let original = try Data(contentsOf: url)
+
+        // A topology read may temporarily omit the Space while a display is
+        // disconnected. Its last known strip must not be deleted.
+        let next = NativeSpacesSnapshot(displays: [NativeSpaceDisplay(identifier: "display-a",
+            activeSpaceID: "2", spaces: [NativeSpace(id: "2", uuid: "desktop-b", type: 0)])],
+            windows: [], readMilliseconds: 0, capturedAt: .now)
+        var inventory = NativeWorkspaceInventory()
+        XCTAssertTrue(inventory.publish(next, for: inventory.invalidate()))
+        runtime.native.layouts.reconcile(inventory, displays: [mainMonitor])
+        await persistence.save(runtime.native.layouts)
+        XCTAssertEqual(try Data(contentsOf: url), original)
+    }
+
     func testAfterARebootWindowsOfOneAppArePairedInOrder() throws {
         let workspace = nativeWorkspace()
         let root = workspace.rootTilingContainer
