@@ -13,6 +13,7 @@
 - Converting back to floating retains the preferred window size; converting to tiling restores previous width preferences.
 - Saved native Space layout snapshots now include optional free-size frame and prior column-width preferences, with backwards-compatible decoding.
 - The minimap labels free-size columns.
+- An explicit foreground close can activate a cross-app logical focus fallback when the original app has no remaining foreground window.
 - Option + two-finger pan release no longer activates the nearest window. Only committed Dock swipes may select a different column.
 - Stationary and nonfinite pan deltas no longer request redundant relayouts.
 - Regression tests were added for snapshot restore, old layouts, native resize and pan focus behavior, but **not executed**.
@@ -20,7 +21,7 @@
 ## Not completed or independently verified
 
 - No compilation, automated suite, native installation, or physical gesture testing.
-- The full requested improvements to momentum feel, input-to-frame latency, focus after last-window closure, settings controls and multi-display recovery have **not** been validated or completed.
+- The full requested improvements to momentum feel, input-to-frame latency, automatic native close events, settings controls and multi-display recovery have **not** been validated or completed.
 - Free-size geometry is based on a normal strip column; widths larger than the current display may still be clamped by existing geometry and macOS.
 - No separate dynamic mode setting in Settings; `layout free-size` is the entry point.
 - Gesture physics uses the existing macOS deltas and momentum; there is no new animation or scheduler rewrite.
