@@ -9,10 +9,8 @@ final class NativeWindowDragPreview {
     private weak var workspace: Workspace?
     private var originalPoint: CGPoint = .zero
     private var sessionEpoch: UInt64 = 0
-    private var started = false
-
-    private lazy var homePanel = Self.makePanel(color: .secondaryLabelColor, alpha: 0.45)
-    private lazy var destinationPanel = Self.makePanel(color: .controlAccentColor, alpha: 0.85)
+    private var homePanel: NSPanel?
+    private var destinationPanel: NSPanel?
 
     func begin(at point: CGPoint) {
         hide()
@@ -34,24 +32,24 @@ final class NativeWindowDragPreview {
               dragged.nodeWorkspace === workspace, dragged.nativeLayoutEligible,
               dragged.parent is TilingContainer else { hide(); return }
         guard hypot(point.x - originalPoint.x, point.y - originalPoint.y) > 12 else { return }
-        started = true
         if let rect = dragged.lastAppliedLayoutPhysicalRect {
-            show(homePanel, rect: rect, under: dragged.windowId)
+            if homePanel == nil { homePanel = Self.makePanel(color: .secondaryLabelColor, alpha: 0.45) }
+            if let homePanel { show(homePanel, rect: rect, under: dragged.windowId) }
         }
         guard let target = nativeMouseSwapTarget(for: dragged, at: point),
               let rect = target.lastAppliedLayoutPhysicalRect else {
-            destinationPanel.orderOut(nil)
+            destinationPanel?.orderOut(nil)
             return
         }
-        show(destinationPanel, rect: rect, under: dragged.windowId)
+        if destinationPanel == nil { destinationPanel = Self.makePanel(color: .controlAccentColor, alpha: 0.85) }
+        if let destinationPanel { show(destinationPanel, rect: rect, under: dragged.windowId) }
     }
 
     func hide() {
         dragged = nil
         workspace = nil
-        started = false
-        if case true = homePanel.isVisible { homePanel.orderOut(nil) }
-        if case true = destinationPanel.isVisible { destinationPanel.orderOut(nil) }
+        homePanel?.orderOut(nil)
+        destinationPanel?.orderOut(nil)
     }
 
     private func show(_ panel: NSPanel, rect: Rect, under id: UInt32) {

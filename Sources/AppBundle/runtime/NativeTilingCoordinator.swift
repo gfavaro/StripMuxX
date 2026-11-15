@@ -120,9 +120,9 @@ final class NativeTilingCoordinator {
                     owner.withValue {
                         MacApp.cancelPendingFocus()
                         if !released { owner.native.focusHold.end() } // A click elsewhere is the user's.
+                        let tiling = owner.native.tiling
                         if released { tiling.dragPreview.hide() }
                         else if leftButton { tiling.dragPreview.begin(at: mouseLocation) }
-                        let tiling = owner.native.tiling
                         guard released else {
                             // A read queued by the drag's own move events must not lay the
                             // window back out before its release is adopted.
