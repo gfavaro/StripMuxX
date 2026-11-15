@@ -211,7 +211,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
                         offset: offset, focused: models[index].id)
             let current = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? ScrollingMinimapButton })
             XCTAssertEqual(current.count, initial.count)
-            XCTAssertTrue(zip(current, initial).allSatisfy { $0 === $1 },
+            XCTAssertTrue(zip(current, initial).allSatisfy { pair in pair.0 === pair.1 },
                           "Viewport and focus updates must reuse existing buttons")
         }
         view.resetPresentation()
