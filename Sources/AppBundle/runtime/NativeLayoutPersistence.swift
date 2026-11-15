@@ -86,8 +86,13 @@ final class NativeLayoutPersistence {
             firstAttempt[uuid] = since
             if since.duration(to: now()) >= pendingGrace {
                 // Windows that have not returned by now are not coming back: keep the rest.
-                _ = restore(record, to: workspace, allowPartial: true)
-                pending.remove(uuid)
+                // If no saved window has returned, do not replace the user's
+                // entire remembered strip with an empty or unrelated desktop.
+                // Retain the snapshot for a later reconciliation/restart.
+                if restore(record, to: workspace, allowPartial: true) {
+                    pending.remove(uuid)
+                    firstAttempt.removeValue(forKey: uuid)
+                }
             }
         }
     }
@@ -95,10 +100,13 @@ final class NativeLayoutPersistence {
     func save(_ layouts: NativeSpaceLayouts) async {
         guard loaded, writable, config.nativeSpaces.restoreLayouts, !serverArgs.isReadOnly, !Task.isCancelled else { return }
         var next = saved
-        // Desktops removed in Mission Control are forgotten, but only against a current read.
+        // A native snapshot is not proof that a desktop was deleted: displays
+        // disappear during unplug, sleep and topology reconciliation. Never
+        // delete remembered strips merely because their Space UUID is absent.
+        // Only overwrite spaces confirmed present in the current inventory.
         let existing = layouts.snapshot.map { Set($0.displays.flatMap(\.spaces).compactMap(\.uuid)) }
-        if let existing { next = next.filter { existing.contains($0.key) } }
-        for (uuid, workspace) in layouts.retainedByUUID where !pending.contains(uuid) && existing?.contains(uuid) != false {
+        for (uuid, workspace) in layouts.retainedByUUID
+            where !pending.contains(uuid) && existing?.contains(uuid) == true {
             next[uuid] = NativePersistedLayout(workspace)
         }
         guard next != saved else { return }
