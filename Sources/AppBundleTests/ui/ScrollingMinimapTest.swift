@@ -365,8 +365,6 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 640, height: height))
         view.update(workspaceName: "Desktop", models: models, icons: [:], metrics: metrics,
                     offset: metrics.offsetRange.lowerBound, focused: models[2].id)
-        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: bitmap)
         let scroll = try XCTUnwrap(minimapDescendants(of: view).compactMap { $0 as? NSScrollView }.first)
         XCTAssertLessThan(scroll.frame.maxY + 8, view.bounds.height - 23,
                           "Position track must fit between tiles and selected footer")
