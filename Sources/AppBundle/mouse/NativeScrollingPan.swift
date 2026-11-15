@@ -271,8 +271,8 @@ final class NativeScrollingPan {
         let wasResizing = resizingColumn
         resizingColumn = false
         resizeWindow = nil
-        if wasResizing { focusNearest = false }
-        let committedDockSwipe = isDockSwipeActive && dockSwipeCommitted && focusNearest
+        let shouldFocus = focusNearest && !wasResizing
+        let committedDockSwipe = isDockSwipeActive && dockSwipeCommitted && shouldFocus
         let metricsAtRelease = workspace.scrollingMetrics
         let settleColumn = settledDockSwipeColumn(in: metricsAtRelease, offset: workspace.scrollingOffset,
             direction: lastDirection, startingColumnID: dockSwipeStartingColumn,
@@ -303,7 +303,7 @@ final class NativeScrollingPan {
         // One fresh native read after the gesture is complete. Never retain
         // stale write authority from a previous Space while finishing.
         defer { runtime.native.observation?.requestRead(event: "nativeScrollingSettled") }
-        guard focusNearest, workspace.isVisible,
+        guard shouldFocus, workspace.isVisible,
               nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else {
             return
         }
