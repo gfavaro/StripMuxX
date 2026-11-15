@@ -51,14 +51,13 @@ final class ScrollingMinimapView: NSView {
     private var subheading = ""
     private var focusedTitle = ""
     private var columnPosition = ""
-    private var positionTrack: CGRect = .zero
-    private var positionThumb: CGRect = .zero
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         setAccessibilityElement(false)
         scrollView.drawsBackground = false
-        scrollView.hasHorizontalScroller = true
+        // The accent frame shows the position; no scroller or position bar.
+        scrollView.hasHorizontalScroller = false
         scrollView.hasVerticalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
@@ -106,18 +105,6 @@ final class ScrollingMinimapView: NSView {
         let scrollFrame = CGRect(x: stripX, y: 29, width: max(bounds.width - 32 - (pinned == nil ? 0 : pinnedWidth + 8), 1),
                                  height: rowHeight + 6)
         scrollView.frame = scrollFrame
-        // Dedicated overview bar below the tiles: its thumb shows both the
-        // viewport's fractional width and its position across the entire strip.
-        positionTrack = CGRect(x: scrollFrame.minX, y: scrollFrame.maxY + 8,
-                               width: scrollFrame.width, height: 4)
-        let range = metrics.offsetRange
-        let progress = range.upperBound > range.lowerBound
-            ? (metrics.clampedOffset(offset) - range.lowerBound) / (range.upperBound - range.lowerBound)
-            : 0
-        let proportion = min(1, metrics.areaWidth / max(metrics.totalWidth, metrics.areaWidth, 1))
-        let thumbWidth = min(positionTrack.width, max(18, positionTrack.width * proportion))
-        positionThumb = CGRect(x: positionTrack.minX + (positionTrack.width - thumbWidth) * min(max(progress, 0), 1),
-                               y: positionTrack.minY, width: thumbWidth, height: positionTrack.height)
         updatePinnedButton(pinned, icons: icons, focused: focused, frame: CGRect(
             x: pinnedOnLeft ? 16 : bounds.width - 16 - pinnedWidth, y: 29, width: pinnedWidth, height: rowHeight))
         let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: scrollFrame.width)
@@ -349,12 +336,6 @@ final class ScrollingMinimapView: NSView {
         if floatingLabelVisible {
             drawMinimapText("Floating", in: CGRect(x: 16, y: bounds.height - 23 - scrollingMinimapFloatingRowHeight + 7,
                             width: 60, height: 14), font: .systemFont(ofSize: 10, weight: .semibold), color: .secondaryLabelColor)
-        }
-        if !positionTrack.isEmpty {
-            NSColor.labelColor.withAlphaComponent(0.08).setFill()
-            NSBezierPath(roundedRect: positionTrack, xRadius: 2, yRadius: 2).fill()
-            NSColor.controlAccentColor.withAlphaComponent(0.7).setFill()
-            NSBezierPath(roundedRect: positionThumb, xRadius: 2, yRadius: 2).fill()
         }
         drawMinimapText(focusedTitle,
                         in: CGRect(x: 16, y: bounds.height - 23, width: bounds.width * 0.55, height: 16),

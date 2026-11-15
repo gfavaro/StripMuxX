@@ -8,32 +8,19 @@ struct ScrollingMinimapGeometry {
     init(metrics: ScrollingWorkspaceMetrics, offset: CGFloat, bounds: CGRect) {
         self.bounds = bounds
         let start = metrics.offsetRange.lowerBound
-        let end = max(metrics.totalWidth, metrics.offsetRange.upperBound + metrics.areaWidth)
-        let span = max(end - start, 1)
-        let displayHeight = max(metrics.geometry.area.height, 1)
-        let verticalScale = max(bounds.height, 0) / displayHeight
-        let fittedScale = min(max(bounds.width, 0) / span, verticalScale)
-        // Normally the map preserves window proportions. When one unusually
-        // narrow column would make the panel excessively tall, the capped row
-        // uses horizontal scrolling instead: keep a 32 pt hit target while
-        // compressing only the vertical axis. Never expand beyond bounds.
-        let narrowest = metrics.columns.map(\.width).min() ?? .infinity
-        let minimumScale = 32 / max(narrowest, 1)
-        // Only relax aspect ratios at the height cap. Ordinary map previews
-        // (including geometry tests using a fixed panel size) remain proportional.
-        let heightCapped = bounds.height >= 96 && minimumScale > verticalScale
-        let canFitMinimum = bounds.width + 0.01 >= span * minimumScale
-        let xScale = heightCapped && canFitMinimum ? max(fittedScale, minimumScale) : fittedScale
-        let yScale = min(xScale, verticalScale)
+        let span = scrollingMinimapSpan(metrics)
+        // Tiles fill the row's height; only widths are to scale, so columns compare by
+        // width and the viewport sits over the columns on screen. A short strip is capped
+        // so the visible part never takes more than most of the panel, and centred.
+        let xScale = min(max(bounds.width, 0) / span,
+                         scrollingMinimapMaximumViewportShare * max(bounds.width, 0) / max(metrics.areaWidth, 1))
         let originX = bounds.midX - span * xScale / 2
-        let height = metrics.geometry.area.height * yScale
-        let originY = bounds.midY - height / 2
         tiles = metrics.columns.map { column in
-            CGRect(x: originX + (column.start - start) * xScale, y: originY,
-                   width: column.width * xScale, height: height)
+            CGRect(x: originX + (column.start - start) * xScale, y: bounds.minY,
+                   width: column.width * xScale, height: bounds.height)
         }
         viewport = CGRect(x: originX + (metrics.clampedOffset(offset) - start) * xScale,
-                          y: originY, width: metrics.areaWidth * xScale, height: height)
+                          y: bounds.minY, width: metrics.areaWidth * xScale, height: bounds.height)
     }
 
     /// Gaps and narrow tiles remain selectable across the entire map strip.
@@ -47,24 +34,27 @@ struct ScrollingMinimapGeometry {
     }
 }
 
-/// Keep ordinary columns proportional, but cap the panel when one very
-/// narrow column would otherwise force an oversized floating overlay.
-/// In that extreme case horizontal scrolling preserves 32 pt tile targets.
-func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics, preferredHeight: CGFloat = 58,
-                               minimumTileWidth: CGFloat = 32, maximumHeight: CGFloat = 96) -> CGFloat {
-    guard let narrowest = metrics.columns.map(\.width).min() else { return preferredHeight }
-    let natural = ceil(minimumTileWidth * max(metrics.geometry.area.height, 1) / max(narrowest, 1))
-    return min(maximumHeight, max(preferredHeight, natural))
+/// The share of the panel the on-screen part of the strip may take at most.
+let scrollingMinimapMaximumViewportShare: CGFloat = 0.6
+
+/// From the strip's start to the end of its last possible viewport.
+func scrollingMinimapSpan(_ metrics: ScrollingWorkspaceMetrics) -> CGFloat {
+    let start = metrics.offsetRange.lowerBound
+    return max(max(metrics.totalWidth, metrics.offsetRange.upperBound + metrics.areaWidth) - start, 1)
 }
 
-func scrollingMinimapContentWidth(metrics: ScrollingWorkspaceMetrics, visibleWidth: CGFloat,
-                                  minimumTileWidth: CGFloat = 32) -> CGFloat {
-    let start = metrics.offsetRange.lowerBound
-    let end = max(metrics.totalWidth, metrics.offsetRange.upperBound + metrics.areaWidth)
-    let scale = scrollingMinimapRowHeight(metrics: metrics, minimumTileWidth: minimumTileWidth) / max(metrics.geometry.area.height, 1)
-    let narrowest = metrics.columns.map(\.width).min() ?? .infinity
-    let horizontalScale = max(scale, minimumTileWidth / max(narrowest, 1))
-    return max(visibleWidth, max(end - start, 1) * horizontalScale)
+/// One fixed row height: room for an icon and a title, whatever the windows' shapes.
+func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 72 }
+
+/// The strip fills the visible width. When that would make typical columns too narrow
+/// to read (56 pt) or any column too narrow to click (32 pt), the canvas grows and scrolls.
+func scrollingMinimapContentWidth(metrics: ScrollingWorkspaceMetrics, visibleWidth: CGFloat) -> CGFloat {
+    let span = scrollingMinimapSpan(metrics)
+    let widths = metrics.columns.map(\.width).sorted()
+    guard let narrowest = widths.first else { return visibleWidth }
+    let typical = widths[widths.count / 2]
+    let scale = max(visibleWidth / span, 32 / max(narrowest, 1), 56 / max(typical, 1))
+    return max(visibleWidth, span * scale)
 }
 
 /// Scroll one small step per drag event near a minimap edge; never scroll

@@ -28,11 +28,8 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         let last = ScrollingMinimapGeometry(metrics: metrics, offset: metrics.offsetRange.upperBound, bounds: bounds)
         XCTAssertEqual(first.tiles[1].width / first.tiles[0].width, metrics.columns[1].width / metrics.columns[0].width, accuracy: 0.001)
         XCTAssertEqual(first.tiles[2].width / first.tiles[0].width, metrics.columns[2].width / metrics.columns[0].width, accuracy: 0.001)
-        XCTAssertEqual(first.viewport.width / first.viewport.height,
-                       metrics.areaWidth / metrics.geometry.area.height, accuracy: 0.001)
-        for (tile, column) in zip(first.tiles, metrics.columns) {
-            XCTAssertEqual(tile.width / tile.height, column.width / metrics.geometry.area.height, accuracy: 0.001)
-        }
+        XCTAssertEqual(first.viewport.width / first.tiles[0].width, metrics.areaWidth / metrics.columns[0].width, accuracy: 0.001)
+        for tile in first.tiles { XCTAssertEqual(tile.height, bounds.height, "Tiles fill the row") }
         XCTAssertLessThanOrEqual(first.tiles[0].minX, first.viewport.midX)
         XCTAssertEqual(last.tiles[2].maxX, last.viewport.maxX, accuracy: 1)
         XCTAssertGreaterThan(last.viewport.minX, first.viewport.minX)
@@ -40,14 +37,14 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertTrue(bounds.insetBy(dx: -0.01, dy: -0.01).contains(last.viewport))
     }
 
-    func testSingleWindowKeepsItsRealAspectRatioInsteadOfStretchingAcrossThePanel() throws {
+    func testSingleWindowIsCentredAndNeverStretchedAcrossThePanel() throws {
         let (workspace, _) = fixture(count: 1)
         let metrics = workspace.scrollingMetrics
         let map = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
-            bounds: CGRect(x: 0, y: 0, width: 648, height: 58))
+            bounds: CGRect(x: 0, y: 0, width: 648, height: 72))
         let tile = try XCTUnwrap(map.tiles.first)
-        XCTAssertEqual(tile.width / tile.height, metrics.columns[0].width / metrics.geometry.area.height, accuracy: 0.001)
-        XCTAssertLessThan(tile.width, 648, "A lone window must not be stretched to the entire panel width")
+        XCTAssertLessThanOrEqual(tile.width, 648 * scrollingMinimapMaximumViewportShare + 0.01,
+                                 "A lone window must not be stretched to the entire panel width")
         XCTAssertEqual(tile.midX, 324, accuracy: 0.01)
         XCTAssertEqual(map.viewport, tile)
     }
@@ -72,32 +69,29 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         }
         let metrics = workspace.scrollingMetrics
         let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
-        XCTAssertLessThanOrEqual(rowHeight, 96)
-        XCTAssertGreaterThanOrEqual(rowHeight, 58)
+        XCTAssertEqual(rowHeight, 72, "A narrow column never changes the panel's height")
         let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
         let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
             bounds: CGRect(x: 0, y: 0, width: contentWidth, height: rowHeight))
         XCTAssertGreaterThanOrEqual(geometry.tiles[0].width, 31.99)
         XCTAssertEqual(geometry.tiles.count, 8)
-        XCTAssertLessThanOrEqual(geometry.viewport.height, 96)
+        XCTAssertEqual(geometry.viewport.height, 72)
         for (index, tile) in geometry.tiles.enumerated() {
             XCTAssertEqual(geometry.column(at: CGPoint(x: tile.midX, y: tile.midY)), index)
         }
     }
 
-    func testNormalMinimapProportionsStayIntactBelowHeightCap() {
-        let (workspace, windows) = fixture(count: 3)
+    func testAStripThatFitsFillsThePanelWithReadableTiles() {
+        let (workspace, windows) = fixture(count: 9)
         windows.forEach { $0.scrollingColumnWidth = 0.5 }
         let metrics = workspace.scrollingMetrics
-        let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
-        XCTAssertEqual(rowHeight, 58)
         let width = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
+        XCTAssertEqual(width, 608, accuracy: 0.01, "Nine half-width columns fit without scrolling")
         let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
-            bounds: CGRect(x: 0, y: 0, width: width, height: rowHeight))
-        for (tile, column) in zip(geometry.tiles, metrics.columns) {
-            XCTAssertEqual(tile.width / tile.height,
-                           column.width / metrics.geometry.area.height, accuracy: 0.001)
-        }
+            bounds: CGRect(x: 0, y: 0, width: width, height: 72))
+        XCTAssertEqual(geometry.tiles.first?.minX ?? -1, 0, accuracy: 1, "No empty space at the sides")
+        XCTAssertEqual(geometry.tiles.last?.maxX ?? -1, 608, accuracy: 1)
+        for tile in geometry.tiles { XCTAssertGreaterThanOrEqual(tile.width, 56) }
     }
 
     func testUnequalDenseMinimapTilesStayAtLeastThirtyTwoPointsAndDoNotOverlap() {
