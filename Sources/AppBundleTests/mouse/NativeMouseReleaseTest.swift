@@ -52,6 +52,17 @@ final class NativeMouseReleaseTest: XCTestCase {
         XCTAssertNil(nativeMouseSwapTarget(for: first, at: first.lastAppliedLayoutPhysicalRect!.center))
     }
 
+    func testDropTargetNeverChoosesFloatingOrIneligibleWindow() async throws {
+        let (first, second) = try await layout()
+        let target = try XCTUnwrap(second.lastAppliedLayoutPhysicalRect)
+        second.nativeLayoutEligible = false
+        XCTAssertNil(nativeMouseSwapTarget(for: first, at: target.center))
+        second.nativeLayoutEligible = true
+        _ = second.bindAsFloatingWindow(to: focus.workspace)
+        XCTAssertNil(nativeMouseSwapTarget(for: first, at: target.center))
+        XCTAssertNil(nativeMouseSwapTarget(for: second, at: target.center))
+    }
+
     func testClickAndDropOnEmptySpaceChangeNothing() async throws {
         let (first, _) = try await layout()
         let root = focus.workspace.rootTilingContainer

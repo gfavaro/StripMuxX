@@ -43,6 +43,23 @@ final class CloseCommandTest: XCTestCase {
         XCTAssertEqual(focus.windowOrNil?.windowId, first.windowId)
     }
 
+    func testClosingPreviousWindowFallsBackToRemainingEligibleColumn() async throws {
+        let workspace = focus.workspace
+        let a = TestWindow.new(id: 92001, parent: workspace.rootTilingContainer)
+        let b = TestWindow.new(id: 92002, parent: workspace.rootTilingContainer)
+        let c = TestWindow.new(id: 92003, parent: workspace.rootTilingContainer)
+        _ = a.focusWindow()
+        _ = b.focusWindow()
+        _ = c.focusWindow()
+        b.closeAxWindow()
+        XCTAssertNil(b.parent)
+        XCTAssertFalse(restoreLogicalFocusAfterWindowClosed(b.windowId, in: workspace),
+                       "Closing an unfocused previous window must not steal focus")
+        c.closeAxWindow()
+        XCTAssertTrue(restoreLogicalFocusAfterWindowClosed(c.windowId, in: workspace))
+        XCTAssertTrue(focus.windowOrNil === a)
+    }
+
     func testCloseViaWindowIdFlag() async throws {
         focus.workspace.rootTilingContainer.apply {
             _ = TestWindow.new(id: 1, parent: $0).focusWindow()

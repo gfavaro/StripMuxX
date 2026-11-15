@@ -157,6 +157,24 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
             startingColumnID: ObjectIdentifier(last.node), advanceIfStuck: true)?.node === last.node)
     }
 
+    func testCommittedWideSwipeSelectsOnlyImmediateNeighborInLargeStrip() {
+        let workspace = nativeDesktop()
+        let windows = (0..<50).map {
+            TestWindow.new(id: UInt32(98000 + $0), parent: workspace.rootTilingContainer)
+        }
+        windows.forEach { $0.scrollingColumnFixedWidth = 2400 }
+        let metrics = workspace.scrollingMetrics
+        XCTAssertEqual(metrics.columns.count, 50)
+        let pivot = metrics.columns[24]
+        let targetOffset = metrics.centeredOffset(for: pivot)
+        let selected = settledDockSwipeColumn(in: metrics, offset: targetOffset, direction: 1,
+            startingColumnID: ObjectIdentifier(pivot.node), advanceIfStuck: true)
+        XCTAssertTrue(selected?.node === metrics.columns[25].node)
+        let backwards = settledDockSwipeColumn(in: metrics, offset: targetOffset, direction: -1,
+            startingColumnID: ObjectIdentifier(pivot.node), advanceIfStuck: true)
+        XCTAssertTrue(backwards?.node === metrics.columns[23].node)
+    }
+
     func testADisplayShowingAFullscreenSpaceHasNoDesktopAndCreatesNone() {
         let desktop = nativeDesktop()
         var inventory = NativeWorkspaceInventory()
