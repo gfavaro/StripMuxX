@@ -355,6 +355,25 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertTrue(dismissed)
     }
 
+    func testCompactMinimapHasHeaderPositionBarAndSelectedFooter() throws {
+        let (workspace, windows) = fixture(count: 5)
+        let metrics = workspace.scrollingMetrics
+        let models = windows.map {
+            ScrollingMinimapTile(id: ObjectIdentifier($0), title: "Window", applications: [], count: 1)
+        }
+        let height = scrollingMinimapRowHeight(metrics: metrics) + 80
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 640, height: height))
+        view.update(workspaceName: "Desktop", models: models, icons: [:], metrics: metrics,
+                    offset: metrics.offsetRange.lowerBound, focused: models[2].id)
+        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        let scroll = try XCTUnwrap(minimapDescendants(of: view).compactMap { $0 as? NSScrollView }.first)
+        XCTAssertLessThan(scroll.frame.maxY + 8, view.bounds.height - 23,
+                          "Position track must fit between tiles and selected footer")
+        XCTAssertEqual(scroll.documentView?.subviews.compactMap { $0 as? ScrollingMinimapButton }.count, 5)
+        XCTAssertLessThanOrEqual(scroll.frame.maxY, view.bounds.height)
+    }
+
     func testIconArrivalRefreshesExistingTileWithoutRebuildingIt() throws {
         let (workspace, windows) = fixture()
         let models = windows.map {
@@ -386,7 +405,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             let host = MinimapPreviewHost(frame: CGRect(x: 0, y: 0, width: 640,
-                height: scrollingMinimapRowHeight(metrics: workspace.scrollingMetrics) + 62))
+                height: scrollingMinimapRowHeight(metrics: workspace.scrollingMetrics) + 80))
             let view = ScrollingMinimapView(frame: host.bounds)
             host.addSubview(view)
             let window = NSWindow(contentRect: host.bounds, styleMask: [.borderless], backing: .buffered, defer: false)

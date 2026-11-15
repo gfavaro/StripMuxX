@@ -41,6 +41,9 @@ final class ScrollingMinimapView: NSView {
     private let dropIndicator = NSView()
     private var heading = ""
     private var focusedTitle = ""
+    private var columnPosition = ""
+    private var positionTrack: CGRect = .zero
+    private var positionThumb: CGRect = .zero
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -79,6 +82,8 @@ final class ScrollingMinimapView: NSView {
         heading = "\(workspaceName) · \(models.count) \(models.count == 1 ? "group" : "groups")" +
             (pinned.map { " · \($0.title) pinned \($0.pinned == .right ? "right" : "left")" } ?? "")
         focusedTitle = (models + (pinned.map { [$0] } ?? [])).first { $0.id == focused }?.title ?? "Click a group to reveal it"
+        let activeIndex = models.firstIndex { $0.id == focused }
+        columnPosition = activeIndex.map { "\($0 + 1) / \(models.count)" } ?? "\(models.count) groups"
         let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
         // A pinned column keeps its edge here too, beside the strip rather than on it.
         let pinnedWidth: CGFloat = pinned == nil ? 0 : min(max(rowHeight * 0.75, 32), 96)
@@ -87,6 +92,18 @@ final class ScrollingMinimapView: NSView {
         let scrollFrame = CGRect(x: stripX, y: 29, width: max(bounds.width - 32 - (pinned == nil ? 0 : pinnedWidth + 8), 1),
                                  height: rowHeight + 6)
         scrollView.frame = scrollFrame
+        // Dedicated overview bar below the tiles: its thumb shows both the
+        // viewport's fractional width and its position across the entire strip.
+        positionTrack = CGRect(x: scrollFrame.minX, y: scrollFrame.maxY + 8,
+                               width: scrollFrame.width, height: 4)
+        let range = metrics.offsetRange
+        let progress = range.upperBound > range.lowerBound
+            ? (metrics.clampedOffset(offset) - range.lowerBound) / (range.upperBound - range.lowerBound)
+            : 0
+        let proportion = min(1, metrics.areaWidth / max(metrics.totalWidth, metrics.areaWidth, 1))
+        let thumbWidth = min(positionTrack.width, max(18, positionTrack.width * proportion))
+        positionThumb = CGRect(x: positionTrack.minX + (positionTrack.width - thumbWidth) * min(max(progress, 0), 1),
+                               y: positionTrack.minY, width: thumbWidth, height: positionTrack.height)
         updatePinnedButton(pinned, icons: icons, focused: focused, frame: CGRect(
             x: pinnedOnLeft ? 16 : bounds.width - 16 - pinnedWidth, y: 29, width: pinnedWidth, height: rowHeight))
         let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: scrollFrame.width)
@@ -270,15 +287,25 @@ final class ScrollingMinimapView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        drawMinimapText(heading, in: CGRect(x: 16, y: 9, width: bounds.width - 32, height: 17),
+        drawMinimapText(heading, in: CGRect(x: 16, y: 9, width: bounds.width - 116, height: 17),
                         font: .systemFont(ofSize: 11, weight: .semibold), color: .labelColor)
-        drawMinimapText(focusedTitle, in: CGRect(x: 16, y: bounds.height - 23, width: bounds.width * 0.48, height: 16),
-                        font: .systemFont(ofSize: 10), color: .secondaryLabelColor)
+        drawMinimapText(columnPosition, in: CGRect(x: bounds.width - 100, y: 9, width: 84, height: 17),
+                        font: .monospacedDigitSystemFont(ofSize: 10, weight: .medium),
+                        color: .secondaryLabelColor, alignment: .right)
+        if !positionTrack.isEmpty {
+            NSColor.labelColor.withAlphaComponent(0.12).setFill()
+            NSBezierPath(roundedRect: positionTrack, xRadius: 2, yRadius: 2).fill()
+            NSColor.controlAccentColor.withAlphaComponent(0.9).setFill()
+            NSBezierPath(roundedRect: positionThumb, xRadius: 2, yRadius: 2).fill()
+        }
+        drawMinimapText("Selected · " + focusedTitle,
+                        in: CGRect(x: 16, y: bounds.height - 23, width: bounds.width * 0.55, height: 16),
+                        font: .systemFont(ofSize: 10, weight: .medium), color: .labelColor)
         let navigationHint = config.scrolling.threeFingerSwipe && config.scrolling.gestureEnabled
             ? "Click to reveal · Three-finger swipe"
             : config.scrolling.gestureEnabled ? "Click to reveal · ⌥ + two-finger scroll" : "Click to reveal · Arrow keys"
-        drawMinimapText(navigationHint, in: CGRect(x: bounds.width * 0.5, y: bounds.height - 23,
-                        width: bounds.width * 0.5 - 16, height: 16), font: .systemFont(ofSize: 10),
+        drawMinimapText(navigationHint, in: CGRect(x: bounds.width * 0.58, y: bounds.height - 23,
+                        width: bounds.width * 0.42 - 16, height: 16), font: .systemFont(ofSize: 10),
                         color: .secondaryLabelColor, alignment: .right)
     }
 }
@@ -452,11 +479,11 @@ private final class ScrollingMinimapViewport: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func draw(_ dirtyRect: NSRect) {
         let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 9, yRadius: 9)
-        NSColor.labelColor.withAlphaComponent(0.09).setFill()
+        NSColor.labelColor.withAlphaComponent(0.035).setFill()
         outline.fill()
-        NSColor.labelColor.withAlphaComponent(0.9).setStroke()
-        outline.lineWidth = 2
-        outline.setLineDash([4, 3], count: 2, phase: 0)
+        NSColor.labelColor.withAlphaComponent(0.42).setStroke()
+        outline.lineWidth = 1.5
+        outline.setLineDash([3, 3], count: 2, phase: 0)
         outline.stroke()
     }
 }
