@@ -130,6 +130,93 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertEqual(scrollingMinimapInsertionIndex(300, otherMidpoints: centers), 4)
     }
 
+    func testMinimapStressWithOneHundredTwentyUnequalColumnsAndViewportExtremes() throws {
+        let (workspace, windows) = fixture(count: 120)
+        for (index, window) in windows.enumerated() {
+            window.scrollingColumnWidth = [0.1, 0.25, 0.5, 1.0][index % 4]
+        }
+        let metrics = workspace.scrollingMetrics
+        let height = scrollingMinimapRowHeight(metrics: metrics)
+        let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 560)
+        XCTAssertTrue(height.isFinite && contentWidth.isFinite)
+        XCTAssertGreaterThan(contentWidth, 560)
+        for offset in [metrics.offsetRange.lowerBound,
+                       (metrics.offsetRange.lowerBound + metrics.offsetRange.upperBound) / 2,
+                       metrics.offsetRange.upperBound] {
+            let map = ScrollingMinimapGeometry(metrics: metrics, offset: offset,
+                bounds: CGRect(x: 0, y: 0, width: contentWidth, height: height))
+            XCTAssertEqual(map.tiles.count, 120)
+            XCTAssertTrue(map.viewport.minX.isFinite && map.viewport.maxX.isFinite)
+            for (index, tile) in map.tiles.enumerated() {
+                XCTAssertTrue(tile.minX.isFinite && tile.width.isFinite && tile.height.isFinite)
+                XCTAssertGreaterThanOrEqual(tile.width, 31.99)
+                XCTAssertEqual(map.column(at: CGPoint(x: tile.midX, y: tile.midY)), index)
+            }
+            for pair in zip(map.tiles, map.tiles.dropFirst()) {
+                XCTAssertLessThanOrEqual(pair.0.maxX, pair.1.minX + 0.01)
+            }
+        }
+    }
+
+    func testMinimapRepeatedEdgeDraggingCannotEscapeDocument() {
+        let viewport: CGFloat = 560
+        let content: CGFloat = 4800
+        var offset: CGFloat = 0
+        for _ in 0..<2000 {
+            let delta = scrollingMinimapEdgeScrollDelta(pointerX: 559, viewportWidth: viewport,
+                contentOffset: offset, contentWidth: content)
+            XCTAssertTrue(delta.isFinite)
+            XCTAssertGreaterThanOrEqual(delta, 0)
+            offset += delta
+            XCTAssertLessThanOrEqual(offset, content - viewport + 0.001)
+        }
+        XCTAssertEqual(offset, content - viewport, accuracy: 0.001)
+        for _ in 0..<2000 {
+            let delta = scrollingMinimapEdgeScrollDelta(pointerX: 1, viewportWidth: viewport,
+                contentOffset: offset, contentWidth: content)
+            XCTAssertTrue(delta.isFinite)
+            XCTAssertLessThanOrEqual(delta, 0)
+            offset += delta
+            XCTAssertGreaterThanOrEqual(offset, -0.001)
+        }
+        XCTAssertEqual(offset, 0, accuracy: 0.001)
+    }
+
+    func testMinimapInsertionIndexWithManyColumnsAndReorderedIdentities() {
+        let centers = (0..<120).map { CGFloat($0) * 35 + 17.5 }
+        for index in centers.indices {
+            XCTAssertEqual(scrollingMinimapInsertionIndex(centers[index] + 1,
+                otherMidpoints: centers), index + 1)
+        }
+        XCTAssertEqual(scrollingMinimapInsertionIndex(-1000, otherMidpoints: centers), 0)
+        XCTAssertEqual(scrollingMinimapInsertionIndex(100000, otherMidpoints: centers), centers.count)
+        XCTAssertEqual(scrollingMinimapInsertionIndex(0, otherMidpoints: []), 0)
+    }
+
+    func testMinimapCanRepeatedlyRefreshLargeModelWithoutRecreatingTiles() throws {
+        let (workspace, windows) = fixture(count: 100)
+        let metrics = workspace.scrollingMetrics
+        let models = windows.map {
+            ScrollingMinimapTile(id: ObjectIdentifier($0), title: "Window", applications: [], count: 1)
+        }
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 640, height: 120))
+        view.update(workspaceName: "Stress", models: models, icons: [:], metrics: metrics,
+                    offset: metrics.offsetRange.lowerBound, focused: models[0].id)
+        let scroll = try XCTUnwrap(minimapDescendants(of: view).compactMap { $0 as? NSScrollView }.first)
+        let initial = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? ScrollingMinimapButton })
+        XCTAssertEqual(initial.count, 100)
+        for index in 0..<50 {
+            let offset = index.isMultiple(of: 2) ? metrics.offsetRange.upperBound : metrics.offsetRange.lowerBound
+            view.update(workspaceName: "Stress", models: models, icons: [:], metrics: metrics,
+                        offset: offset, focused: models[index].id)
+            let current = try XCTUnwrap(scroll.documentView?.subviews.compactMap { $0 as? ScrollingMinimapButton })
+            XCTAssertEqual(current.count, initial.count)
+            XCTAssertTrue(zip(current, initial).allSatisfy { $0 === $1 },
+                          "Viewport and focus updates must reuse existing buttons")
+        }
+        view.resetPresentation()
+    }
+
     func testPinnedColumnGetsItsOwnTileBesideTheStrip() throws {
         let (workspace, windows) = fixture(count: 4)
         let metrics = workspace.scrollingMetrics
