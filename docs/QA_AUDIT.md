@@ -16,7 +16,8 @@ checks in [not executed](#7-not-executed) still need you at the desktop.
 
 Branch `main`. Audited from `757c89bf` (merge of `origin/main` at `8cf47d4c` with the
 unpushed `9d448054`, "Never create desktops from workspace shortcuts"). Fixes are in
-`faa85330` … `72576197` (see [§5](#5-bugs-found-and-fixed)).
+`faa85330` … `72576197`, plus the edge-preview floor after the follow-up
+measurement (see [§5](#5-bugs-found-and-fixed) and [§8](#8-remaining-risks)).
 
 ## 3. Commands executed
 
@@ -116,11 +117,12 @@ change to the pipeline is proposed without a measured gap.
 **P0:** none found.
 
 **P1**
-- **Edge preview below 40 pt is not honoured.** macOS keeps about 40 pt of a window on
-  its display. With `edge-preview = 0` (your config) or the default 14, parked windows
-  are shown 40 pt wide at the right edge, and the desired frame never matches the real
-  one. Put-back no longer fights it (fix 3), but the setting promises something macOS
-  will not do. Decide: clamp the effective preview to 40 pt, or document it.
+- ~~Edge preview below 40 pt is not honoured.~~ **Corrected by measurement and fixed.**
+  Moving a floating fixture window with AX showed macOS honours any sliver of 1 pt or
+  more exactly, on both edges (1, 2, 3, 5, 14, 25, 40, 60 pt requested and read back);
+  only a window placed wholly off the display is moved back to show 40 pt. The default
+  14 pt was always fine; only `edge-preview = 0` produced 40 pt slivers. The layout now
+  keeps at least 1 pt on screen (`effectiveEdgePreview`).
 - **Unpushed work from other sessions.** Commits reached `main` without `make check`
   passing (build break, six failures). A pre-push `make check` would prevent this.
 
@@ -140,9 +142,8 @@ change to the pipeline is proposed without a measured gap.
 
 ## 9. Recommended next actions
 
-1. Decide the edge-preview floor (P1) and align the Settings range.
-2. Run the §7 physical matrix on a test desktop with `script/native-spaces-fixture.swift`.
-3. Relax the installer's Screen Recording requirement.
-4. Offer an opt-in shortcut preset that avoids Option-letter keys (for example
+1. Run the §7 physical matrix on a test desktop with `script/native-spaces-fixture.swift`.
+2. Relax the installer's Screen Recording requirement.
+3. Offer an opt-in shortcut preset that avoids Option-letter keys (for example
    `modifiers.alt = 'left'` plus Ctrl-Option chords), without changing existing bindings.
-5. Run `make check` before every push.
+4. Run `make check` before every push.
