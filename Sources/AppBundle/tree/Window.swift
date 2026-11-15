@@ -13,6 +13,11 @@ open class Window: TreeNode, Hashable {
         set { scrollingColumnConcealed = newValue }
     }
     var lastFloatingSize: CGSize?
+    /// Explicit strip member whose natural size and vertical offset are preserved.
+    /// Unlike floating, it remains a column in the workspace tiling container.
+    @MainActor var freeSizeRect: Rect?
+    @MainActor var freeSizePreviousColumnWidth: CGFloat?
+    @MainActor var freeSizePreviousFixedWidth: CGFloat?
     // Width chosen by the user for a lone tile on ultrawide, persisted with its layout.
     var singleWindowManualWidth: CGFloat?
     var isFullscreen: Bool = false
