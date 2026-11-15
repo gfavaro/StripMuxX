@@ -52,6 +52,10 @@ struct FrozenWindow: Codable, Equatable, Sendable {
     let minimumEvidenceAppGeneration: UInt64
     let lastFloatingSize: CGSize?
     let singleWindowManualWidth: CGFloat?
+    /// Optional additions keep native-space layout files from older releases readable.
+    let freeSizeFrame: CGRect?
+    let freeSizePreviousColumnWidth: CGFloat?
+    let freeSizePreviousFixedWidth: CGFloat?
     let scrollingColumnWidth: CGFloat?
     let scrollingColumnFixedWidth: CGFloat?
 
@@ -64,6 +68,9 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         lastFloatingSize = window.parent is Workspace && !window.isFullscreen
             ? window.lastKnownActualRect?.size ?? window.lastFloatingSize : window.lastFloatingSize
         singleWindowManualWidth = window.singleWindowManualWidth
+        freeSizeFrame = window.freeSizeRect.map { CGRect(origin: $0.topLeftCorner, size: $0.size) }
+        freeSizePreviousColumnWidth = window.freeSizePreviousColumnWidth
+        freeSizePreviousFixedWidth = window.freeSizePreviousFixedWidth
         scrollingColumnWidth = window.scrollingColumnWidth
         scrollingColumnFixedWidth = window.scrollingColumnFixedWidth
         minimumEvidenceVersion = 3
@@ -88,6 +95,9 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         case minimumEvidenceAppGeneration
         case lastFloatingSize
         case singleWindowManualWidth
+        case freeSizeFrame
+        case freeSizePreviousColumnWidth
+        case freeSizePreviousFixedWidth
         case scrollingColumnWidth
         case scrollingColumnFixedWidth
     }
@@ -108,6 +118,9 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         minimumEvidenceAppGeneration = try container.decodeIfPresent(UInt64.self, forKey: .minimumEvidenceAppGeneration) ?? 0
         lastFloatingSize = try container.decodeIfPresent(CGSize.self, forKey: .lastFloatingSize)
         singleWindowManualWidth = try container.decodeIfPresent(CGFloat.self, forKey: .singleWindowManualWidth)
+        freeSizeFrame = try container.decodeIfPresent(CGRect.self, forKey: .freeSizeFrame)
+        freeSizePreviousColumnWidth = try container.decodeIfPresent(CGFloat.self, forKey: .freeSizePreviousColumnWidth)
+        freeSizePreviousFixedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .freeSizePreviousFixedWidth)
         scrollingColumnWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnWidth)
         scrollingColumnFixedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnFixedWidth)
     }
@@ -219,6 +232,17 @@ func restoreStrip(_ frozen: FrozenStrip, to workspace: Workspace, windowsById: [
 
 @MainActor
 func applyFrozenWindowState(_ window: Window, _ frozenWindow: FrozenWindow) {
+    // Keep the free-size mode with its window during restart pairing. Frames
+    // are only preferred geometry; the layout clamps them for the active display.
+    window.freeSizeRect = frozenWindow.freeSizeFrame.flatMap { frame in
+        guard frame.origin.x.isFinite, frame.origin.y.isFinite,
+              frame.size.width.isFinite, frame.size.height.isFinite,
+              frame.size.width > 0, frame.size.height > 0 else { return nil }
+        return Rect(topLeftX: frame.minX, topLeftY: frame.minY,
+                    width: frame.width, height: frame.height)
+    }
+    window.freeSizePreviousColumnWidth = frozenWindow.freeSizePreviousColumnWidth
+    window.freeSizePreviousFixedWidth = frozenWindow.freeSizePreviousFixedWidth
     window.scrollingColumnWidth = frozenWindow.scrollingColumnWidth
     window.scrollingColumnFixedWidth = frozenWindow.scrollingColumnFixedWidth.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
     window.isFullscreen = frozenWindow.isFullscreen
