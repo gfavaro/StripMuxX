@@ -44,6 +44,10 @@ Automatic updates are disabled.
   displays, Mission Control renumbering and restarts all keep each desktop's strip.
 - **Floating when you want it.** Toggle any window, or float apps by rule; floating
   windows keep their own frames above the strip.
+- **Free-size strip columns (experimental).** `stripmuxx layout free-size` makes a
+  window part of the strip while preserving its preferred width, height and
+  vertical placement. `layout tiling` returns to managed sizing; `layout floating`
+  removes it from the strip. This implementation is not yet build-validated.
 
 There are no other layouts, virtual workspaces, projects, sidebar, tabs or window
 borders. A WinMux or AeroSpace-style configuration that uses them still loads, and
