@@ -43,9 +43,12 @@ struct LayoutCommand: Command {
                       let rect = observedRect, rect.width > 0, rect.height > 0 else {
                     return io.err("Could not read a stable native window frame")
                 }
-                if window.isFloating {
+                if window.isFloating || window.topLevelWorkspaceGroup !== window {
+                    // A free-size window must own its column. Pull it out of a
+                    // vertical stack before applying independent width/height.
                     let data = bindingDataForNewTilingWindow(target.workspace, window: window)
                     window.bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
+                    target.workspace.normalizeContainers()
                 }
                 let group = window.topLevelWorkspaceGroup
                 window.freeSizePreviousColumnWidth = group.scrollingColumnWidth
