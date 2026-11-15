@@ -121,6 +121,7 @@ automatically-tile-new-windows = true
     ctrl-alt-i = 'balance-sizes'
     ctrl-alt-t = 'layout floating tiling'
     ctrl-alt-v = 'focus floating'
+    ctrl-alt-slash = 'shortcuts'
     ctrl-alt-m = 'fullscreen'
     ctrl-alt-s = 'scrolling-minimap'
     # Desktops, numbered as Control-N in Mission Control.

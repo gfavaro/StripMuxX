@@ -13,14 +13,18 @@ documents an explicit target such as `--window-id`.
 **The strip:** `scrolling-pan left|right|focus` moves the viewport without switching
 window focus; left/right pan by half a viewport, focus reveals the active column.
 `scrolling-width-pixels N` sets a fixed column width in points (persisted across
-restarts and changes of display size). `scrolling-width next|previous|full` changes the focused column's
-width; `scrolling-center` centers it. `scrolling-focus 1-9|first|last` focuses a
+restarts and changes of display size). `scrolling-width next|previous|full|<share>` changes the focused column's
+width (a share is 0.1 to 1 of the display); `scrolling-center` centers it. `scrolling-focus 1-9|first|last` focuses a
 column by place (9 is the last), `scrolling-move 1-9|first|last` moves the focused
 column there, and `scrolling-pin left|right` pins it to an edge of the display (again
 to unpin). `scrolling-minimap` opens or closes the clickable map of the strip; it
 supports Left/Right, Return and Escape. `balance-sizes` resets column widths and
 stack heights; `flatten-workspace-tree` turns stacks into columns. See
-[the strip](LAYOUTS.md).
+[the strip](LAYOUTS.md). `focus floating` steps through the desktop's floating windows,
+then back to the strip.
+
+**Cheat sheet:** `shortcuts` (Alt-Shift-/) shows the current mode's shortcuts grouped
+by what they do; any key or click closes it.
 
 **Undo:** `undo-layout` puts the focused desktop's strip back as it was before its
 last layout command (`layout`, `move`, `join-with`, `resize`, `balance-sizes`,

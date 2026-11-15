@@ -118,6 +118,7 @@ automatically-tile-new-windows = true
     cmd-shift-i = 'balance-sizes'
     alt-shift-t = 'layout floating tiling'
     alt-shift-v = 'focus floating'
+    alt-shift-slash = 'shortcuts'
     alt-shift-m = 'fullscreen'
     alt-ctrl-m = 'scrolling-minimap'
     # Desktops, numbered as Control-N in Mission Control.

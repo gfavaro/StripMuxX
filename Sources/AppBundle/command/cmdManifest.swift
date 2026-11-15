@@ -25,6 +25,7 @@ extension CmdArgs {
             case let args as RetileCmdArgs: RetileCommand(args: args)
             case let args as ScrollingWidthCmdArgs: ScrollingWidthCommand(args: args)
             case let args as ScrollingMinimapCmdArgs: ScrollingMinimapCommand(args: args)
+            case let args as ShortcutsCmdArgs: ShortcutsCommand(args: args)
             case let args as ScrollingFocusCmdArgs: ScrollingFocusCommand(args: args)
             case let args as ScrollingMoveCmdArgs: ScrollingMoveCommand(args: args)
             case let args as ScrollingPinCmdArgs: ScrollingPinCommand(args: args)

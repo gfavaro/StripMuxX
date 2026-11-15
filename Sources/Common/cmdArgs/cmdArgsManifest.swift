@@ -42,6 +42,7 @@ public enum CmdKind: String, CaseIterable, Equatable, Sendable {
     case scrollingFocus = "scrolling-focus"
     case scrollingMove = "scrolling-move"
     case scrollingPin = "scrolling-pin"
+    case shortcuts
     case swap
     case triggerBinding = "trigger-binding"
     case workspace
@@ -138,6 +139,8 @@ func initSubcommands() -> [String: any SubCommandParserProtocol] {
                 result[kind.rawValue] = SubCommandParser(ScrollingWidthCmdArgs.init)
             case .scrollingMinimap:
                 result[kind.rawValue] = SubCommandParser(ScrollingMinimapCmdArgs.init)
+            case .shortcuts:
+                result[kind.rawValue] = SubCommandParser(ShortcutsCmdArgs.init)
             case .scrollingFocus:
                 result[kind.rawValue] = SubCommandParser(ScrollingFocusCmdArgs.init)
             case .scrollingMove:
