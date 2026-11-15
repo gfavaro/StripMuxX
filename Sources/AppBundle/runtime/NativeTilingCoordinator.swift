@@ -48,6 +48,7 @@ final class NativeTilingCoordinator {
         // identity even while the mouse is down. Do not leave overlay panels
         // on a different Space after that transition.
         dragPreview.hide()
+        NativeWindowBorder.shared.hide()
         nativePanTiming.count("invalidate: \(reason)")
         generation &+= 1
         ready = false
@@ -155,6 +156,7 @@ final class NativeTilingCoordinator {
         }
         await runtime.native.persistence.save(runtime.native.layouts)
         guard generation == version else { return }
+        NativeWindowBorder.shared.refresh()
         ready = true
         hasCompletedInitialLayout = true
         if scrollingReadRequestedAt != nil { scrollingReadRequestedAt = nil; relayoutVisibleScrolling() }
@@ -213,6 +215,7 @@ final class NativeTilingCoordinator {
                     noteScrollingLayout(start.duration(to: .now), during: workspace.scrollingGestureMotionActive)
                 }
             } while scrollingLayoutPending
+            NativeWindowBorder.shared.refresh()
             scrollingLayoutTask = nil
             // Scrolling, column reordering and resizing bypass accept(), which
             // is otherwise the only place that persists a desktop layout.
