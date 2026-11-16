@@ -203,6 +203,7 @@ final class NativeTilingCoordinator {
             scrollingReadRequestedAt = .now
             return runtime.native.observation?.requestRead(event: "nativeScrolling") ?? ()
         }
+        GestureTrace.mark("request")
         scrollingLayoutRequests.request(target)
         // The frames are only requested; follow the windows as they actually move,
         // from the first step of a pan rather than once its layouts drain.
@@ -221,7 +222,9 @@ final class NativeTilingCoordinator {
                         break
                     }
                     let start = ContinuousClock.now
+                    GestureTrace.mark("layout-begin")
                     do { try await workspace.layoutWorkspace() } catch { break }
+                    GestureTrace.mark("layout-end")
                     nativePanTiming.record("scrolling layout", start.duration(to: .now))
                     noteScrollingLayout(start.duration(to: .now), during: workspace.scrollingGestureMotionActive)
                 }

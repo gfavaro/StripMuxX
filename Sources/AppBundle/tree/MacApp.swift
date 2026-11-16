@@ -413,7 +413,9 @@ final class MacApp: AbstractApp {
         let permit = nativePermitCheck(windowId)
         setFrameJobs[windowId] = withWindowAsync(windowId) { [axApp, animatedSizes, validatedSessions] window, job in
             let started = ContinuousClock.now
+            GestureTrace.mark("ax-begin", window: windowId)
             defer {
+                GestureTrace.mark("ax-end", window: windowId)
                 let elapsed = started.duration(to: .now).components
                 AxWriteTiming.shared.record(Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1e15, app: appName)
             }

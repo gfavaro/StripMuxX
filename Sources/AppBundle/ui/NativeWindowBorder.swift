@@ -72,6 +72,11 @@ final class NativeWindowBorder {
         let activeDesktops = runtime.native.layouts.currentBySpaceID.values.filter { $0.isVisible }
         guard !activeDesktops.isEmpty else { clear(); return }
 
+        // A transparent border (the default for unfocused windows) draws nothing, yet positioning
+        // and redrawing it cost main-thread time on every display frame of a scroll, delaying the
+        // scroll events that share that thread. Windows without a visible border are skipped.
+        let activeShown = !windowBorderIsInvisible(settings.activeColor)
+        let inactiveShown = !windowBorderIsInvisible(settings.inactiveColor)
         var visible = Set<UInt32>()
         for workspace in activeDesktops {
             guard nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else { continue }
@@ -80,6 +85,7 @@ final class NativeWindowBorder {
                       !window.isFullscreen, window.lastKnownNativeFullscreen != true,
                       window.lastKnownNativeMinimized != true, !window.isConcealedByScrolling else { continue }
                 if let bundle = window.app.rawAppBundleId, settings.excludeApps.contains(bundle) { continue }
+                guard focus.windowOrNil === window ? activeShown : inactiveShown else { continue }
                 // Same SkyLight top-level document filter as WinMuxX. Unsupported
                 // systems report -1 and retain the documented AX fallback.
                 let eligible = documentWindowCache[window.windowId] ?? {

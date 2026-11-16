@@ -52,4 +52,13 @@ final class WindowBordersConfigTest: XCTestCase {
             XCTAssertFalse(errors.isEmpty, setting)
         }
     }
+
+    func testOnlyAFullyTransparentColorCountsAsInvisible() {
+        XCTAssertTrue(windowBorderIsInvisible("#00000000"))
+        XCTAssertTrue(windowBorderIsInvisible("#FF880000"))
+        XCTAssertFalse(windowBorderIsInvisible("#00000001"))
+        XCTAssertFalse(windowBorderIsInvisible("#494D6480"))
+        XCTAssertFalse(windowBorderIsInvisible("#112233"), "No alpha means opaque")
+        XCTAssertFalse(windowBorderIsInvisible("accent"))
+    }
 }

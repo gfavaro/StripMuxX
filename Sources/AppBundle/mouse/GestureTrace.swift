@@ -8,7 +8,9 @@ import Common
 @MainActor
 final class GestureTrace {
     static let shared = GestureTrace()
-    private(set) var running = false
+    private(set) var running = false {
+        didSet { Self.pipelineLock.withLock { Self.recording = running } }
+    }
     private var startedAt: UInt64 = 0
     private var inputs: [[String: Any]] = []
     private var sampler: TraceSampler?
@@ -16,14 +18,34 @@ final class GestureTrace {
 
     nonisolated static func now() -> UInt64 { DispatchTime.now().uptimeNanoseconds }
 
-    func start(io: CmdIo) -> Bool {
+    /// Pipeline timestamps from any thread: a layout asked for, a layout running, an app's
+    /// write starting and ending. They show which stage makes a window's motion uneven.
+    private nonisolated static let pipelineLock = NSLock()
+    private nonisolated(unsafe) static var recording = false
+    private nonisolated(unsafe) static var pipelineOrigin: UInt64 = 0
+    private nonisolated(unsafe) static var pipeline: [[Any]] = []
+
+    nonisolated static func mark(_ stage: String, window: UInt32 = 0, value: Double = 0) {
+        pipelineLock.withLock {
+            guard recording else { return }
+            pipeline.append([Double(now() - pipelineOrigin) / 1e6, stage, Int(window), value])
+        }
+    }
+
+    /// Whether marks are being recorded; lets callers skip measuring when they are not.
+    nonisolated static var isRecording: Bool { pipelineLock.withLock { recording } }
+
+    /// `sampleWindows: false` records only inputs and pipeline marks. Polling the window server
+    /// every 3 ms is itself load, so use that to check a trace's timing was not disturbed by it.
+    func start(io: CmdIo, sampleWindows: Bool = true) -> Bool {
         guard !running else { return io.err("A gesture trace is already running; use --gesture-trace-stop") }
-        running = true
         startedAt = Self.now()
+        Self.pipelineLock.withLock { Self.pipelineOrigin = startedAt; Self.pipeline = [] }
+        running = true
         inputs = []
         let sampler = TraceSampler(startedAt: startedAt)
         self.sampler = sampler
-        Thread.detachNewThread { sampler.run() }
+        if sampleWindows { Thread.detachNewThread { sampler.run() } }
         autoStop = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(120))
             guard let self, self.running else { return }
@@ -49,9 +71,10 @@ final class GestureTrace {
         let changes = sampler.changes
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("stripmuxx-gesture-trace-\(UUID().uuidString).json")
         let seconds = Double(Self.now() - startedAt) / 1e9
+        let pipeline = Self.pipelineLock.withLock { Self.pipeline }
         let document: [String: Any] = [
-            "seconds": seconds, "inputs": inputs, "windowChanges": changes,
-            "note": "t is milliseconds since the trace started. windowChanges rows: [t, windowId, owner, x, y, width, height].",
+            "seconds": seconds, "inputs": inputs, "windowChanges": changes, "pipeline": pipeline,
+            "note": "t is milliseconds since the trace started. windowChanges rows: [t, windowId, owner, x, y, width, height]. pipeline rows: [t, stage, windowId] for request, layout-begin, layout-end, write and ax-begin/ax-end.",
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: document),
               (try? data.write(to: url)) != nil else { return io.err("Could not write the trace") }

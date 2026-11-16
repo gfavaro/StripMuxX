@@ -475,6 +475,28 @@ At the end every window was identical to the baseline and focus was back where i
 Not tested: unplugging or plugging a display, display arrangement changes, desktop switching,
 Mission Control, sleep/wake, fullscreen on the second display.
 
+## Scroll stutter, found and fixed (builds 86-90)
+
+Found by measuring the real trackpad trace (windows updated every 18 to 23 ms at the median but
+20% of the time more than 50 ms apart, in every app alike), then instrumenting the pipeline
+(`debug-windows --gesture-trace-start`, which now also records request, layout, write and AX
+timing, how late each scroll event reaches the event tap, and how long the tap holds it).
+Layout (0.5 ms) and the apps' writes (0.8 ms) were fast; input arrived late. Sampling the main
+thread showed why: borders were refreshed every display frame (about 17% of the thread, with
+a 49-sample wait inside the window server), including the transparent unfocused ones, and the
+event tap shares that thread. Steady 60 Hz synthetic pan, window sampler off:
+
+| | Build 88 | Build 89 (skip invisible borders) | Build 90 (+ minimap drawn after the event) |
+| --- | --- | --- | --- |
+| Event lateness at the tap, median / p90 / p99 | 14.2 / 58.7 / 105 ms | 0.10 / 0.23 / 50 ms | 0.08 / 0.15 / 25 ms |
+| Longest the tap held an event | 48 ms | 53 ms | 0.5 ms |
+| Input gaps over 33 ms | 18% | 0% | 0% |
+
+Window motion (sampler on): update gaps median 31.3 ms, 47% over 33 ms, 28% over 50 ms (build 86)
+became median 16.6 ms, p90 23.5 ms, none over 33 ms (build 89). The focused window's border is
+still drawn on its edges. Not re-measured on the trackpad: do a gesture trace to compare with the
+75-gesture session above.
+
 ## Gesture smoothing experiment (build 85; `scrolling.gesture-smoothing`, default 0 = off)
 
 Ten flick-shaped gestures (7 steps of about 140 pt, like a fast three-finger swipe), traced with

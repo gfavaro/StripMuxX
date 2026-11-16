@@ -66,6 +66,11 @@ func windowBorderHexRGBA(_ hex: String) -> UInt32 {
     return hasAlpha ? value : (value << 8) | 255
 }
 
+/// A colour that draws nothing (`#RRGGBB00`): a border in it is not worth positioning.
+func windowBorderIsInvisible(_ color: String) -> Bool {
+    color != windowBorderAccentColor && windowBorderHexRGBA(color) & 0xFF == 0
+}
+
 func parseWindowBorders(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace, _ errors: inout [TomlParseError]) -> WindowBordersConfig {
     parseTable(raw, WindowBordersConfig(), borderParsers, trace, &errors)
 }

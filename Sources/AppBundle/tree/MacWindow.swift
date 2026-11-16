@@ -187,6 +187,7 @@ final class MacWindow: Window {
                 return
             }
             lastGestureFrame = (session, frame)
+            GestureTrace.mark("write", window: windowId)
             NativeFrameWriteMetrics.shared.gestureRequests &+= 1
             setScrollingGestureFrame(frame, session: session)
             return

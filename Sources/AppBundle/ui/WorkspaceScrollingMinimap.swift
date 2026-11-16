@@ -24,6 +24,23 @@ final class WorkspaceScrollingMinimap: NSObject {
     private var generation: UInt64 = 0
     private var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
+    private var gestureShowTask: Task<Void, Never>?
+    private weak var gestureShowWorkspace: Workspace?
+
+    /// Shows the minimap for a gesture step after the current event has been handled, once for
+    /// however many steps arrive before then.
+    func showSoon(_ workspace: Workspace) {
+        gestureShowWorkspace = workspace
+        guard gestureShowTask == nil else { return }
+        gestureShowTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.gestureShowTask = nil
+            guard let workspace = self.gestureShowWorkspace else { return }
+            self.gestureShowWorkspace = nil
+            _ = self.show(workspace, duringGesture: true)
+        }
+    }
+
     @discardableResult
     func show(_ workspace: Workspace, duringGesture: Bool = false, explicitly: Bool = false) -> Bool {
         guard config.scrolling.minimapEnabled, workspace.isVisible, !workspace.workspaceLayoutUnits.isEmpty,
