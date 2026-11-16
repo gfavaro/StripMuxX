@@ -415,6 +415,30 @@ terminal running it was itself parked off-screen by the strip), so timings were
 unreliable; the built-in `doctor --simulate-native-pan` probe no longer pans (its
 self-posted events are ignored) and was left alone.
 
+## Real trackpad session (75 gestures, 100 s, borders on, `hide-while-scrolling` off)
+
+Recorded with the gesture trace on build 82. 48 three-finger swipes and 27 Option + two-finger
+pans, about 60 input steps a second.
+
+| | Option pan | Three-finger swipe |
+| --- | --- | --- |
+| Window behind the fingers | median 18 ms, p90 38 ms (about 1 to 2 frames) | median 0 ms, p90 121 ms |
+| Last window move after the last input | median 26 ms | median 53 ms |
+| Border more than 6 pt from a window edge | 14% of updates, p90 17 pt | 21%, p90 93 pt |
+
+- By app, window lag medians are 4 to 20 ms (Safari 4, ZapFast 6, Finder 13, TextEdit 14,
+  Rex Beta 20). Writes take 2.7 ms on average (ZapFast 5.9, Safari 4.3, Rex 2.7).
+- The only slow swipes (two of 48, over 1,200 pt, about 200 ms behind) were the Rex Beta
+  window, the terminal streaming output while it was moved: an app redrawing, not StripMuxX.
+- Border error follows gesture speed: p90 25 pt below 2,000 pt/s, 87 pt above. A flick
+  arrives as 5 to 8 input steps of up to 256 pt, so a border one frame behind a window is a
+  step behind. It is inherent to following the window; `borders.hide-while-scrolling` removes
+  it, and easing the strip between steps would reduce it at the cost of latency (not done).
+- A first reading of the trace blamed Finder. That was the analysis: 71% of gestures began
+  within 600 ms of the previous one and the look-ahead overlapped it (six Finder windows were
+  also open). The analysis now stops at the next gesture and records where the strip was
+  before each step; it is covered by `script/test_analyze_gesture_trace.py`.
+
 The earlier P2 "lift after an idle-settled resize" is closed. Three-finger swipes with
 `borders.hide-while-scrolling`: by code path they share the Option pan's `pan` call and
 hide the same way; still not exercisable by synthetic events (user trackpad test with the

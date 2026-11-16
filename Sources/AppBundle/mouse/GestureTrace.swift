@@ -34,9 +34,11 @@ final class GestureTrace {
     }
 
     /// One input step: `kind` is pan, dock or end; `delta` the finger movement in points.
-    func note(_ kind: String, delta: Double = 0, offset: CGFloat = 0) {
+    func note(_ kind: String, delta: Double = 0, from: CGFloat? = nil, offset: CGFloat = 0) {
         guard running else { return }
-        inputs.append(["t": Double(Self.now() - startedAt) / 1e6, "kind": kind, "delta": delta, "offset": Double(offset)])
+        var step: [String: Any] = ["t": Double(Self.now() - startedAt) / 1e6, "kind": kind, "delta": delta, "offset": Double(offset)]
+        if let from { step["from"] = Double(from) }
+        inputs.append(step)
     }
 
     func stop(io: CmdIo) -> Bool {
