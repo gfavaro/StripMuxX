@@ -40,7 +40,6 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case borderInactiveColor = "borders.inactive-color"
     case borderOrder = "borders.order"
     case borderExcludeApps = "borders.exclude-apps"
-    case borderHideWhileScrolling = "borders.hide-while-scrolling"
 
     var id: String { rawValue }
     var title: String {
@@ -73,7 +72,6 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .borderInactiveColor: "Unfocused border color"
             case .borderOrder: "Border drawing order"
             case .borderExcludeApps: "Exclude apps from borders"
-            case .borderHideWhileScrolling: "Hide borders while the strip scrolls"
         }
     }
     var page: SettingsSidebarItem {
@@ -82,7 +80,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .loneWidth, .loneAlignment, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
             case .gapHorizontal, .gapOuterLeft: .appearance
             case .appearance, .menuBar, .bordersEnabled, .borderWidth, .borderActiveColor, .borderInactiveColor,
-                 .borderOrder, .borderExcludeApps, .borderHideWhileScrolling: .appearance
+                 .borderOrder, .borderExcludeApps: .appearance
         }
     }
 }
@@ -95,7 +93,6 @@ extension SettingsControl {
             case .loneAlignment: "position centered left right"
             case .bordersEnabled: "outline highlight frame"
             case .borderActiveColor, .borderInactiveColor: "colour accent highlight"
-            case .borderHideWhileScrolling: "lag trail scroll gesture"
             default: ""
         }
     }

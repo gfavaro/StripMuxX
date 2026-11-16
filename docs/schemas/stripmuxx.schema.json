@@ -219,10 +219,6 @@
           "items": {
             "type": "string"
           }
-        },
-        "hide-while-scrolling": {
-          "type": "boolean",
-          "default": false
         }
       },
       "additionalProperties": false

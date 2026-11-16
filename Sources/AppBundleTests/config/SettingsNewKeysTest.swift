@@ -27,7 +27,6 @@ final class SettingsNewKeysTest: XCTestCase {
             ("borders", "inactive-color", "'#494D6480'"),
             ("borders", "order", "'above'"),
             ("borders", "exclude-apps", "['com.apple.finder']"),
-            ("borders", "hide-while-scrolling", "true"),
         ])
         XCTAssertEqual(config.scrolling.centerFocusedColumn, .onOverflow)
         XCTAssertEqual(config.scrolling.edgePreview, 12)
@@ -42,7 +41,6 @@ final class SettingsNewKeysTest: XCTestCase {
         XCTAssertEqual(config.windowBorders.inactiveColor, "#494D6480")
         XCTAssertEqual(config.windowBorders.order, .above)
         XCTAssertEqual(config.windowBorders.excludeApps, ["com.apple.finder"])
-        XCTAssertTrue(config.windowBorders.hideWhileScrolling)
     }
 
     func testMinimapHoldKeysRoundTripAndRejectUnknownNames() {

@@ -492,6 +492,16 @@ more than 50 ms apart (the app holds an event 0.5 ms at most, so this is the eve
 and the easing costs about 40 ms of lag and a 290 ms glide after release. `analyze_gesture_trace.py`
 now prints the smoothness figures (input and window-update gaps, scroll event lateness) itself.
 
+## Simplification (builds 95 and 96)
+
+Build 95 removed the stutter hunt's diagnostic scaffolding (pipeline timing marks, the always-on
+write-timing counter, the trace's `--no-window-samples`): 77 lines fewer. Build 96 removed
+`borders.hide-while-scrolling` (config key, Settings toggle and search entry, the border code's
+hidden-during-motion state, schema, reference configs, docs, tests): 35 lines fewer. The key
+had never been released, was off in the only config that used it, and did the same job as
+`scrolling.gesture-smoothing`. Steady-pan smoothness after both (window sampler on): window
+updates every 16.8 ms, none over 33 ms.
+
 ## Minimap proportions (build 92)
 
 Reported: a full-width window looked like it was on a wide screen. Cause (measured from a

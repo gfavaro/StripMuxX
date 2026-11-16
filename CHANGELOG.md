@@ -7,7 +7,7 @@
 - `shortcuts` (Alt-Shift-/) shows the current mode's shortcuts, grouped, in macOS notation.
 - Window rules can set a new window's column width: `scrolling-width <share>` (0.1 to 1) and `scrolling-width-pixels`. `scrolling-width <share>` also works as a shortcut.
 - Experimental `[scrolling] gesture-smoothing` (milliseconds, off by default): windows ease toward the fingers during a scroll gesture. On flick-shaped input, 40 ms cut the border's 90th-percentile distance from a window edge from 139 pt to 22 pt (80 ms: 1 pt) and made windows move in about four times as many steps, at the cost of windows running 44 ms behind the fingers and settling about 190 ms after release.
-- Window borders with the WinMuxX renderer, and `borders.hide-while-scrolling` to hide them during a scroll gesture. Every border setting is searchable in Settings.
+- Window borders with the WinMuxX renderer. Every border setting is searchable in Settings.
 - `doctor` reports why borders were hidden and how many unchanged gesture steps were skipped.
 - `debug-windows --gesture-trace-start/--gesture-trace-stop` records a real gesture (inputs and every window position) and `script/analyze_gesture_trace.py` reports lag, border distance and smoothness from it.
 

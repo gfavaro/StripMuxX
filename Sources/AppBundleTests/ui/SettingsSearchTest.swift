@@ -18,11 +18,9 @@ final class SettingsSearchTest: XCTestCase {
     func testEveryBorderSettingIsSearchableAndOpensItsControl() {
         XCTAssertEqual(Set(settingsControlSearchResults("border")), Set([
             .bordersEnabled, .borderWidth, .borderActiveColor, .borderInactiveColor, .borderOrder,
-            .borderExcludeApps, .borderHideWhileScrolling,
+            .borderExcludeApps,
         ]))
-        XCTAssertEqual(settingsControlSearchResults("hide borders while scrolling"), [.borderHideWhileScrolling])
         XCTAssertEqual(settingsControlSearchResults("colour"), [.borderActiveColor, .borderInactiveColor], "Either spelling")
-        XCTAssertEqual(settingsControlSearchResults("trail"), [.borderHideWhileScrolling])
         XCTAssertTrue(SettingsControl.allCases.filter { $0.id.hasPrefix("borders.") }.allSatisfy { $0.page == .appearance })
     }
 
