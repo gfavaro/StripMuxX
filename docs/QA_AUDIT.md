@@ -359,3 +359,33 @@ frame, so `borders.hide-while-scrolling` (off by default) hides them during a ge
   not the Dock swipe path. P3.
 - Desktop switches with borders (not permitted), multiple displays, restart
   restoration of floating windows after the other session's persistence changes.
+
+---
+
+# Improvement round — 2026-11-16
+
+Installed as build 77; `make check`: **573 XCTest, 59 Python, 0 failures, 0 compiler
+warnings in the product code** (was 17; four test warnings remain for an accessibility
+call with no replacement).
+
+## Previously unexecuted paths, now executed (disposable fixture app)
+
+| Check | Result |
+| --- | --- |
+| `focus floating` from two different strip windows | Floating window, then back to the starting window, both times |
+| Floating window across a StripMuxX restart | Still floating, same desktop, 0 saved layouts pending |
+| `on-window-detected` + `scrolling-width-pixels 700` with a real app window | Window opened 700 pt wide; config restored byte-for-byte |
+
+## Improvements
+
+| Change | Evidence |
+| --- | --- |
+| Commands no longer force a full SkyLight + AX reread when the model is already current | `focus` left/right p50 81 → 48 ms, p90 148 → 65 ms (including a 25 ms CLI round trip); 3 presses 50 ms apart still land on the right column; 0 failures in 30 runs |
+| The lift of a resize the idle timer ended no longer reaches the app | 0 of 3 runs leaked events after a 450 ms rest; a plain scroll afterwards still reaches the app; unit tests for both touch outcomes |
+| Thrown errors in shortcut, menu-bar reload and app-startup tasks are logged instead of dropped | startup failures also show a message |
+| 17 compiler warnings cleared | `swift build` from a full rebuild: none |
+
+The earlier P2 "lift after an idle-settled resize" is closed. Three-finger swipes with
+`borders.hide-while-scrolling`: by code path they share the Option pan's `pan` call and
+hide the same way; still not exercisable by synthetic events (user trackpad test with the
+setting off: "almost good").
