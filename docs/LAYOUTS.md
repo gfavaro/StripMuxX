@@ -28,11 +28,9 @@ unpin. `balance-sizes` gives every column the configured width again.
 column along the strip. `scrolling-focus 1-9|first|last` and `scrolling-move …` go by
 place, 9 being the last column, like browser tabs. The minimap (`scrolling-minimap`)
 shows the whole strip; click or drag a column there to focus or reorder it. To see where your
-windows are, a "Desktops" row (when the display has more than one desktop) shows each desktop's number
-and the icons of the apps on it (the names are in the tooltip), and clicking one switches to it, the same
-as `workspace N`. With two or more displays a "Displays" row pictures them as they are arranged (a display
-above is drawn above, one to the right is drawn to the right) with the desktop each shows and its apps;
-clicking one focuses its latest window and moves the minimap there. A display with no windows is dimmed.
+windows are, a "Spaces" row (when the display has more than one space) shows each space's number and the
+icons of the apps on it (the names are in the tooltip), and clicking one switches to it, the same as
+`workspace N`. An open minimap follows the switch, and a click anywhere outside it dismisses it.
 
 ## Stacks
 

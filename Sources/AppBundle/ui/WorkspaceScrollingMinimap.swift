@@ -161,11 +161,9 @@ final class WorkspaceScrollingMinimap: NSObject {
                                                maximum: min(680, max(1, screens[index - 1].visibleFrame.width - 48)))
         let floatingWindows = workspace.floatingWindows.filter(\.nativeLayoutEligible).sorted { $0.windowId < $1.windowId }
         let desktops = scrollingMinimapDesktops(nativeDesktopWorkspaces(), showing: workspace, apps: minimapApps(of:))
-        let displays = scrollingMinimapDisplays(sortedMonitors, showing: workspace, apps: minimapApps(of:))
         let height = scrollingMinimapRowHeight(metrics: workspace.scrollingMetrics) + 68
             + (floatingWindows.isEmpty ? 0 : scrollingMinimapFloatingRowHeight)
             + (desktops.isEmpty ? 0 : scrollingMinimapDesktopRowHeight)
-            + scrollingMinimapDisplayRowHeight(displays)
         guard let frame = scrollingMinimapFrame(size: CGSize(width: width, height: height),
             visibleFrames: screens.map(\.visibleFrame), screenIndex: index) else { dismiss(); return }
         let panel = self.panel ?? makePanel()
@@ -191,8 +189,8 @@ final class WorkspaceScrollingMinimap: NSObject {
                 title: cachedWindowTitle(for: window) ?? window.app.name ?? "Window",
                 focused: focus.windowOrNil === window)
         }
-        view.update(workspaceName: userFacingDesktopName(workspace), models: models, pinned: pinned,
-                    floating: floating, desktops: desktops, displays: displays, icons: icons,
+        view.update(workspaceName: nativeDesktopNumber(of: workspace).map(scrollingMinimapSpaceName) ?? "Space", models: models, pinned: pinned,
+                    floating: floating, desktops: desktops, icons: icons,
                     metrics: workspace.scrollingMetrics, offset: workspace.scrollingOffset,
                     focused: focus.windowOrNil.flatMap { $0.nodeWorkspace === workspace ? ObjectIdentifier($0.topLevelWorkspaceGroup) : nil })
         refreshTitles(representatives, in: workspace)
@@ -203,16 +201,6 @@ final class WorkspaceScrollingMinimap: NSObject {
     private func switchToDesktop(_ number: Int) {
         guard case .cmd(let command) = parseCommand("workspace \(number)") else { return }
         Task { _ = try? await [command].runCmdSeq(CmdEnv.defaultEnv, .emptyStdin) }
-    }
-
-    /// Focuses the latest window of the desktop another display shows, as `focus-monitor` does, and moves
-    /// the minimap to that display, whose desktop is already showing.
-    private func switchToDisplay(_ index: Int) {
-        let monitors = sortedMonitors
-        guard monitors.indices.contains(index), let desktop = nativeActiveDesktop(on: monitors[index]),
-              let window = desktop.mostRecentWindowRecursive, window.focusWindow() else { return }
-        window.nativeFocus()
-        if !show(desktop, explicitly: isExplicitlyOpen) { dismiss() }
     }
 
     /// A desktop change was accepted: an open minimap follows its display to the desktop now showing
@@ -256,7 +244,6 @@ final class WorkspaceScrollingMinimap: NSObject {
         }
         view.dismissRequested = { [weak self] in self?.dismiss() }
         view.desktopSelected = { [weak self] number in self?.switchToDesktop(number) }
-        view.displaySelected = { [weak self] index in self?.switchToDisplay(index) }
         effect.addSubview(view)
         panel.contentView = effect
         panel.invalidateShadow()
@@ -312,7 +299,7 @@ final class WorkspaceScrollingMinimap: NSObject {
             freeSize: windows.count == 1 && windows[0].freeSizeRect != nil, vertical: vertical)
     }
 
-    /// The apps with windows on a desktop, tiled ones first, for the desktop and display buttons.
+    /// The apps with windows on a desktop, tiled ones first, for the space buttons.
     private func minimapApps(of workspace: Workspace) -> ScrollingMinimapApps {
         var pids: [Int32] = [], names: [String] = []
         for window in workspace.allLeafWindowsRecursive + workspace.floatingWindows where !pids.contains(window.app.pid) {
