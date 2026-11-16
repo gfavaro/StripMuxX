@@ -23,7 +23,7 @@ struct ShortcutBehaviorSettingsView: View {
     @Environment(\.settingsSearchTarget) private var searchTarget
 
     @SettingsDraft("single-window-alignment", load: { config.singleWindowAlignment }) private var singleWindowAlignment: SingleWindowAlignment
-    @SettingsDraft("single-window-aspect-ratio", load: { String(config.singleWindowAspectRatio) }) private var singleWindowRatio: String
+    @SettingsDraft("single-window-aspect-ratio", load: { String(format: "%g", config.singleWindowAspectRatio) }) private var singleWindowRatio: String
 
     var body: some View {
         SettingsScrollView {

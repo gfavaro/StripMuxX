@@ -364,8 +364,8 @@
       "type": "number",
       "minimum": 0,
       "maximum": 6,
-      "default": 1.6,
-      "description": "A lone tiled window is at most this many times as wide as it is tall; 0 lets it fill the width."
+      "default": 0,
+      "description": "A lone tiled window is at most this many times as wide as it is tall; 0 (the default) lets it fill the width."
     },
     "windowWidthSettings": {
       "type": "object",

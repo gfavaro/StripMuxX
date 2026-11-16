@@ -31,7 +31,7 @@ var configurationReferenceSections: [ConfigurationReferenceSection] {
         '1' = 'main'
         '2' = 'secondary'
         """),
-        .init(id: "window-width", title: "Lone-window shape", description: "single-window-aspect-ratio (0 to 6; 0 fills the width) limits a window alone on a desktop to that many times its height in width, so it keeps one shape on any display; single-window-alignment places it. Both can be set globally or in a [display.<pattern>] table. StripMuxX fullscreen always fills the display.", defaults: "single-window-aspect-ratio = \(defaultSingleWindowAspectRatio), single-window-alignment = center", example: """
+        .init(id: "window-width", title: "Lone-window shape", description: "single-window-aspect-ratio (0 to 6; 0 fills the width) limits a window alone on a desktop to that many times its height in width, so it keeps one shape on any display; single-window-alignment places it. Both can be set globally or in a [display.<pattern>] table. StripMuxX fullscreen always fills the display.", defaults: "single-window-aspect-ratio = 0, single-window-alignment = center", example: """
         single-window-aspect-ratio = 1.6
         single-window-alignment = 'center'
         [display.'Built-in']

@@ -12,8 +12,8 @@ struct WindowWidthSettings: ConvenienceCopyable, Equatable {
     }
 }
 
-/// Width as a multiple of height for a lone window; 0 lets it fill the width.
-let defaultSingleWindowAspectRatio = 1.6
+/// Width as a multiple of height for a lone window; 0, the default, lets it fill the width.
+let defaultSingleWindowAspectRatio = 0.0
 
 /// `[display.<pattern>]`: width settings for one display.
 struct DisplayWindowSettings {

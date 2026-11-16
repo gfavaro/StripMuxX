@@ -11,10 +11,10 @@ config-version = 2
 # It never removes desktops; manage them in Mission Control.
 persistent-workspaces = []
 
-# A lone tiled window is at most this many times as wide as it is tall, so it keeps one shape on any
-# display (1.6 is a 16:10 window); 0 lets it fill the width. A [display.<pattern>] table can set its
-# own single-window-aspect-ratio and single-window-alignment for one display.
-single-window-aspect-ratio = 1.6
+# Limits a lone tiled window to this many times as wide as it is tall, so it keeps one shape on any
+# display (for example 1.6 is a 16:10 window); 0 lets it fill the width. A [display.<pattern>] table
+# can set its own single-window-aspect-ratio and single-window-alignment for one display.
+single-window-aspect-ratio = 0
 # Alignment of a lone tiled window within the area remaining after gaps: center, left, right.
 single-window-alignment = 'center'
 

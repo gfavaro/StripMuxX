@@ -34,13 +34,12 @@ final class WindowWidthTest: WorkspaceTestCase {
         XCTAssertEqual(workspaceTilingRect(workspace).width, available.width, accuracy: 0.001, "0 fills the width")
     }
 
-    func testDefaultRatioAppliesWithoutAnyConfiguration() async throws {
+    func testALoneWindowFillsTheWidthUnlessARatioIsSet() async throws {
         try load("")
         let workspace = focus.workspace
         _ = TestWindow.new(id: 72030, parent: workspace.rootTilingContainer)
-        XCTAssertEqual(config.singleWindowAspectRatio, defaultSingleWindowAspectRatio)
-        XCTAssertEqual(workspaceTilingRect(workspace).width,
-                       limitedWidth(workspace, ratio: defaultSingleWindowAspectRatio), accuracy: 0.001)
+        XCTAssertEqual(config.singleWindowAspectRatio, 0)
+        XCTAssertEqual(workspaceTilingRect(workspace), workspace.workspaceMonitor.visibleRectPaddedByOuterGaps)
     }
 
     func testDisplayOverridesTheRatioAndKeepsTheGlobalAlignment() async throws {

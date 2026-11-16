@@ -13,7 +13,7 @@
 - `debug-windows --gesture-trace-start/--gesture-trace-stop` records a real gesture (inputs and every window position) and `script/analyze_gesture_trace.py` reports lag, border distance and smoothness from it.
 
 ### Changed
-- A lone window is limited by one `single-window-aspect-ratio` (width as a multiple of height, default 1.6; 0 fills the width) on every display, instead of the `fullscreen-width` and `lone-window-width` percentages. The ratio, like the alignment, can be overridden per display in a `[display.<pattern>]` table, and is a Settings control. `fullscreen` always fills the display.
+- A lone window is limited by one `single-window-aspect-ratio` (width as a multiple of height; 0, the default, fills the width) on every display, instead of the `fullscreen-width` and `lone-window-width` percentages. The ratio, like the alignment, can be overridden per display in a `[display.<pattern>]` table, and is a Settings control. `fullscreen` always fills the display.
 - Windows always ease toward the fingers over 40 ms (off while Reduce Motion is on); `gesture-smoothing` and `gesture-sensitivity` no longer exist. `fullscreen-width`, `lone-window-width` and those two keys are ignored with a note in `doctor` when a config still sets them.
 - The minimap is compact: window cards sized to the strip at true scale (a 64 pt row; a window that keeps its own height or is free-size is drawn at its real height and position), an accent frame around the visible part, no scroller or position bar.
 - Commands no longer force a full window reread when the model is current: `focus left/right` p50 81 → 48 ms.

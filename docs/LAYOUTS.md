@@ -115,9 +115,9 @@ leaving the strip; `macos-native-fullscreen` gives it a macOS fullscreen Space.
 ## Lone window
 
 A lone tiled window is at most `single-window-aspect-ratio` times as wide as it is tall
-(default 1.6; 0 fills the width) and is placed by `single-window-alignment`, per display with
-`[display.<pattern>]` tables. On an ultrawide display that keeps it a comfortable shape;
-on a display narrower than the ratio it already fills the width. The [ultrawide diagram](assets/layouts/ultrawide.svg)
+(default 0, which fills the width) and is placed by `single-window-alignment`, per display with
+`[display.<pattern>]` tables. On an ultrawide display a ratio such as 1.6 keeps it a comfortable
+shape; on a display narrower than the ratio it already fills the width. The [ultrawide diagram](assets/layouts/ultrawide.svg)
 illustrates this behavior.
 
 ## Undo

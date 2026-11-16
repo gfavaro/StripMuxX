@@ -120,14 +120,14 @@ A window alone on a desktop is limited to a shape, not a share of the screen wid
 the same on a laptop and on an ultrawide:
 
 ```toml
-single-window-aspect-ratio = 1.6   # at most 1.6 times as wide as it is tall; 0 fills the width
+single-window-aspect-ratio = 1.6   # at most 1.6 times as wide as it is tall; 0 (default) fills the width
 single-window-alignment = 'center' # center | left | right
 
 [display.'Built-in']
 single-window-aspect-ratio = 1.2
 ```
 
-`single-window-aspect-ratio` accepts `0` to `6`; the default is `1.6` (a 16:10 window).
+`single-window-aspect-ratio` accepts `0` to `6`; the default is `0`, which lets a lone window fill the width, and `1.6` is a 16:10 window.
 Known application minimum widths take priority, up to the available width. A second column
 ends the limit. A `[display.<pattern>]` table overrides the ratio and the alignment for one
 display, and omitted keys inherit the global values; named display patterns beat
