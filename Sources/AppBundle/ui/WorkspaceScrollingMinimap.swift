@@ -145,41 +145,66 @@ final class WorkspaceScrollingMinimap: NSObject {
         // Avoid repeated WindowServer transactions for a stationary overlay.
         if panel.frame.size != frame.size { panel.setContentSize(frame.size) }
         if panel.frame.origin != frame.origin { panel.setFrameOrigin(frame.origin) }
-        let view: ScrollingMinimapView
-        if let existing = self.view { view = existing }
-        else {
-            let effect = NSVisualEffectView(frame: CGRect(origin: .zero, size: frame.size))
-            effect.autoresizingMask = [.width, .height]
-            effect.material = .hudWindow
-            effect.blendingMode = .behindWindow
-            effect.state = .active
-            effect.wantsLayer = true
-            effect.layer?.cornerRadius = 14
-            effect.layer?.masksToBounds = true
-            if NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
-                effect.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-            }
-            view = ScrollingMinimapView(frame: effect.bounds)
-            view.autoresizingMask = [.width, .height]
-            view.selected = { [weak self] id in self?.selectGroup(id) }
-            view.floatingSelected = { [weak self] id in
-                guard let self, let window = Window.get(byId: id), window.focusWindow() else { return }
-                runtime.native.focusDidMove(to: window)
-                if let workspace = self.workspace { self.show(workspace) }
-            }
-            view.hoverChanged = { [weak self] hovered in
-                guard let self else { return }
-                self.lifetime.hover(hovered, at: self.now)
-                self.panel?.alphaValue = 1
-                self.scheduleDismissal()
-            }
-            view.dismissRequested = { [weak self] in self?.dismiss() }
-            effect.addSubview(view)
-            panel.contentView = effect
-            self.view = view
-        }
+        let view = self.view ?? installView(in: panel, size: frame.size)
         let targetViewFrame = CGRect(origin: .zero, size: frame.size)
         if view.frame != targetViewFrame { view.frame = targetViewFrame }
+        bindSelection(of: view, to: workspace)
+        let groups = workspace.scrollingStripUnits
+        let pinnedColumn = workspace.pinnedScrollingColumn
+        let representatives = (groups + (pinnedColumn.map { [$0] } ?? [])).compactMap(\.mostRecentWindowRecursive)
+            + floatingWindows
+        let models = groups.map { tile($0, in: workspace) }
+        var pinned = pinnedColumn.map { tile($0, in: workspace) }
+        pinned?.pinned = workspace.scrollingPinSide
+        let floating = floatingWindows.map { window in
+            cacheIcon(of: window.app)
+            return ScrollingMinimapFloatingWindow(windowId: window.windowId, pid: window.app.pid,
+                title: cachedWindowTitle(for: window) ?? window.app.name ?? "Window",
+                focused: focus.windowOrNil === window)
+        }
+        view.update(workspaceName: userFacingDesktopName(workspace), models: models, pinned: pinned,
+                    floating: floating, icons: icons,
+                    metrics: workspace.scrollingMetrics, offset: workspace.scrollingOffset,
+                    focused: focus.windowOrNil.flatMap { $0.nodeWorkspace === workspace ? ObjectIdentifier($0.topLevelWorkspaceGroup) : nil })
+        refreshTitles(representatives, in: workspace)
+    }
+
+    /// The panel's blurred background and the minimap view in it, built once and reused.
+    private func installView(in panel: NSPanel, size: CGSize) -> ScrollingMinimapView {
+        let effect = NSVisualEffectView(frame: CGRect(origin: .zero, size: size))
+        effect.autoresizingMask = [.width, .height]
+        effect.material = .hudWindow
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = 14
+        effect.layer?.masksToBounds = true
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
+            effect.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        }
+        let view = ScrollingMinimapView(frame: effect.bounds)
+        view.autoresizingMask = [.width, .height]
+        view.floatingSelected = { [weak self] id in
+            guard let self, let window = Window.get(byId: id), window.focusWindow() else { return }
+            runtime.native.focusDidMove(to: window)
+            if let workspace = self.workspace { self.show(workspace) }
+        }
+        view.hoverChanged = { [weak self] hovered in
+            guard let self else { return }
+            self.lifetime.hover(hovered, at: self.now)
+            self.panel?.alphaValue = 1
+            self.scheduleDismissal()
+        }
+        view.dismissRequested = { [weak self] in self?.dismiss() }
+        effect.addSubview(view)
+        panel.contentView = effect
+        self.view = view
+        return view
+    }
+
+    /// Selecting or reordering acts only while `workspace` is still the one, in the same shape,
+    /// that this minimap was drawn for; a stale panel can never change another strip.
+    private func bindSelection(of view: ScrollingMinimapView, to workspace: Workspace) {
         let expectedEpoch = workspace.scrollingSessionEpoch
         let expectedTopology = workspace.scrollingTopologySignature
         view.selected = { [weak self, weak workspace] id in
@@ -197,53 +222,37 @@ final class WorkspaceScrollingMinimap: NSObject {
             workspace.moveScrollingColumn(id, toStripIndex: index)
             self.modelDidChange()
         }
-        let groups = workspace.scrollingStripUnits
-        let pinnedColumn = workspace.pinnedScrollingColumn
-        let representatives = (groups + (pinnedColumn.map { [$0] } ?? [])).compactMap(\.mostRecentWindowRecursive)
-            + floatingWindows
-        func tile(_ group: TreeNode) -> ScrollingMinimapTile {
-            let windows = group.allLeafWindowsRecursive
-            let window = group.mostRecentWindowRecursive
-            var pids: [Int32] = []
-            for member in windows where !pids.contains(member.app.pid) {
-                pids.append(member.app.pid)
-                if icons[member.app.pid] == nil {
-                    icons[member.app.pid] = (member.app as? MacApp)?.nsApp.icon
-                        ?? NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
-                }
-            }
-            let title = window.flatMap { member -> String? in
-                cachedWindowTitle(for: member) ?? member.app.name
-            } ?? "Empty column"
-            // Where a lone window really sits, if it is not the column's full height.
-            var vertical: ClosedRange<CGFloat> = 0...1
-            let area = workspace.scrollingMetrics.geometry.area
-            if windows.count == 1, let rect = windows[0].lastAppliedLayoutPhysicalRect, area.height > 1 {
-                let top = min(max((rect.minY - area.minY) / area.height, 0), 0.85)
-                let height = min(max(rect.height / area.height, 0.15), 1 - top)
-                if top > 0.02 || height < 0.98 { vertical = top...(top + height) }
-            }
-            return ScrollingMinimapTile(id: ObjectIdentifier(group),
-                title: title, applications: pids, count: windows.count,
-                freeSize: windows.count == 1 && windows[0].freeSizeRect != nil, vertical: vertical)
+    }
+
+    /// One column as the minimap shows it: its apps, title and, for a lone window that does not
+    /// fill the column, where it really sits.
+    private func tile(_ group: TreeNode, in workspace: Workspace) -> ScrollingMinimapTile {
+        let windows = group.allLeafWindowsRecursive
+        let window = group.mostRecentWindowRecursive
+        var pids: [Int32] = []
+        for member in windows where !pids.contains(member.app.pid) {
+            pids.append(member.app.pid)
+            cacheIcon(of: member.app)
         }
-        let models = groups.map(tile)
-        var pinned = pinnedColumn.map(tile)
-        pinned?.pinned = workspace.scrollingPinSide
-        let floating = floatingWindows.map { window in
-            if icons[window.app.pid] == nil {
-                icons[window.app.pid] = (window.app as? MacApp)?.nsApp.icon
-                    ?? NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
-            }
-            return ScrollingMinimapFloatingWindow(windowId: window.windowId, pid: window.app.pid,
-                title: cachedWindowTitle(for: window) ?? window.app.name ?? "Window",
-                focused: focus.windowOrNil === window)
+        let title = window.flatMap { member -> String? in
+            cachedWindowTitle(for: member) ?? member.app.name
+        } ?? "Empty column"
+        // Where a lone window really sits, if it is not the column's full height.
+        var vertical: ClosedRange<CGFloat> = 0...1
+        let area = workspace.scrollingMetrics.geometry.area
+        if windows.count == 1, let rect = windows[0].lastAppliedLayoutPhysicalRect, area.height > 1 {
+            let top = min(max((rect.minY - area.minY) / area.height, 0), 0.85)
+            let height = min(max(rect.height / area.height, 0.15), 1 - top)
+            if top > 0.02 || height < 0.98 { vertical = top...(top + height) }
         }
-        view.update(workspaceName: userFacingDesktopName(workspace), models: models, pinned: pinned,
-                    floating: floating, icons: icons,
-                    metrics: workspace.scrollingMetrics, offset: workspace.scrollingOffset,
-                    focused: focus.windowOrNil.flatMap { $0.nodeWorkspace === workspace ? ObjectIdentifier($0.topLevelWorkspaceGroup) : nil })
-        refreshTitles(representatives, in: workspace)
+        return ScrollingMinimapTile(id: ObjectIdentifier(group),
+            title: title, applications: pids, count: windows.count,
+            freeSize: windows.count == 1 && windows[0].freeSizeRect != nil, vertical: vertical)
+    }
+
+    private func cacheIcon(of app: any AbstractApp) {
+        guard icons[app.pid] == nil else { return }
+        icons[app.pid] = (app as? MacApp)?.nsApp.icon ?? NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
     }
 
     private func refreshTitles(_ windows: [Window], in workspace: Workspace) {
