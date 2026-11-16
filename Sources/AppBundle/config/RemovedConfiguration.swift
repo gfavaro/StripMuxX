@@ -8,7 +8,7 @@ import TOMLKit
 /// Root keys of removed features.
 let removedRootConfigKeys: Set<String> = [
     "after-login-command", "animations", "auto-add-new-windows-to-tab-group", "automatically-unhide-macos-hidden-apps",
-    "borders", "default-root-container-layout", "default-root-container-orientation", "dimming", "drag-stack-layout",
+    "default-root-container-layout", "default-root-container-orientation", "dimming", "drag-stack-layout",
     "enable-normalization-flatten-containers", "enable-normalization-opposite-orientation-for-nested-containers",
     "enable-shake-to-toggle-tiling", "focus-follows-mouse", "focus-follows-mouse-dwell", "follow-app-activation",
     "hover-bar", "indent-for-nested-containers-with-the-same-orientation", "master",
