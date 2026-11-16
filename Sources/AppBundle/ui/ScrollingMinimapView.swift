@@ -70,7 +70,7 @@ final class ScrollingMinimapView: NSView {
         addSubview(scrollView)
         addSubview(viewport)
         dropIndicator.wantsLayer = true
-        dropIndicator.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
+        dropIndicator.layer?.backgroundColor = winMuxEmphasisColor.cgColor
         dropIndicator.layer?.cornerRadius = 2
         dropIndicator.isHidden = true
         dropIndicator.setAccessibilityElement(false)
@@ -155,6 +155,7 @@ final class ScrollingMinimapView: NSView {
         previousOffset = offset
         previousViewportMidX = map.viewport.midX
         updateViewportFrame()
+        dropIndicator.layer?.backgroundColor = winMuxEmphasisColor.cgColor
         viewport.needsDisplay = true
         needsDisplay = true
     }
@@ -328,10 +329,10 @@ final class ScrollingMinimapView: NSView {
             let font = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .semibold)
             let width = (columnPosition as NSString).size(withAttributes: [.font: font]).width + 16
             let pill = CGRect(x: bounds.width - 16 - width, y: 7, width: width, height: 18)
-            NSColor.controlAccentColor.withAlphaComponent(0.18).setFill()
+            winMuxEmphasisColor.withAlphaComponent(0.18).setFill()
             NSBezierPath(roundedRect: pill, xRadius: 9, yRadius: 9).fill()
             drawMinimapText(columnPosition, in: pill.insetBy(dx: 8, dy: 2.5), font: font,
-                            color: .controlAccentColor, alignment: .center)
+                            color: winMuxEmphasisColor, alignment: .center)
         }
         if floatingLabelVisible {
             drawMinimapText("Floating", in: CGRect(x: 16, y: bounds.height - 23 - scrollingMinimapFloatingRowHeight + 7,
@@ -460,7 +461,7 @@ final class ScrollingMinimapButton: NSButton {
         // A miniature window: a card with a title bar, the app's icon and its title.
         let tile = bounds.insetBy(dx: 2, dy: 2)
         let path = NSBezierPath(roundedRect: tile, xRadius: 8, yRadius: 8)
-        let accent = NSColor.controlAccentColor
+        let accent = winMuxEmphasisColor
         (focused ? accent.withAlphaComponent(0.22)
             : isHighlighted ? accent.withAlphaComponent(0.14)
             : NSColor.labelColor.withAlphaComponent(0.07)).setFill()
@@ -576,11 +577,11 @@ final class ScrollingMinimapFloatingChip: NSButton {
 
     override func draw(_ dirtyRect: NSRect) {
         let chip = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 12, yRadius: 12)
-        (model.focused ? NSColor.controlAccentColor.withAlphaComponent(0.22)
-            : isHighlighted ? NSColor.controlAccentColor.withAlphaComponent(0.14)
+        (model.focused ? winMuxEmphasisColor.withAlphaComponent(0.22)
+            : isHighlighted ? winMuxEmphasisColor.withAlphaComponent(0.14)
             : NSColor.labelColor.withAlphaComponent(0.07)).setFill()
         chip.fill()
-        (model.focused ? NSColor.controlAccentColor : NSColor.labelColor.withAlphaComponent(0.16)).setStroke()
+        (model.focused ? winMuxEmphasisColor : NSColor.labelColor.withAlphaComponent(0.16)).setStroke()
         chip.lineWidth = model.focused ? 1.5 : 1
         chip.stroke()
         icon?.draw(in: CGRect(x: 6, y: 4, width: 16, height: 16), from: .zero, operation: .sourceOver,
@@ -596,9 +597,9 @@ private final class ScrollingMinimapViewport: NSView {
     override func draw(_ dirtyRect: NSRect) {
         // The part of the strip on screen: a soft accent frame around those columns.
         let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 10, yRadius: 10)
-        NSColor.controlAccentColor.withAlphaComponent(0.06).setFill()
+        winMuxEmphasisColor.withAlphaComponent(0.06).setFill()
         outline.fill()
-        NSColor.controlAccentColor.withAlphaComponent(0.6).setStroke()
+        winMuxEmphasisColor.withAlphaComponent(0.6).setStroke()
         outline.lineWidth = 1.5
         outline.stroke()
     }
