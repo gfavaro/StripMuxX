@@ -56,16 +56,41 @@ series of commits. See [implementation status](SCROLL_FEEL_IMPLEMENTATION_STATUS
 
 ## Window borders
 
-StripMuxX restores the default WinMuxX-style **focused window outline**:
-a click-through, 4-point macOS accent border around the focused managed window.
-The border tracks focus, follows window and strip movement, and disappears
-when tiling is suspended, the window is hidden, or its Space is no longer
-active. It does not move, resize or activate any window.
+The WinMuxX border engine is restored: native eight-piece WindowServer borders,
+continuous rounded vector paths, backing-pixel alignment at 1× and Retina scale,
+native WindowServer order matching, and the original click-through AppKit fallback.
+Borders follow visible, managed windows as the strip moves and across native
+Spaces. Native Space transitions and Mission Control hide stale overlays.
+Dialogs and non-document utility surfaces are excluded using the original
+WinMuxX document-window filter; floating windows continue floating.
 
-This initial port uses an AppKit panel, not WinMuxX's private WindowServer
-renderer. The original inactive-color, width, order, exclude-apps settings
-and per-window corner radii have **not yet been ported**. No compile or
-physical validation has been run for this commit series.
+The original WinMuxX options are supported in the TOML config and in
+**Settings → Appearance → Window borders**:
+
+```toml
+# Optional. Leave unset to follow the system accent color.
+# accent-color = '#5E9EFF'
+
+[borders]
+enabled = true
+width = 4
+active-color = 'accent'
+inactive-color = '#00000000'
+order = 'below'
+exclude-apps = []
+```
+
+Colors accept `accent`, `#RRGGBB`, or `#RRGGBBAA`; widths may be fractional.
+When the native renderer cannot operate on the current macOS version, the
+same original WinMuxX fallback panels render the same vector border geometry.
+Unlike WinMuxX, StripMuxX has no tab-bar or virtual-workspace chrome to surround.
+The native engine and its rendering tests are copied from WinMuxX; the native
+Space lifecycle adapter is specific to StripMuxX.
+
+**Verification status:** source-only port; no macOS compilation, hardware test,
+or `make check` was run in this commit series. Physically verify fullscreen,
+Mission Control, Space switches, external displays, fractional widths, dragging,
+and the native-to-fallback transition before considering this release-ready.
 
 ## Floating and fullscreen
 
