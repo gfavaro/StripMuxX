@@ -2,24 +2,24 @@
 import AppKit
 import XCTest
 
+/// StripMuxX must use the same renderer primitives as WinMuxX, not the
+/// superseded single-panel stroke approximation.
 @MainActor
 final class NativeWindowBorderTest: XCTestCase {
-    func testBorderFrameExpandsOutsideTheWindowWithoutChangingWindowGeometry() {
-        let window = CGRect(x: 100, y: 200, width: 600, height: 400)
-        let border = NativeWindowBorder.panelFrame(for: window, mainDisplayHeight: 1200)
-        XCTAssertEqual(border.minX, 96)
-        XCTAssertEqual(border.minY, 596)
-        XCTAssertEqual(border.width, 608)
-        XCTAssertEqual(border.height, 408)
-        XCTAssertEqual(window, CGRect(x: 100, y: 200, width: 600, height: 400))
+    func testDefaultsMatchWinMuxX() {
+        let options = WindowBordersConfig()
+        XCTAssertTrue(options.enabled)
+        XCTAssertEqual(options.width, 4)
+        XCTAssertEqual(options.activeColor, "accent")
+        XCTAssertEqual(options.inactiveColor, "#00000000")
+        XCTAssertEqual(options.order, .below)
+        XCTAssertEqual(options.excludeApps, [])
     }
 
-    func testBorderCoordinateConversionHandlesSecondaryDisplayAtNegativeCoordinates() {
-        let window = CGRect(x: -1200, y: -150, width: 500, height: 350)
-        let border = NativeWindowBorder.panelFrame(for: window, mainDisplayHeight: 1080)
-        XCTAssertEqual(border.minX, -1204)
-        XCTAssertEqual(border.minY, 876)
-        XCTAssertEqual(border.size.width, 508)
-        XCTAssertEqual(border.size.height, 358)
+    func testFocusedBorderUsesContinuousVectorGeometry() {
+        let size = CGSize(width: 608, height: 408)
+        let geometry = WindowBorderGeometry(size: size, radius: 12, width: 4, scale: 2)
+        XCTAssertEqual(geometry.key.size, size)
+        XCTAssertFalse(geometry.path.isEmpty)
     }
 }
