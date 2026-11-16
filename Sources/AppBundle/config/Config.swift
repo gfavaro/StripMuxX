@@ -32,7 +32,14 @@ var defaultConfigUrl: URL {
 // Domain accessors; storage and lifetime belong to the runtime.
 @MainActor var config: Config {
     get { runtime.configuration.value }
-    set { runtime.configuration.value = newValue }
+    set {
+        let previousBorders = runtime.configuration.value.windowBorders
+        let previousAccent = runtime.configuration.value.accentColor
+        runtime.configuration.value = newValue
+        if previousBorders != newValue.windowBorders || previousAccent != newValue.accentColor {
+            NativeWindowBorder.shared.resume()
+        }
+    }
 }
 @MainActor var configUrl: URL {
     get { runtime.configuration.url }
