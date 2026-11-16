@@ -12,6 +12,13 @@ struct ShortcutAppearanceSettingsView: View {
     @SettingsDraft("gaps.outer.top", load: { settingsConstantValue(config.gaps.outer.top) }) private var outerTopGap: Int
     @SettingsDraft("gaps.outer.bottom", load: { settingsConstantValue(config.gaps.outer.bottom) }) private var outerBottomGap: Int
 
+    @SettingsDraft("borders.enabled", load: { config.windowBorders.enabled }) private var bordersEnabled: Bool
+    @SettingsDraft("borders.width", load: { String(config.windowBorders.width) }) private var borderWidth: String
+    @SettingsDraft("borders.active-color", load: { config.windowBorders.activeColor }) private var activeBorderColor: String
+    @SettingsDraft("borders.inactive-color", load: { config.windowBorders.inactiveColor }) private var inactiveBorderColor: String
+    @SettingsDraft("borders.order", load: { config.windowBorders.order }) private var borderOrder: WindowBorderOrder
+    @SettingsDraft("borders.exclude-apps", load: { config.windowBorders.excludeApps.joined(separator: ", ") }) private var excludedBorderApps: String
+
     @State private var showsInnerSpacing = false
     @State private var showsOuterSpacing = false
     @Environment(\.settingsSearchTarget) private var searchTarget
@@ -49,6 +56,42 @@ struct ShortcutAppearanceSettingsView: View {
             }
 
 
+
+            SettingsSection("Window borders") {
+                Text("WinMuxX’s native eight-piece borders, with the same AppKit fallback if WindowServer rendering is unavailable.")
+                    .font(.callout).foregroundStyle(.secondary)
+                SettingsToggle("Draw window borders", id: "borders.enabled", isOn: $bordersEnabled,
+                               help: "Click-through native borders around visible managed windows.") {
+                    persist("borders", "enabled", bordersEnabled ? "true" : "false")
+                }
+                SettingsTextField("Border width (points)", id: "borders.width", text: $borderWidth,
+                                  help: "Fractional point widths are supported.", validate: borderWidthError) {
+                    if let value = Double(borderWidth), value.isFinite, value >= 0 {
+                        persist("borders", "width", String(value))
+                    }
+                }
+                SettingsTextField("Focused color", id: "borders.active-color", text: $activeBorderColor,
+                                  help: "accent, #RRGGBB or #RRGGBBAA.", validate: borderColorError) {
+                    if let color = normalizedWindowBorderColor(activeBorderColor) {
+                        persist("borders", "active-color", "'\\(color)'")
+                    }
+                }
+                SettingsTextField("Unfocused color", id: "borders.inactive-color", text: $inactiveBorderColor,
+                                  help: "Transparent by default: #00000000.", validate: borderColorError) {
+                    if let color = normalizedWindowBorderColor(inactiveBorderColor) {
+                        persist("borders", "inactive-color", "'\\(color)'")
+                    }
+                }
+                SettingsPicker("Drawing order", id: "borders.order", selection: $borderOrder,
+                               help: "Below follows WinMuxX's default; above draws over the app.") {
+                    Text("Below window").tag(WindowBorderOrder.below)
+                    Text("Above window").tag(WindowBorderOrder.above)
+                } onChange: { persist("borders", "order", "'\\(borderOrder.rawValue)'") }
+                SettingsTextField("Exclude apps (bundle IDs)", id: "borders.exclude-apps",
+                                  text: $excludedBorderApps, help: "Comma-separated bundle identifiers.") {
+                    persist("borders", "exclude-apps", tomlCommaSeparatedStringArray(excludedBorderApps))
+                }
+            }
 
             SettingsSection("Window spacing") {
                 if hasPerMonitorGaps {
@@ -114,4 +157,15 @@ private func settingsConstantValue(_ value: DynamicConfigValue<Int>) -> Int {
         case .constant(let value): value
         case .perMonitor(_, let `default`): `default`
     }
+}
+
+private func borderWidthError(_ raw: String) -> String? {
+    guard let width = Double(raw), width.isFinite, width >= 0 else {
+        return "Enter a finite width of zero or more points."
+    }
+    return nil
+}
+
+private func borderColorError(_ raw: String) -> String? {
+    normalizedWindowBorderColor(raw) == nil ? "Use accent, #RRGGBB or #RRGGBBAA." : nil
 }
