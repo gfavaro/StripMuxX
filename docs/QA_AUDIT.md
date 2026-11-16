@@ -457,6 +457,24 @@ give a real first run on an account that has never seen the app.
 Everything opened in the helper was closed and its install moved aside (`atlas cleanup
 --apply`); its two earlier windows were not touched.
 
+## Two displays (build 85; built-in 1710x1112 plus S34CG50 3440x1440 above it, one desktop each)
+
+Run with three disposable fixture windows and a baseline of all 50 windows (frames) taken first.
+At the end every window was identical to the baseline and focus was back where it started.
+
+| Check | Result |
+| --- | --- |
+| Fixtures open on the built-in | Its strip grew 3 to 6 columns; display 2 stayed at 3 and none of its windows moved |
+| `move-node-to-monitor S34CG50` | Display 2 went to 4 columns, the built-in to 5; the window landed inside display 2 (x 814, y -1406, 1714x1402) with no overlap with its neighbours (5 pt gap). Display 2's own windows shifted 0 to 2 pt as the strip re-flowed |
+| Border on the moved window | Pieces at x=810 and x=2527, exactly on its left and right edges |
+| Minimap and cheat sheet with focus on display 2 | Both centred on display 2 (minimap near its bottom centre, sheet at its centre), not on the built-in |
+| `focus-monitor down / up / next / prev` | Each landed on the right display's window |
+| `move-node-to-monitor down` | Back to the built-in; 3 and 6 columns |
+| Option pan with the pointer over display 2 | Display 2's strip scrolled 625 pt; display 1's windows did not move. A pan toward a strip's end does nothing; reversed afterwards to the exact baseline |
+
+Not tested: unplugging or plugging a display, display arrangement changes, desktop switching,
+Mission Control, sleep/wake, fullscreen on the second display.
+
 ## Gesture smoothing experiment (build 85; `scrolling.gesture-smoothing`, default 0 = off)
 
 Ten flick-shaped gestures (7 steps of about 140 pt, like a fast three-finger swipe), traced with
