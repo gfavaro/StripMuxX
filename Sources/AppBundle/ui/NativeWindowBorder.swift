@@ -17,6 +17,10 @@ final class NativeWindowBorder {
     private var isSuspended = false
     private var documentWindowCache: [UInt32: Bool] = [:]
     private var lastDragLocation: CGPoint?
+    /// Owns the display-link subscription that follows a moving strip.
+    private final class MotionOwner {}
+    private let motionOwner = MotionOwner()
+    private var motionDeadline: CFTimeInterval = 0
 
     var backendDiagnosticSummary: String {
         let native = borders.values.filter(\.usesNativeBackend).count
@@ -43,6 +47,8 @@ final class NativeWindowBorder {
         for border in borders.values { border.hide() }
         for border in spareBorders { border.hide() }
         DisplayRefreshDriver.shared.remove(owner: self)
+        DisplayRefreshDriver.shared.remove(owner: motionOwner)
+        motionDeadline = 0
     }
 
     func refresh() {
@@ -139,6 +145,24 @@ final class NativeWindowBorder {
         }
     }
 
+    /// A strip that is panning or settling moves its windows through asynchronous AX
+    /// writes, so a refresh when the layout returns reads where the windows were. Follow
+    /// the WindowServer frames every display frame instead, until the strip has been still
+    /// for `settle` seconds.
+    func followStripMotion(settle: CFTimeInterval = 0.35) {
+        guard !isUnitTest, !isSuspended, config.windowBorders.enabled else { return }
+        let alreadyFollowing = motionDeadline > CACurrentMediaTime()
+        motionDeadline = CACurrentMediaTime() + settle
+        guard !alreadyFollowing else { return }
+        DisplayRefreshDriver.shared.add(owner: motionOwner) { [weak self] _ in
+            guard let self else { return }
+            self.refresh()
+            if CACurrentMediaTime() >= self.motionDeadline || self.isSuspended {
+                DisplayRefreshDriver.shared.remove(owner: self.motionOwner)
+            }
+        }
+    }
+
     func endDragging() {
         lastDragLocation = nil
         DisplayRefreshDriver.shared.remove(owner: self)
@@ -149,6 +173,8 @@ final class NativeWindowBorder {
         lastDragLocation = nil
         documentWindowCache.removeAll()
         DisplayRefreshDriver.shared.remove(owner: self)
+        DisplayRefreshDriver.shared.remove(owner: motionOwner)
+        motionDeadline = 0
         for border in borders.values { border.destroy() }
         for border in spareBorders { border.destroy() }
         borders.removeAll()

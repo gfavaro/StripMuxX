@@ -48,14 +48,14 @@ final class NativeWorkspaceLifecycle {
             guard let owner else { return }
             owner.withValue {
                 owner.native.writeAuthority.invalidate()
-                owner.native.tiling.invalidate("WindowServer event")
+                owner.native.tiling.invalidate("WindowServer event", spacesMayChange: false)
             }
         }
         observer.onWindowClosed = { [weak owner] id in
             guard let owner else { return }
             owner.withValue {
                 owner.native.writeAuthority.invalidate()
-                owner.native.tiling.invalidate("window closed")
+                owner.native.tiling.invalidate("window closed", spacesMayChange: false)
                 owner.native.windows.invalidate()
                 guard let window = MacWindow.allWindowsMap[id] else { return }
                 let workspace = window.nodeWorkspace
@@ -70,7 +70,8 @@ final class NativeWorkspaceLifecycle {
             defer { nativePanTiming.record("observation change", start.duration(to: .now)) }
             owner.withValue {
                 self.writeAuthority.invalidate()
-                self.tiling.invalidate("read: \(event)")
+                let shown = inventory.currentSnapshot.map { Set($0.displays.map(\.activeSpaceID)) }
+                self.tiling.invalidate("read: \(event)", spacesMayChange: shown != Set(self.layouts.currentBySpaceID.keys))
                 self.windows.invalidate()
                 for window in MacWindow.allWindows { window.suspendMinimumObservationForMotion() }
                 self.layouts.reconcile(inventory, displays: owner.displays.all())

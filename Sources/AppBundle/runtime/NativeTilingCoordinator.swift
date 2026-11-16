@@ -43,12 +43,14 @@ final class NativeTilingCoordinator {
         hasCompletedInitialLayout = true
     }
 
-    func invalidate(_ reason: String = "other") {
+    /// `spacesMayChange` is false only for a read whose displays still show the same
+    /// desktops: borders then stay put, since hiding them would blink on every read.
+    func invalidate(_ reason: String = "other", spacesMayChange: Bool = true) {
         // A native Space/window lifecycle change can invalidate the drag's
         // identity even while the mouse is down. Do not leave overlay panels
         // on a different Space after that transition.
         dragPreview.hide()
-        NativeWindowBorder.shared.hide()
+        if spacesMayChange { NativeWindowBorder.shared.hide() }
         nativePanTiming.count("invalidate: \(reason)")
         generation &+= 1
         ready = false
@@ -202,6 +204,9 @@ final class NativeTilingCoordinator {
             return runtime.native.observation?.requestRead(event: "nativeScrolling") ?? ()
         }
         scrollingLayoutRequests.request(target)
+        // The frames are only requested; follow the windows as they actually move,
+        // from the first step of a pan rather than once its layouts drain.
+        NativeWindowBorder.shared.followStripMotion()
         if scrollingLayoutTask != nil { scrollingLayoutPending = true; return }
         scrollingLayoutTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -221,7 +226,7 @@ final class NativeTilingCoordinator {
                     noteScrollingLayout(start.duration(to: .now), during: workspace.scrollingGestureMotionActive)
                 }
             } while scrollingLayoutPending
-            NativeWindowBorder.shared.refresh()
+            NativeWindowBorder.shared.followStripMotion()
             scrollingLayoutTask = nil
             // Scrolling, column reordering and resizing bypass accept(), which
             // is otherwise the only place that persists a desktop layout.
