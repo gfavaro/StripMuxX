@@ -84,6 +84,14 @@ final class NativeScrollingPan {
 
     /// Returns whether the event belongs to a pan and must not reach the app.
     func handle(_ scroll: Scroll) -> Bool {
+        if absorbsLeftoverResizeScroll(scroll) { return true }
+        if let workspace { return continueGesture(scroll, in: workspace) }
+        return beginGesture(scroll)
+    }
+
+    /// After a column resize ends, the fingers' remaining scroll events (and macOS's momentum)
+    /// belong to nobody: swallow them so they cannot start a pan or reach the app below.
+    private func absorbsLeftoverResizeScroll(_ scroll: Scroll) -> Bool {
         if awaitingIdleResizeLift, workspace == nil {
             if scroll.phase == 1 && scroll.momentumPhase == 0 {
                 awaitingIdleResizeLift = false
@@ -102,54 +110,61 @@ final class NativeScrollingPan {
             }
             absorbingResizeMomentum = false
         }
-        if let workspace {
-            // A stale Space, display or session cannot own any further scroll events.
-            // Do not focus another column while cancelling a superseded interaction.
-            guard workspace.isVisible, workspace.scrollingSessionEpoch == gestureEpoch,
-                  workspace.workspaceMonitor.displayUUID == gestureMonitor,
-                  config.scrolling.gestureEnabled, TrayMenuModel.shared.isEnabled,
-                  nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else {
-                cancel()
-                lastDecision = "gesture cancelled: desktop or session changed"
-                return false
-            }
-            if resizingColumn {
-                // Direct resize ends with the fingers, not with kinetic momentum:
-                // coasting should never continue to alter a window's size.
-                if scroll.phase == 4 || scroll.momentumPhase != 0 {
-                    settle()
-                    absorbingResizeMomentum = scroll.momentumPhase != 3
-                    return true
-                }
-                if scroll.phase == 1 && !scroll.resizeOnly {
-                    cancel()
-                    return false
-                }
-                guard scroll.resizeOnly, let window = resizeWindow,
-                      window.nodeWorkspace === workspace, window.parent is TilingContainer else {
-                    cancel()
-                    return false
-                }
-                resizeFocusedColumn(window, in: workspace, by: scroll.deltaX)
-                settleWhenIdle()
+        return false
+    }
+
+    /// A scroll event for the gesture already in progress on `workspace`.
+    private func continueGesture(_ scroll: Scroll, in workspace: Workspace) -> Bool {
+        // A stale Space, display or session cannot own any further scroll events.
+        // Do not focus another column while cancelling a superseded interaction.
+        guard workspace.isVisible, workspace.scrollingSessionEpoch == gestureEpoch,
+              workspace.workspaceMonitor.displayUUID == gestureMonitor,
+              config.scrolling.gestureEnabled, TrayMenuModel.shared.isEnabled,
+              nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else {
+            cancel()
+            lastDecision = "gesture cancelled: desktop or session changed"
+            return false
+        }
+        if resizingColumn {
+            // Direct resize ends with the fingers, not with kinetic momentum:
+            // coasting should never continue to alter a window's size.
+            if scroll.phase == 4 || scroll.momentumPhase != 0 {
+                settle()
+                absorbingResizeMomentum = scroll.momentumPhase != 3
                 return true
             }
-            // A new non-Option gesture belongs to the foreground app. Never snap
-            // focus to another window as a side effect of that unrelated gesture.
-            if scroll.momentumPhase == 0, scroll.phase == 1, !scroll.optionOnly {
+            if scroll.phase == 1 && !scroll.resizeOnly {
                 cancel()
                 return false
             }
-            // Finger lift may precede macOS momentum by a few frames.
-            // Don't settle the camera or focus while waiting for that handoff.
-            if scroll.momentumPhase == 3 {
-                settle()
-            } else {
-                pan(workspace, by: scroll.deltaX)
-                settleWhenIdle(awaitingMomentum: scroll.phase == 4)
+            guard scroll.resizeOnly, let window = resizeWindow,
+                  window.nodeWorkspace === workspace, window.parent is TilingContainer else {
+                cancel()
+                return false
             }
+            resizeFocusedColumn(window, in: workspace, by: scroll.deltaX)
+            settleWhenIdle()
             return true
         }
+        // A new non-Option gesture belongs to the foreground app. Never snap
+        // focus to another window as a side effect of that unrelated gesture.
+        if scroll.momentumPhase == 0, scroll.phase == 1, !scroll.optionOnly {
+            cancel()
+            return false
+        }
+        // Finger lift may precede macOS momentum by a few frames.
+        // Don't settle the camera or focus while waiting for that handoff.
+        if scroll.momentumPhase == 3 {
+            settle()
+        } else {
+            pan(workspace, by: scroll.deltaX)
+            settleWhenIdle(awaitingMomentum: scroll.phase == 4)
+        }
+        return true
+    }
+
+    /// A scroll event with no gesture in progress: starts a pan or a column resize if it qualifies.
+    private func beginGesture(_ scroll: Scroll) -> Bool {
         guard (scroll.optionOnly || scroll.resizeOnly), scroll.isContinuous,
               scroll.momentumPhase == 0 else { return false }
         guard config.scrolling.gestureEnabled, TrayMenuModel.shared.isEnabled else {
