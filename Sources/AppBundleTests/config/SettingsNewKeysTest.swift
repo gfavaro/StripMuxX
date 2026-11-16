@@ -21,6 +21,12 @@ final class SettingsNewKeysTest: XCTestCase {
             ("scrolling", "three-finger-swipe", "true"),
             ("native-spaces", "restore-layouts", "false"),
             ("native-spaces", "restore-frames-on-quit", "false"),
+            ("borders", "enabled", "true"),
+            ("borders", "width", "4.5"),
+            ("borders", "active-color", "'accent'"),
+            ("borders", "inactive-color", "'#494D6480'"),
+            ("borders", "order", "'above'"),
+            ("borders", "exclude-apps", "['com.apple.finder']"),
         ])
         XCTAssertEqual(config.scrolling.centerFocusedColumn, .onOverflow)
         XCTAssertEqual(config.scrolling.edgePreview, 12)
@@ -29,6 +35,12 @@ final class SettingsNewKeysTest: XCTestCase {
         XCTAssertTrue(config.scrolling.threeFingerSwipe)
         XCTAssertFalse(config.nativeSpaces.restoreLayouts)
         XCTAssertFalse(config.nativeSpaces.restoreFramesOnQuit)
+        XCTAssertTrue(config.windowBorders.enabled)
+        XCTAssertEqual(config.windowBorders.width, 4.5)
+        XCTAssertEqual(config.windowBorders.activeColor, "accent")
+        XCTAssertEqual(config.windowBorders.inactiveColor, "#494D6480")
+        XCTAssertEqual(config.windowBorders.order, .above)
+        XCTAssertEqual(config.windowBorders.excludeApps, ["com.apple.finder"])
     }
 
     func testMinimapHoldKeysRoundTripAndRejectUnknownNames() {
