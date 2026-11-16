@@ -9,7 +9,7 @@ import Common
 final class GestureTrace {
     static let shared = GestureTrace()
     private(set) var running = false {
-        didSet { Self.pipelineLock.withLock { Self.recording = running } }
+        didSet { Self.pipelineLock.withLock { Self.recording = running; Self.recordingFlag = running } }
     }
     private var startedAt: UInt64 = 0
     private var inputs: [[String: Any]] = []
@@ -22,10 +22,14 @@ final class GestureTrace {
     /// write starting and ending. They show which stage makes a window's motion uneven.
     private nonisolated static let pipelineLock = NSLock()
     private nonisolated(unsafe) static var recording = false
+    /// The same fact, read without the lock: the marks sit on scroll, layout and write paths and
+    /// must cost nothing when no trace is running. A stale read only loses or adds one mark.
+    private nonisolated(unsafe) static var recordingFlag = false
     private nonisolated(unsafe) static var pipelineOrigin: UInt64 = 0
     private nonisolated(unsafe) static var pipeline: [[Any]] = []
 
     nonisolated static func mark(_ stage: String, window: UInt32 = 0, value: Double = 0) {
+        guard recordingFlag else { return }
         pipelineLock.withLock {
             guard recording else { return }
             pipeline.append([Double(now() - pipelineOrigin) / 1e6, stage, Int(window), value])
@@ -33,7 +37,7 @@ final class GestureTrace {
     }
 
     /// Whether marks are being recorded; lets callers skip measuring when they are not.
-    nonisolated static var isRecording: Bool { pipelineLock.withLock { recording } }
+    nonisolated static var isRecording: Bool { recordingFlag }
 
     /// `sampleWindows: false` records only inputs and pipeline marks. Polling the window server
     /// every 3 ms is itself load, so use that to check a trace's timing was not disturbed by it.

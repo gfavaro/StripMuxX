@@ -407,7 +407,7 @@ final class MacApp: AbstractApp {
 
     @MainActor
     func setAnimatedAxFrame(_ windowId: UInt32, _ frame: CGRect, session: UUID) {
-        let appName = nsApp.localizedName ?? "pid \(pid)"
+        let appName = name ?? "pid \(pid)"
         setFrameJobs.removeValue(forKey: windowId)?.cancel()
         let full = nativeFrameValidation(windowId)
         let permit = nativePermitCheck(windowId)
