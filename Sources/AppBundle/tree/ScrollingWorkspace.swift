@@ -61,16 +61,41 @@ struct ScrollingWorkspaceGeometryInput {
 /// Pure strip geometry. It only describes logical and physical frames; it does
 /// not query AX, change focus, or mutate a workspace.
 func calculateScrollingWorkspaceGeometry(_ input: ScrollingWorkspaceGeometryInput) -> ScrollingWorkspaceGeometry {
-    let bounds = input.bounds
     let gap = max(0, input.horizontalGap.isFinite ? input.horizontalGap : 0)
     let preview = max(0, input.preview.isFinite ? input.preview : 0)
+    let area = scrollingViewportArea(input, gap: gap, preview: preview)
+    let spans = scrollingColumnSpans(input, area: area, gap: gap)
+    let range = scrollingOffsetRange(input, spans: spans, area: area)
+    let requested = input.offset.isFinite ? input.offset : 0
+    let offset = min(max(requested, range.lowerBound), range.upperBound)
+    let geometries = spans.enumerated().map { index, span in
+        scrollingColumnGeometry(index: index, span: span, input: input, area: area, offset: offset, preview: preview)
+    }
+    return ScrollingWorkspaceGeometry(area: area, clampedOffset: offset, offsetRange: range, columns: geometries,
+                                      stackingOrder: scrollingStackingOrder(geometries, area: area, focused: input.focusedColumnIndex))
+}
+
+/// A column's slot on the strip: where it starts, how wide it is, and the half gaps either side.
+private struct ScrollingSpan {
+    let start: CGFloat
+    let width: CGFloat
+    let lead: CGFloat
+    let trail: CGFloat
+}
+
+/// The part of the display columns are laid out in, narrowed by the gutters that keep
+/// neighbouring columns' previews visible where no wall stops them.
+private func scrollingViewportArea(_ input: ScrollingWorkspaceGeometryInput, gap: CGFloat, preview: CGFloat) -> CGRect {
+    let bounds = input.bounds
     let hasMultiple = input.columns.count > 1
     let leftGutter = hasMultiple && !input.leftWall ? max(0, preview + gap / 2 - max(0, input.outerLeft)) : 0
     let rightGutter = hasMultiple && !input.rightWall ? max(0, preview + gap / 2 - max(0, input.outerRight)) : 0
-    let area = CGRect(x: bounds.minX + leftGutter, y: bounds.minY,
-                      width: max(1, bounds.width - leftGutter - rightGutter), height: bounds.height)
+    return CGRect(x: bounds.minX + leftGutter, y: bounds.minY,
+                  width: max(1, bounds.width - leftGutter - rightGutter), height: bounds.height)
+}
 
-    var spans: [(start: CGFloat, width: CGFloat, lead: CGFloat, trail: CGFloat)] = []
+private func scrollingColumnSpans(_ input: ScrollingWorkspaceGeometryInput, area: CGRect, gap: CGFloat) -> [ScrollingSpan] {
+    var spans: [ScrollingSpan] = []
     var cursor: CGFloat = 0
     for (index, column) in input.columns.enumerated() {
         let lead = index > 0 ? gap / 2 : 0
@@ -82,12 +107,18 @@ func calculateScrollingWorkspaceGeometry(_ input: ScrollingWorkspaceGeometryInpu
         // A fixed width is the window's own width; the gaps around it come on top.
         let desired = fixed.map { $0 + lead + trail } ?? (input.columns.count == 1 ? area.width : (area.width * share).rounded())
         let width = max(desired.rounded(), minimum + lead + trail)
-        spans.append((cursor, width, lead, trail))
+        spans.append(ScrollingSpan(start: cursor, width: width, lead: lead, trail: trail))
         cursor += width
     }
+    return spans
+}
+
+/// When the strip fits, a negative offset centres it. Overflowing strips start at zero and
+/// stop when the final column reaches the right edge. A sheet wider than a column at either
+/// end can only be shown by scrolling past that end, until the sheet closes.
+private func scrollingOffsetRange(_ input: ScrollingWorkspaceGeometryInput, spans: [ScrollingSpan],
+                                  area: CGRect) -> ClosedRange<CGFloat> {
     let total = spans.last.map { $0.start + $0.width } ?? 0
-    // When the strip fits, a negative offset centres it. Overflowing strips start
-    // at zero and stop when the final column reaches the right edge.
     let stripLower: CGFloat
     let stripUpper: CGFloat
     if input.columns.isEmpty {
@@ -100,62 +131,64 @@ func calculateScrollingWorkspaceGeometry(_ input: ScrollingWorkspaceGeometryInpu
         stripLower = 0
         stripUpper = total - area.width
     }
-    // A sheet wider than a column at either end of the strip can only be shown by
-    // scrolling past that end, until the sheet closes.
     let sheet = input.sheetOffset.flatMap { $0.isFinite ? $0 : nil }
-    let lower = min(stripLower, sheet ?? stripLower)
-    let upper = max(stripUpper, sheet ?? stripUpper)
-    let requested = input.offset.isFinite ? input.offset : 0
-    let offset = min(max(requested, lower), upper)
+    return min(stripLower, sheet ?? stripLower)...max(stripUpper, sheet ?? stripUpper)
+}
+
+/// Where one column sits on the strip and where it is actually placed on the display: columns
+/// off the viewport are parked at a wall or left showing only a preview sliver.
+private func scrollingColumnGeometry(index: Int, span: ScrollingSpan, input: ScrollingWorkspaceGeometryInput,
+                                     area: CGRect, offset: CGFloat, preview: CGFloat) -> ScrollingColumnGeometry {
     let viewport = area
-    let geometries = spans.enumerated().map { index, span -> ScrollingColumnGeometry in
-        let logicalX = area.minX + span.start - offset + span.lead
-        let width = max(1, span.width - span.lead - span.trail)
-        let logical = CGRect(x: logicalX.rounded(), y: area.minY, width: width.rounded(), height: area.height)
-        var physicalX = logical.minX
-        let whollyLeft = logical.maxX <= viewport.minX
-        let whollyRight = logical.minX >= viewport.maxX
-        let parking = input.parkingBounds
-        if span.width > parking.width, index == input.focusedColumnIndex {
-            // If a learned app minimum exceeds the display width, full
-            // containment is impossible. Center the focused oversized column.
-            physicalX = parking.midX - logical.width / 2
-        } else if whollyLeft {
-            physicalX = input.leftWall ? parking.minX : parking.minX + preview - logical.width
-        } else if whollyRight {
-            physicalX = input.rightWall ? parking.maxX - logical.width : parking.maxX - preview
-        } else {
-            physicalX = min(max(physicalX, input.leftWall ? parking.minX : parking.minX + preview - logical.width),
-                           input.rightWall ? parking.maxX - logical.width : parking.maxX - preview)
-        }
-        let visibility: ScrollingColumnVisibility = if whollyLeft {
-            input.leftWall ? .parkedLeft : .leftPreview
-        } else if whollyRight {
-            input.rightWall ? .parkedRight : .rightPreview
-        } else if logical.minX >= viewport.minX && logical.maxX <= viewport.maxX {
-            .visible
-        } else if logical.midX < viewport.midX {
-            .leftPreview
-        } else {
-            .rightPreview
-        }
-        let physical = CGRect(x: physicalX.rounded(), y: logical.minY, width: logical.width, height: logical.height)
-        return ScrollingColumnGeometry(index: index, spanStart: span.start, spanWidth: span.width,
-                                       leadInset: span.lead, trailInset: span.trail,
-                                       logicalFrame: logical, physicalFrame: physical, visibility: visibility)
+    let logicalX = area.minX + span.start - offset + span.lead
+    let width = max(1, span.width - span.lead - span.trail)
+    let logical = CGRect(x: logicalX.rounded(), y: area.minY, width: width.rounded(), height: area.height)
+    var physicalX = logical.minX
+    let whollyLeft = logical.maxX <= viewport.minX
+    let whollyRight = logical.minX >= viewport.maxX
+    let parking = input.parkingBounds
+    if span.width > parking.width, index == input.focusedColumnIndex {
+        // If a learned app minimum exceeds the display width, full
+        // containment is impossible. Center the focused oversized column.
+        physicalX = parking.midX - logical.width / 2
+    } else if whollyLeft {
+        physicalX = input.leftWall ? parking.minX : parking.minX + preview - logical.width
+    } else if whollyRight {
+        physicalX = input.rightWall ? parking.maxX - logical.width : parking.maxX - preview
+    } else {
+        physicalX = min(max(physicalX, input.leftWall ? parking.minX : parking.minX + preview - logical.width),
+                       input.rightWall ? parking.maxX - logical.width : parking.maxX - preview)
     }
-    let order = geometries.indices.sorted { lhs, rhs in
+    let visibility: ScrollingColumnVisibility = if whollyLeft {
+        input.leftWall ? .parkedLeft : .leftPreview
+    } else if whollyRight {
+        input.rightWall ? .parkedRight : .rightPreview
+    } else if logical.minX >= viewport.minX && logical.maxX <= viewport.maxX {
+        .visible
+    } else if logical.midX < viewport.midX {
+        .leftPreview
+    } else {
+        .rightPreview
+    }
+    let physical = CGRect(x: physicalX.rounded(), y: logical.minY, width: logical.width, height: logical.height)
+    return ScrollingColumnGeometry(index: index, spanStart: span.start, spanWidth: span.width,
+                                   leadInset: span.lead, trailInset: span.trail,
+                                   logicalFrame: logical, physicalFrame: physical, visibility: visibility)
+}
+
+/// Back to front: hidden columns first, the focused one above its neighbours, nearer the
+/// middle of the viewport above farther.
+private func scrollingStackingOrder(_ geometries: [ScrollingColumnGeometry], area: CGRect, focused: Int?) -> [Int] {
+    geometries.indices.sorted { lhs, rhs in
         let lVisible = geometries[lhs].logicalFrame.intersects(area)
         let rVisible = geometries[rhs].logicalFrame.intersects(area)
         if lVisible != rVisible { return !lVisible }
-        if lhs == input.focusedColumnIndex { return false }
-        if rhs == input.focusedColumnIndex { return true }
-        let lDistance = abs(geometries[lhs].logicalFrame.midX - viewport.midX)
-        let rDistance = abs(geometries[rhs].logicalFrame.midX - viewport.midX)
+        if lhs == focused { return false }
+        if rhs == focused { return true }
+        let lDistance = abs(geometries[lhs].logicalFrame.midX - area.midX)
+        let rDistance = abs(geometries[rhs].logicalFrame.midX - area.midX)
         return lDistance == rDistance ? lhs < rhs : lDistance > rDistance
     }
-    return ScrollingWorkspaceGeometry(area: area, clampedOffset: offset, offsetRange: lower...upper,
-                                      columns: geometries, stackingOrder: order)
 }
 
 /// macOS keeps any sliver of a window on its display, down to one point, but moves a
