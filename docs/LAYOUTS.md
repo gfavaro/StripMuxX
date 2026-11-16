@@ -81,6 +81,11 @@ exclude-apps = []
 ```
 
 Colors accept `accent`, `#RRGGBB`, or `#RRGGBBAA`; widths may be fractional.
+The minimap's focused tiles, viewport outline, and insertion indicators and
+the shortcut cheat sheet's headings/key badges share the **same resolved
+active border color**. Set `active-color = 'accent'` to use the optional root
+`accent-color` (or the system accent when omitted). Changes are applied when
+configuration reloads, including when these overlays are already visible.
 When the native renderer cannot operate on the current macOS version, the
 same original WinMuxX fallback panels render the same vector border geometry.
 Unlike WinMuxX, StripMuxX has no tab-bar or virtual-workspace chrome to surround.
