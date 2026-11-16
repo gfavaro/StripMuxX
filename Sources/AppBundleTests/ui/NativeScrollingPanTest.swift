@@ -400,4 +400,10 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertFalse(NativeScrollingPan().handle(scroll(-120, at: desktop.workspaceMonitor.rect.center)))
         XCTAssertEqual(Workspace.all.count, before, "No virtual workspace is created for the display")
     }
+
+    func testReducedMotionTurnsGestureSmoothingOff() {
+        XCTAssertEqual(effectiveGestureSmoothing(configured: 40, reduceMotion: false), 40)
+        XCTAssertEqual(effectiveGestureSmoothing(configured: 40, reduceMotion: true), 0)
+        XCTAssertEqual(effectiveGestureSmoothing(configured: 0, reduceMotion: false), 0)
+    }
 }

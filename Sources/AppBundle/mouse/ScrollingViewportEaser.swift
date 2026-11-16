@@ -15,7 +15,9 @@ final class ScrollingViewportEaser {
 
     /// Called by a pan step before it moves the real offset.
     func begin(_ workspace: Workspace, from current: CGFloat) {
-        guard config.scrolling.gestureSmoothing > 0, !isUnitTest else { return }
+        guard effectiveGestureSmoothing(configured: config.scrolling.gestureSmoothing,
+                                        reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion) > 0,
+              !isUnitTest else { return }
         if workspace.scrollingRenderedOffset == nil { workspace.scrollingRenderedOffset = current }
         guard self.workspace !== workspace else { return }
         stop(finishing: true)
@@ -74,4 +76,9 @@ func easedViewportOffset(rendered: CGFloat, target: CGFloat, elapsed: Double, sm
     guard smoothingMilliseconds > 0, elapsed > 0 else { return smoothingMilliseconds > 0 ? rendered : target }
     let tau = Double(smoothingMilliseconds) / 1000
     return rendered + (target - rendered) * CGFloat(1 - exp(-elapsed / tau))
+}
+
+/// The easing time that applies: none when the system asks for reduced motion.
+func effectiveGestureSmoothing(configured: Int, reduceMotion: Bool) -> Int {
+    reduceMotion ? 0 : configured
 }
