@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- `script/scene-stripmuxx.sh`, a hook for Scene (Settings → Scripts) that sets the root `accent-color` from the theme on screen and restores your own value afterwards. See the recipe in `docs/RECIPES.md`.
+- `scene-stripmuxx.sh`, bundled in the app's Resources, a hook for Scene (Settings → Scripts) that sets the root `accent-color` from the theme on screen and restores your own value afterwards. See the recipe in `docs/RECIPES.md`.
 - Default keys for the previous window (`focus-back-and-forth`), focusing and moving a window to the neighbouring display, the first column, and window height ±50, in the default config and the ergonomic preset.
 - Floating windows stay floating and are easy to find: the minimap lists them under the strip (click to focus), and `focus floating` (Alt-Shift-V) steps through them, then back to the strip window you left.
 - `shortcuts` (Alt-Shift-/) shows the current mode's shortcuts, grouped, in macOS notation.

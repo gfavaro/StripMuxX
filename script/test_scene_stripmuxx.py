@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parent / "scene-stripmuxx.sh"
+SCRIPT = Path(__file__).resolve().parents[1] / "resources" / "scene-stripmuxx.sh"
 
 
 class SceneHookTest(unittest.TestCase):
