@@ -23,8 +23,7 @@ struct ShortcutBehaviorSettingsView: View {
     @Environment(\.settingsSearchTarget) private var searchTarget
 
     @SettingsDraft("single-window-alignment", load: { config.singleWindowAlignment }) private var singleWindowAlignment: SingleWindowAlignment
-    @SettingsDraft("fullscreen-width", load: { config.fullscreenWidth ?? 1.0 }) private var fullscreenWidth: Double
-    @SettingsDraft("lone-window-width", load: { config.loneWindowWidth ?? config.fullscreenWidth ?? 1.0 }) private var loneWindowWidth: Double
+    @SettingsDraft("single-window-aspect-ratio", load: { String(config.singleWindowAspectRatio) }) private var singleWindowRatio: String
 
     var body: some View {
         SettingsScrollView {
@@ -32,31 +31,20 @@ struct ShortcutBehaviorSettingsView: View {
                 SettingsToggle("Tile new windows automatically", id: "automatically-tile-new-windows", isOn: $automaticallyTileNewWindows, help: "A new window becomes a column right of the focused one. Off leaves new windows floating.") { persistRootBool("automatically-tile-new-windows", automaticallyTileNewWindows) }
             }
             scrollingSettingsSection
-            DisclosureGroup("Single-window and fullscreen sizing", isExpanded: $showsSingleWindowOptions) {
+            DisclosureGroup("Single-window shape", isExpanded: $showsSingleWindowOptions) {
                 SettingsSection("When one window is open") {
 
-                SettingsStepper("Lone window width", id: "lone-window-width", value: Binding(
-                    get: { Int((loneWindowWidth * 100).rounded()) },
-                    set: { loneWindowWidth = Double($0) / 100 }), range: 10...100,
-                    help: "Width of a tiled window when it is the only column. Existing configs fall back to fullscreen-width.", unit: "%") {
-                    persistConfig(section: nil, key: "lone-window-width", value: String(loneWindowWidth))
+                SettingsTextField("Lone window aspect ratio", id: "single-window-aspect-ratio", text: $singleWindowRatio,
+                                  help: "A window alone on a desktop is at most this many times as wide as it is tall, so it keeps the same shape on any display. 0 lets it fill the width; 1.6 is a 16:10 window.",
+                                  validate: singleWindowRatioError) {
+                    if let value = parseSingleWindowRatio(singleWindowRatio) {
+                        persistConfig(section: nil, key: "single-window-aspect-ratio", value: String(value))
+                    }
                 }
-                SettingsStepper("Managed fullscreen width", id: "fullscreen-width", value: Binding(
-                    get: { Int((fullscreenWidth * 100).rounded()) },
-                    set: { fullscreenWidth = Double($0) / 100 }), range: 10...100,
-                    help: "Width of StripMuxX fullscreen on the current desktop. Native macOS fullscreen remains separate.", unit: "%") {
-                    persistConfig(section: nil, key: "fullscreen-width", value: String(fullscreenWidth))
-                }
-                Text("These widths are independent. Per-display overrides may take priority. Native macOS fullscreen creates a separate Space.")
+                Text("Per-display ratios and alignment can be set in [display.<name>] tables. Native macOS fullscreen creates a separate Space; StripMuxX fullscreen fills the display.")
                     .font(.callout).foregroundStyle(.secondary)
-                if let width = focus.workspace.windowWidthSettings.loneWindowWidth ?? focus.workspace.windowWidthSettings.fullscreenWidth {
-                    Text("Current desktop: \(Int((width * 100).rounded()))% lone window · \(focus.workspace.windowWidthSettings.singleWindowAlignment?.rawValue ?? "center") · \(focus.workspace.workspaceMonitor.name)")
-                        .font(.callout).foregroundStyle(.secondary)
-                } else {
-                    Text("The current desktop uses the legacy aspect-ratio setting. Saving a width switches to percentage sizing.")
-                        .font(.callout).foregroundStyle(.secondary)
-                }
-                SettingsLoneWindowPreview(fraction: loneWindowWidth, alignment: singleWindowAlignment)
+                SettingsLoneWindowPreview(ratio: parseSingleWindowRatio(singleWindowRatio) ?? defaultSingleWindowAspectRatio,
+                                          alignment: singleWindowAlignment)
                     .padding(.vertical, 4)
                 SettingsPicker("Alignment", id: "single-window-alignment", selection: $singleWindowAlignment,
                     help: "Position a lone tiled window within the available area after gaps.") {
@@ -227,7 +215,7 @@ struct ShortcutBehaviorSettingsView: View {
 
     private func revealSearchedControl() {
         switch searchTarget?.id {
-            case "lone-window-width", "fullscreen-width", "single-window-alignment":
+            case "single-window-aspect-ratio", "single-window-alignment":
                 showsSingleWindowOptions = true
             case "scrolling.width-presets.custom", "scrolling.column-width.custom":
                 showsCustomColumnSizes = true
@@ -289,8 +277,18 @@ private func scrollingPresetError(_ text: String) -> String? {
     scrollingPresetValues(text) == nil ? "Enter ascending percentages between 10 and 100, separated by commas." : nil
 }
 
-func settingsLoneWindowPreviewFrame(in bounds: CGRect, fraction: Double, alignment: SingleWindowAlignment) -> CGRect {
-    let width = bounds.width * CGFloat(min(max(fraction, 0.1), 1))
+func parseSingleWindowRatio(_ text: String) -> Double? {
+    guard let value = Double(text.trimmingCharacters(in: .whitespaces)), value.isFinite, (0...6).contains(value) else { return nil }
+    return value
+}
+
+private func singleWindowRatioError(_ text: String) -> String? {
+    parseSingleWindowRatio(text) == nil ? "Enter a number from 0 (fill the width) to 6, such as 1.6." : nil
+}
+
+/// Where a lone window sits in a preview of the display: as wide as `ratio` times its height, at most the full width.
+func settingsLoneWindowPreviewFrame(in bounds: CGRect, ratio: Double, alignment: SingleWindowAlignment) -> CGRect {
+    let width = ratio > 0 ? min(bounds.width, bounds.height * CGFloat(ratio)) : bounds.width
     let x: CGFloat
     switch alignment {
         case .left: x = bounds.minX
@@ -302,7 +300,7 @@ func settingsLoneWindowPreviewFrame(in bounds: CGRect, fraction: Double, alignme
 
 /// Noninteractive diagram showing how a single tiled column is positioned.
 private struct SettingsLoneWindowPreview: View {
-    let fraction: Double
+    let ratio: Double
     let alignment: SingleWindowAlignment
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -310,7 +308,7 @@ private struct SettingsLoneWindowPreview: View {
             GeometryReader { geometry in
                 let area = CGRect(x: 8, y: 8, width: max(geometry.size.width - 16, 0),
                                   height: max(geometry.size.height - 16, 0))
-                let window = settingsLoneWindowPreviewFrame(in: area, fraction: fraction, alignment: alignment)
+                let window = settingsLoneWindowPreviewFrame(in: area, ratio: ratio, alignment: alignment)
                 ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color(nsColor: .controlBackgroundColor))

@@ -22,8 +22,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case minimap = "scrolling.minimap-enabled"
     case width = "scrolling.column-width"
     case widthPresets = "scrolling.width-presets"
-    case fullscreenWidth = "fullscreen-width"
-    case loneWidth = "lone-window-width"
+    case singleWindowRatio = "single-window-aspect-ratio"
     case loneAlignment = "single-window-alignment"
     case centerFocused = "scrolling.center-focused-column"
     case keepHeight = "scrolling.keep-window-height"
@@ -53,8 +52,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .minimap: "Show scrolling minimap"
             case .width: "Default column width"
             case .widthPresets: "Column size shortcuts"
-            case .fullscreenWidth: "Managed fullscreen width"
-            case .loneWidth: "Lone window width"
+            case .singleWindowRatio: "Lone window aspect ratio"
             case .loneAlignment: "Single window alignment"
             case .centerFocused: "When focusing a column"
             case .keepHeight: "Keep opening window height"
@@ -75,7 +73,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     var page: SettingsSidebarItem {
         switch self {
             case .startAtLogin, .autoReload, .restoreLayouts, .restoreFrames: .general
-            case .autoTile, .gestures, .threeFingers, .minimap, .width, .widthPresets, .fullscreenWidth, .loneWidth, .loneAlignment, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
+            case .autoTile, .gestures, .threeFingers, .minimap, .width, .widthPresets, .singleWindowRatio, .loneAlignment, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
             case .gapHorizontal, .gapOuterLeft: .appearance
             case .appearance, .menuBar, .bordersEnabled, .borderWidth, .borderActiveColor, .borderInactiveColor,
                  .borderOrder, .borderExcludeApps: .appearance
@@ -87,7 +85,7 @@ extension SettingsControl {
     /// Earlier names people still search for.
     var aliases: String {
         switch self {
-            case .loneWidth: "single-window single window"
+            case .singleWindowRatio: "single-window single window width shape proportion percent fullscreen"
             case .loneAlignment: "position centered left right"
             case .bordersEnabled: "outline highlight frame"
             case .borderActiveColor, .borderInactiveColor: "colour accent highlight"

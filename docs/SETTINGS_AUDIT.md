@@ -20,7 +20,7 @@ It deliberately does **not** drop parser support or silently delete existing TOM
 
 | Setting | Audit decision | Reason |
 | --- | --- | --- |
-| `fullscreen-width` | **Keep, clarify** | Currently affects both a lone tiled window and managed fullscreen. It is not native macOS fullscreen, and <100% deliberately does not fill the screen |
+| `single-window-aspect-ratio` | **Keep** | Gives a lone window one shape on any display; replaced the `fullscreen-width` and `lone-window-width` percentages, which gave a different shape on every display |
 | `single-window-alignment` | **Keep** | Only applies to lone columns, not to all strip columns |
 | `scrolling.keep-window-height` | **Keep** | Allows unusual app windows to retain their opening height, without a new layout mode |
 | `scrolling.edge-preview` | **Keep** | Explicitly controls side peeks separately from outer gaps; especially relevant with adjacent monitors |
@@ -36,8 +36,6 @@ It deliberately does **not** drop parser support or silently delete existing TOM
   virtual workspace changes. Preserve its parser and any existing user value.
   Existing users can inspect it in the raw TOML editor; audit its runtime
   dispatch separately before any deprecation/removal.
-- `single-window-aspect-ratio`: legacy configuration fallback used only when
-  `fullscreen-width` is unset; do not offer both as equally current controls.
 - `workspace-to-monitor-force-assignment`: keep for desktop creation and
   clearly describe its limited effect.
 - Virtual workspace layouts, Dwindle, BSP, tabs, projects, sidebar, hover bar,
@@ -49,9 +47,7 @@ It deliberately does **not** drop parser support or silently delete existing TOM
 1. Confirm whether the legacy `exec-on-workspace-change` hook is dispatched for
    native Space changes; migrate it to an explicitly named native-desktop event
    only after observing behavior in the running app.
-2. Consider separating `fullscreen-width` into lone-window and managed-fullscreen
-   preferences, but only as a deliberate breaking behavioral change.
-3. Move display-assignment editing behind a dedicated advanced disclosure, once
+2. Move display-assignment editing behind a dedicated advanced disclosure, once
    the live desktop movement workflow has a straightforward primary UI.
-4. Recheck Settings search indexes whenever settings controls are renamed,
+3. Recheck Settings search indexes whenever settings controls are renamed,
    and exercise live config saving / draft reconciliation on macOS.

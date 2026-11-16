@@ -83,14 +83,7 @@
       ]
     },
     "single-window-aspect-ratio": {
-      "$ref": "#/$defs/dynamicNumber",
-      "deprecated": true
-    },
-    "fullscreen-width": {
-      "$ref": "#/$defs/fullscreenWidth"
-    },
-    "lone-window-width": {
-      "$ref": "#/$defs/fullscreenWidth"
+      "$ref": "#/$defs/aspectRatio"
     },
     "display": {
       "type": "object",
@@ -367,19 +360,18 @@
       },
       "additionalProperties": false
     },
-    "fullscreenWidth": {
+    "aspectRatio": {
       "type": "number",
-      "minimum": 0.1,
-      "maximum": 1
+      "minimum": 0,
+      "maximum": 6,
+      "default": 1.6,
+      "description": "A lone tiled window is at most this many times as wide as it is tall; 0 lets it fill the width."
     },
     "windowWidthSettings": {
       "type": "object",
       "properties": {
-        "fullscreen-width": {
-          "$ref": "#/$defs/fullscreenWidth"
-        },
-        "lone-window-width": {
-          "$ref": "#/$defs/fullscreenWidth"
+        "single-window-aspect-ratio": {
+          "$ref": "#/$defs/aspectRatio"
         },
         "single-window-alignment": {
           "enum": [

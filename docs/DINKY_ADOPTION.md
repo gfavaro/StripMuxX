@@ -4,7 +4,7 @@ Source studied: https://github.com/mikker/Dinky (`Sources/DinkyLayout/Scrolling.
 
 ## Adopted
 
-- Independent `lone-window-width` and `fullscreen-width` globally and per display; existing configurations retain the legacy fallback when the new key is absent.
+- Independent `lone-window-width` and `fullscreen-width` globally and per display (later replaced by a single `single-window-aspect-ratio`, globally and per display).
 - Individual independent Settings controls and width configuration documentation.
 
 ## Already present in StripMuxX

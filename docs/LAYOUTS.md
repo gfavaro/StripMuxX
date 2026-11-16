@@ -112,11 +112,12 @@ them under the strip (click one to focus it), and `focus floating` (Alt-Shift-V)
 focuses each in turn, then returns to the strip. `fullscreen` widens a window over the desktop without
 leaving the strip; `macos-native-fullscreen` gives it a macOS fullscreen Space.
 
-## Lone ultrawide window
+## Lone window
 
-On ultrawide displays, a lone tiled window can use a configurable maximum width
-(`fullscreen-width`) and alignment (`single-window-alignment`), per display with
-`[display.<pattern>]` tables. The [ultrawide diagram](assets/layouts/ultrawide.svg)
+A lone tiled window is at most `single-window-aspect-ratio` times as wide as it is tall
+(default 1.6; 0 fills the width) and is placed by `single-window-alignment`, per display with
+`[display.<pattern>]` tables. On an ultrawide display that keeps it a comfortable shape;
+on a display narrower than the ratio it already fills the width. The [ultrawide diagram](assets/layouts/ultrawide.svg)
 illustrates this behavior.
 
 ## Undo

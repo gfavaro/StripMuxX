@@ -3,17 +3,17 @@
 Examples use StripMuxX's TOML names and commands. Back up your config before editing;
 Settings → Configuration validates before applying changes.
 
-## Keep one window centered on an ultrawide
+## Keep one window a comfortable shape on an ultrawide
 
-In Settings → Windows choose the lone-window width and alignment, or set:
+In Settings → Windows choose the lone-window aspect ratio and alignment, or set:
 
 ```toml
-fullscreen-width = 0.6
+single-window-aspect-ratio = 1.4
 single-window-alignment = 'center'
 ```
 
-Set the width to `1.0` to fill the display again. See the
-[full explanation](../README.md#lone-windows-and-fullscreen-width).
+Set the ratio to `0` to let a lone window fill the display again. See the
+[full explanation](../README.md#lone-windows).
 
 ## Two columns per screen, or three
 

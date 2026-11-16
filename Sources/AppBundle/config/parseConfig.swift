@@ -88,10 +88,8 @@ private let configParser: [String: any ParserProtocol<Config>] = [
             SingleWindowAlignment(rawValue: $0).orFailure(.semantic(backtrace, "Expected center, left or right"))
         }
     },
-    "fullscreen-width": Parser(\.fullscreenWidth, parseFullscreenWidth),
-    "lone-window-width": Parser(\.loneWindowWidth, parseFullscreenWidth),
     "display": Parser(\.displayWindowSettings, parseDisplayWindowSettings),
-    "single-window-aspect-ratio": Parser(\.singleWindowAspectRatio, parseSingleWindowAspectRatio),
+    "single-window-aspect-ratio": Parser(\.singleWindowAspectRatio, parseAspectRatio),
     "gaps": Parser(\.gaps, parseGaps),
     "menu-bar": Parser(\.menuBar, parseMenuBar),
     "modifiers": Parser(\.modifierSides, parseModifierSides),
@@ -158,12 +156,6 @@ func parseCommandOrCommands(_ raw: TOMLValueConvertible) -> Parsed<[any Command]
         guard case .semantic(let backtrace, _) = error else { return false }
         return ignoredPaths.contains(backtrace.description)
     }
-    // Omitted width uses Dinky's full-width default. Only an explicit legacy key
-    // retains the old aspect-ratio behavior until a width is configured.
-    if config.fullscreenWidth == nil && !rawTable.contains(key: "single-window-aspect-ratio") {
-        config.fullscreenWidth = 1.0
-    }
-
     if let mapping = rawTable[keyMappingConfigRootKey].flatMap({ parseKeyMapping($0, .rootKey(keyMappingConfigRootKey), &errors) }) {
         config.keyMapping = mapping
     }

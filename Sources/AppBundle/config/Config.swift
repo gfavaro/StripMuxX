@@ -70,12 +70,10 @@ struct Config: ConvenienceCopyable {
     var onFocusChanged: [any Command] = []
     var onFocusedMonitorChanged: [any Command] = []
 
-    var fullscreenWidth: Double?
-    /// Independent width for a lone tiled window; nil falls back to fullscreen-width.
-    var loneWindowWidth: Double?
     var displayWindowSettings: [DisplayWindowSettings] = []
     var singleWindowAlignment: SingleWindowAlignment = .center
-    var singleWindowAspectRatio: DynamicConfigValue<Double> = .constant(1.5)
+    /// A lone tiled window is at most this many times as wide as it is tall; 0 lets it fill the width.
+    var singleWindowAspectRatio: Double = defaultSingleWindowAspectRatio
     var gaps: Gaps = .zero
     var menuBar = MenuBarConfig()
     /// Where a desktop added for `persistent-workspaces` is created.

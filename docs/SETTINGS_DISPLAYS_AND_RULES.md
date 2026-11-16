@@ -29,10 +29,10 @@ display. No UUID-to-hardware fallback or reconnect movement is introduced.
 
 ## Width and lone-window placement
 
-Settings → Windows edits the global `fullscreen-width` percentage and
-`single-window-alignment` (center, left or right). Width applies to lone tiles and
-StripMuxX fullscreen; fullscreen stays centered. The available width excludes outer
-gaps. These values also support `[display.<selector>]` tables; omitted keys inherit
+Settings → Windows edits the global `single-window-aspect-ratio` and
+`single-window-alignment` (center, left or right). The ratio limits a lone tiled window
+to that many times its height in width; StripMuxX fullscreen always fills the display. The
+available area excludes outer gaps. These values also support `[display.<selector>]` tables; omitted keys inherit
 from the global values. Changing the global controls preserves override tables.
 
 ## Window rules

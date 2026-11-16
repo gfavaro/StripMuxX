@@ -14,9 +14,8 @@ TOML inline dotted keys and table headers can express equivalent structures.
 | `exec-on-workspace-change` | string array | root parser |
 | `start-at-login`, `auto-reload-config`, `automatically-tile-new-windows` | booleans | root parser |
 | `persistent-workspaces` | string array; requires version 2 | numeric names are desktops to keep |
-| `fullscreen-width` | number 0.1–1.0 | `WindowWidthConfig.swift` |
+| `single-window-aspect-ratio` | number 0–6 (0 fills the width) | `WindowWidthConfig.swift` |
 | `single-window-alignment` | `center`, `left`, `right` | root parser |
-| `single-window-aspect-ratio` | scalar or monitor-specific dynamic value | legacy; used only without `fullscreen-width` |
 | `display` | display patterns to width and alignment overrides | `WindowWidthConfig.swift` |
 | `gaps` | nested inner/outer dynamic integer values | `parseGaps.swift` |
 | `scrolling` | column width, width presets, centering, gesture and minimap settings | `ScrollingConfig.swift` |

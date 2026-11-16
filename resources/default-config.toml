@@ -11,12 +11,10 @@ config-version = 2
 # It never removes desktops; manage them in Mission Control.
 persistent-workspaces = []
 
-# Share of usable width for managed fullscreen, staying in the same desktop.
-# [display.<pattern>] tables can override either width independently.
-fullscreen-width = 1.0
-# Width for a lone tiled column (0.1 to 1); can differ from managed fullscreen.
-# Old configs without this key continue using fullscreen-width as the fallback.
-lone-window-width = 1.0
+# A lone tiled window is at most this many times as wide as it is tall, so it keeps one shape on any
+# display (1.6 is a 16:10 window); 0 lets it fill the width. A [display.<pattern>] table can set its
+# own single-window-aspect-ratio and single-window-alignment for one display.
+single-window-aspect-ratio = 1.6
 # Alignment of a lone tiled window within the area remaining after gaps: center, left, right.
 single-window-alignment = 'center'
 

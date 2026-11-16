@@ -5,24 +5,23 @@ import XCTest
 
 @MainActor
 final class SingleWindowGeometryTest: XCTestCase {
-    func testScreenThresholdAndOrientation() {
+    func testRatioLimitsTheWidthOnAnyDisplayShape() {
         let available = Rect(topLeftX: 130, topLeftY: 40, width: 3000, height: 1001)
-        for (width, height, limited) in [(1920.0, 1080.0, false), (2300, 1000, true), (2299, 1000, false), (3440, 1440, true), (5120, 1440, true), (1440, 3440, false)] {
-            let result = singleWindowLimitedRect(available: available, screen: Rect(topLeftX: 0, topLeftY: 0, width: width, height: height), ratio: 1.5, minimumWidth: 0)
-            XCTAssertEqual(result.width, limited ? 1500 : 3000)
-            XCTAssertEqual(result.topLeftX, limited ? 880 : 130)
+        for (ratio, expected) in [(1.5, 1500.0), (1.0, 1000), (2.5, 2500), (3.0, 3000), (6.0, 3000)] {
+            let result = singleWindowLimitedRect(available: available, ratio: ratio, minimumWidth: 0)
+            XCTAssertEqual(result.width, expected, "ratio \(ratio)")
+            XCTAssertEqual(result.topLeftX, 130 + (3000 - expected) / 2, "centered")
             XCTAssertEqual(result.height, 1001)
             XCTAssertEqual(result.topLeftY, 40)
         }
     }
 
     func testDisabledNarrowAreaAndMinimums() {
-        let screen = Rect(topLeftX: 0, topLeftY: 0, width: 3440, height: 1440)
         let available = Rect(topLeftX: 100, topLeftY: 30, width: 3000, height: 1001)
         for (ratio, minimum, expected) in [(0.0, 0.0, 3000.0), (1.5, 1800, 1800), (1.5, 4000, 3000)] {
-            XCTAssertEqual(singleWindowLimitedRect(available: available, screen: screen, ratio: ratio, minimumWidth: minimum).width, expected)
+            XCTAssertEqual(singleWindowLimitedRect(available: available, ratio: ratio, minimumWidth: minimum).width, expected)
         }
-        XCTAssertEqual(singleWindowLimitedRect(available: available.copy(\.width, 900), screen: screen, ratio: 1.5, minimumWidth: 0).width, 900)
+        XCTAssertEqual(singleWindowLimitedRect(available: available.copy(\.width, 900), ratio: 1.5, minimumWidth: 0).width, 900)
     }
 
     func testAlignmentAndParsing() {

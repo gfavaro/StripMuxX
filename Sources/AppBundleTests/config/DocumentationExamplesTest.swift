@@ -12,7 +12,7 @@ final class DocumentationExamplesTest: XCTestCase {
 
     func testLoneWindowRecipeParses() {
         assertParses("""
-            fullscreen-width = 0.6
+            single-window-aspect-ratio = 1.4
             single-window-alignment = 'center'
             """)
     }

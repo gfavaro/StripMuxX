@@ -1,18 +1,19 @@
 import Common
 import TOMLKit
 
-/// How wide a lone or fullscreen window may be, and where it sits.
+/// The shape of a lone tiled window and where it sits.
 struct WindowWidthSettings: ConvenienceCopyable, Equatable {
-    var fullscreenWidth: Double?
-    var loneWindowWidth: Double?
+    var aspectRatio: Double?
     var singleWindowAlignment: SingleWindowAlignment?
 
     func overlaying(_ base: Self) -> Self {
-        Self(fullscreenWidth: fullscreenWidth ?? base.fullscreenWidth,
-             loneWindowWidth: loneWindowWidth ?? base.loneWindowWidth,
+        Self(aspectRatio: aspectRatio ?? base.aspectRatio,
              singleWindowAlignment: singleWindowAlignment ?? base.singleWindowAlignment)
     }
 }
+
+/// Width as a multiple of height for a lone window; 0 lets it fill the width.
+let defaultSingleWindowAspectRatio = 1.6
 
 /// `[display.<pattern>]`: width settings for one display.
 struct DisplayWindowSettings {
@@ -20,9 +21,9 @@ struct DisplayWindowSettings {
     let settings: WindowWidthSettings
 }
 
-func parseFullscreenWidth(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace) -> ParsedToml<Double?> {
-    guard let value: Double = parseSimpleType(raw), value.isFinite, (0.1...1).contains(value) else {
-        return .failure(.semantic(trace, "Expected a finite width from 0.1 to 1.0"))
+func parseAspectRatio(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace) -> ParsedToml<Double> {
+    guard let value: Double = parseSimpleType(raw), value.isFinite, (0...6).contains(value) else {
+        return .failure(.semantic(trace, "Expected a finite aspect ratio from 0 (fill the width) to 6"))
     }
     return .success(value)
 }
@@ -35,8 +36,7 @@ func parseOptionalSingleWindowAlignment(_ raw: TOMLValueConvertible, _ trace: To
 }
 
 private let displayWindowParsers: [String: any ParserProtocol<WindowWidthSettings>] = [
-    "fullscreen-width": Parser(\.fullscreenWidth, parseFullscreenWidth),
-    "lone-window-width": Parser(\.loneWindowWidth, parseFullscreenWidth),
+    "single-window-aspect-ratio": Parser(\.aspectRatio) { raw, trace in parseAspectRatio(raw, trace).map { Optional($0) } },
     "single-window-alignment": Parser(\.singleWindowAlignment, parseOptionalSingleWindowAlignment),
 ]
 
@@ -78,9 +78,8 @@ func matchingWindowSettings(_ rules: [DisplayWindowSettings], on monitor: Monito
 extension Workspace {
     @MainActor
     var windowWidthSettings: WindowWidthSettings {
-        let global = WindowWidthSettings(fullscreenWidth: config.fullscreenWidth,
-                                            loneWindowWidth: config.loneWindowWidth,
-                                            singleWindowAlignment: config.singleWindowAlignment)
+        let global = WindowWidthSettings(aspectRatio: config.singleWindowAspectRatio,
+                                         singleWindowAlignment: config.singleWindowAlignment)
         return matchingWindowSettings(config.displayWindowSettings, on: workspaceMonitor)?.overlaying(global) ?? global
     }
 }

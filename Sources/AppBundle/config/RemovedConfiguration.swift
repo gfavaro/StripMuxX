@@ -15,11 +15,13 @@ let removedRootConfigKeys: Set<String> = [
     "non-empty-workspaces-root-containers-layout-on-startup", "on-display-changed", "shortcuts-preset",
     "start-workspaces-on-main-monitor", "tab-group-padding", "window-tabs", "workspace", "workspace-backend",
     "workspace-overview", "workspace-sidebar", "workspace-swipe",
+    "fullscreen-width", "lone-window-width",
 ]
 
 /// Keys of kept tables whose features were removed.
 let removedTableConfigKeys: [String: Set<String>] = [
     "native-spaces": ["tiling-enabled"],
+    "scrolling": ["gesture-smoothing", "gesture-sensitivity"],
 ]
 
 /// Commands of removed features.

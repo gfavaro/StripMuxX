@@ -58,9 +58,5 @@
   "invalid-window-width.toml": {
     "parser": false,
     "schema": false
-  },
-  "valid-lone-window-width.toml": {
-    "parser": true,
-    "schema": true
   }
 }

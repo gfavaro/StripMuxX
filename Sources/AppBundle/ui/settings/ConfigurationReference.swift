@@ -17,7 +17,7 @@ var configurationReferenceSections: [ConfigurationReferenceSection] {
         .init(id: "general", title: "General", description: "start-at-login launches StripMuxX at login. auto-reload-config watches the configuration file for changes.", defaults: "start-at-login = \(defaults.startAtLogin), auto-reload-config = \(defaults.autoReloadConfig)", pane: .general),
         .init(id: "workspaces", title: "Desktops", description: "persistent-workspaces lists stable desktop numbers; missing ones are added automatically.", defaults: "persistent-workspaces = []", example: "persistent-workspaces = ['1', '2', '3']", pane: .workspaces),
         .init(id: "scrolling", title: "Scrolling strip", description: "Configures column widths, edge preview, keep-window-height and the minimap.", defaults: "column-width = \(defaults.scrolling.columnWidth), gesture-enabled = \(defaults.scrolling.gestureEnabled), minimap-enabled = \(defaults.scrolling.minimapEnabled), keep-window-height = \(defaults.scrolling.keepWindowHeight)", example: "[scrolling]\ncolumn-width = 0.5\nwidth-presets = [0.3333, 0.5, 0.6667, 1.0]", pane: .windows),
-        .init(id: "windows", title: "Windows", description: "Controls automatic new-window tiling and single-window size/alignment. lone-window-width controls a lone tiled column; fullscreen-width controls managed fullscreen. If lone-window-width is omitted, it falls back to fullscreen-width.", defaults: "automatically-tile-new-windows = \(defaults.automaticallyTileNewWindows), single-window-alignment = '\(defaults.singleWindowAlignment.rawValue)'", pane: .windows),
+        .init(id: "windows", title: "Windows", description: "Controls automatic new-window tiling and the shape and alignment of a lone window (single-window-aspect-ratio, single-window-alignment).", defaults: "automatically-tile-new-windows = \(defaults.automaticallyTileNewWindows), single-window-alignment = '\(defaults.singleWindowAlignment.rawValue)'", pane: .windows),
         .init(id: "appearance", title: "Appearance", description: "[gaps] controls spacing. Root appearance chooses system, light or dark for StripMuxX UI. [menu-bar] indicator chooses icon or workspace; icon-appearance chooses color or monochrome.", defaults: "appearance = '\(defaults.appearance.rawValue)', indicator = '\(defaults.menuBar.indicator.rawValue)', icon-appearance = '\(defaults.menuBar.iconAppearance.rawValue)'", pane: .appearance),
         .init(id: "modifier-sides", title: "Modifier sides", description: "[modifiers] accepts alt, cmd, ctrl and shift with both, left or right. Applies to shortcut chords; modifier taps retain their explicit sides. The unused side passes through for normal typing.", defaults: "All modifiers use both sides.", example: "[modifiers]\nalt = 'left'"),
         .init(id: "rules", title: "[[on-window-detected]]", description: "Match exact app-id, app-id-regex, workspace, app-name-regex-substring, window-title-regex-substring or during-winmux-startup (legacy name). Rules run in file order; check-further-callbacks = true continues after a match.", defaults: "No rules; check-further-callbacks = false.", example: """
@@ -31,12 +31,11 @@ var configurationReferenceSections: [ConfigurationReferenceSection] {
         '1' = 'main'
         '2' = 'secondary'
         """),
-        .init(id: "window-width", title: "Lone-window and fullscreen width", description: "lone-window-width and fullscreen-width accept 0.1 to 1.0 globally or per display. If lone-window-width is omitted, the old fullscreen-width value still sizes lone windows. single-window-alignment accepts center, left or right for lone tiled windows; fullscreen stays centered.", example: """
-        fullscreen-width = 1.0
-        lone-window-width = 0.70
+        .init(id: "window-width", title: "Lone-window shape", description: "single-window-aspect-ratio (0 to 6; 0 fills the width) limits a window alone on a desktop to that many times its height in width, so it keeps one shape on any display; single-window-alignment places it. Both can be set globally or in a [display.<pattern>] table. StripMuxX fullscreen always fills the display.", defaults: "single-window-aspect-ratio = \(defaultSingleWindowAspectRatio), single-window-alignment = center", example: """
+        single-window-aspect-ratio = 1.6
         single-window-alignment = 'center'
         [display.'Built-in']
-        lone-window-width = 0.65
+        single-window-aspect-ratio = 1.2
         """, pane: .windows),
         .init(id: "gaps", title: "Per-display gaps", description: "Each [gaps] value accepts a constant or an ordered list of display overrides followed by a fallback. Values are measured in points. Replace the existing key inside [gaps].", defaults: "See Appearance for the default inner and outer spacing.", example: """
         [gaps]
