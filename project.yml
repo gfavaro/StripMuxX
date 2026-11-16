@@ -25,6 +25,11 @@ targets:
     sources:
       - "Sources/WinMuxApp"
       - path: "resources"
+        # Sources for the icon, the schema tests and the README logo stay in the repo, not the app.
+        excludes:
+          - "app-icon"
+          - "test-fixtures"
+          - "winmux-logo.svg"
     dependencies:
       - package: WinMuxPackage
         product: AppBundle
