@@ -352,6 +352,10 @@ frame, so `borders.hide-while-scrolling` (off by default) hides them during a ge
 - `focus floating` from other windows: results were inconsistent because focus was
   changing during the run (the Mac was in use); re-test with the Mac idle.
 - Per-app width rules with a real app (needs a rule in your config).
-- Three-finger Dock swipes with borders or `hide-while-scrolling` (cannot be synthesised).
+- Three-finger Dock swipes cannot be synthesised. **User test (trackpad, borders
+  shown):** "almost good" — the border starts partly behind the window on the
+  leading side and trails slightly during the scroll; not a major issue. This is the
+  one-frame follow lag; `hide-while-scrolling` covers only the Option + two-finger pan,
+  not the Dock swipe path. P3.
 - Desktop switches with borders (not permitted), multiple displays, restart
   restoration of floating windows after the other session's persistence changes.
