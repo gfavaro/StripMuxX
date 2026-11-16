@@ -21,6 +21,8 @@ final class NativeWindowBorder {
     private final class MotionOwner {}
     private let motionOwner = MotionOwner()
     private var motionDeadline: CFTimeInterval = 0
+    /// Borders out of sight while the strip moves (`borders.hide-while-scrolling`).
+    private var hiddenForMotion = false
 
     /// Why borders disappeared since launch, for doctor.
     private(set) var hideCounts: [String: Int] = [:]
@@ -55,6 +57,7 @@ final class NativeWindowBorder {
         DisplayRefreshDriver.shared.remove(owner: self)
         DisplayRefreshDriver.shared.remove(owner: motionOwner)
         motionDeadline = 0
+        hiddenForMotion = false
     }
 
     func refresh() {
@@ -65,7 +68,7 @@ final class NativeWindowBorder {
         guard !isSuspended else { return }
         // Mid-reconciliation, eligibility and membership are being rebuilt; removing a
         // border then only to restore it on accept makes it blink. accept() resumes.
-        guard runtime.native.tiling.ready else { return }
+        guard runtime.native.tiling.ready, !hiddenForMotion else { return }
         let activeDesktops = runtime.native.layouts.currentBySpaceID.values.filter { $0.isVisible }
         guard !activeDesktops.isEmpty else { clear(); return }
 
@@ -159,17 +162,22 @@ final class NativeWindowBorder {
     /// writes, so a refresh when the layout returns reads where the windows were. Follow
     /// the WindowServer frames every display frame instead, until the strip has been still
     /// for `settle` seconds.
-    func followStripMotion(settle: CFTimeInterval = 0.35) {
+    func followStripMotion() {
         guard !isUnitTest, !isSuspended, config.windowBorders.enabled else { return }
+        let hide = config.windowBorders.hideWhileScrolling
         let alreadyFollowing = motionDeadline > CACurrentMediaTime()
-        motionDeadline = CACurrentMediaTime() + settle
+        motionDeadline = CACurrentMediaTime() + (hide ? 0.15 : 0.35)
+        if hide, !hiddenForMotion {
+            hiddenForMotion = true
+            for border in borders.values { border.hide() }
+        }
         guard !alreadyFollowing else { return }
         DisplayRefreshDriver.shared.add(owner: motionOwner) { [weak self] _ in
             guard let self else { return }
+            let settled = CACurrentMediaTime() >= self.motionDeadline || self.isSuspended
+            if settled { self.hiddenForMotion = false }
             self.refresh()
-            if CACurrentMediaTime() >= self.motionDeadline || self.isSuspended {
-                DisplayRefreshDriver.shared.remove(owner: self.motionOwner)
-            }
+            if settled { DisplayRefreshDriver.shared.remove(owner: self.motionOwner) }
         }
     }
 

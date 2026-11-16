@@ -78,9 +78,13 @@ active-color = 'accent'
 inactive-color = '#00000000'
 order = 'below'
 exclude-apps = []
+hide-while-scrolling = false
 ```
 
 Colors accept `accent`, `#RRGGBB`, or `#RRGGBBAA`; widths may be fractional.
+A border follows its window's real position, so while the strip scrolls it trails
+by one display frame. `hide-while-scrolling = true` hides borders from the first
+scroll step until the strip has been still for 150 ms.
 The minimap's focused tiles, viewport outline, and insertion indicators and
 the shortcut cheat sheet's headings/key badges share the **same resolved
 active border color**. Set `active-color = 'accent'` to use the optional root

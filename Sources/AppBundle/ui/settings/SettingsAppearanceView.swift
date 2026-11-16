@@ -13,6 +13,7 @@ struct ShortcutAppearanceSettingsView: View {
     @SettingsDraft("gaps.outer.bottom", load: { settingsConstantValue(config.gaps.outer.bottom) }) private var outerBottomGap: Int
 
     @SettingsDraft("borders.enabled", load: { config.windowBorders.enabled }) private var bordersEnabled: Bool
+    @SettingsDraft("borders.hide-while-scrolling", load: { config.windowBorders.hideWhileScrolling }) private var hideBordersWhileScrolling: Bool
     @SettingsDraft("borders.width", load: { String(config.windowBorders.width) }) private var borderWidth: String
     @SettingsDraft("borders.active-color", load: { config.windowBorders.activeColor }) private var activeBorderColor: String
     @SettingsDraft("borders.inactive-color", load: { config.windowBorders.inactiveColor }) private var inactiveBorderColor: String
@@ -87,6 +88,10 @@ struct ShortcutAppearanceSettingsView: View {
                     Text("Below window").tag(WindowBorderOrder.below)
                     Text("Above window").tag(WindowBorderOrder.above)
                 } onChange: { persist("borders", "order", "'\(borderOrder.rawValue)'") }
+                SettingsToggle("Hide while the strip scrolls", id: "borders.hide-while-scrolling", isOn: $hideBordersWhileScrolling,
+                               help: "A border follows its window one display frame late; hide it until the strip stops.") {
+                    persist("borders", "hide-while-scrolling", hideBordersWhileScrolling ? "true" : "false")
+                }
                 SettingsTextField("Exclude apps (bundle IDs)", id: "borders.exclude-apps",
                                   text: $excludedBorderApps, help: "Comma-separated bundle identifiers.") {
                     persist("borders", "exclude-apps", tomlCommaSeparatedStringArray(excludedBorderApps))

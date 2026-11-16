@@ -11,6 +11,8 @@ struct WindowBordersConfig: ConvenienceCopyable, Equatable {
     var inactiveColor = "#00000000"
     var order = WindowBorderOrder.below
     var excludeApps: [String] = []
+    /// Borders trail a moving window by a display frame; hide them until the strip stops.
+    var hideWhileScrolling = false
 }
 
 private let borderParsers: [String: any ParserProtocol<WindowBordersConfig>] = [
@@ -24,6 +26,7 @@ private let borderParsers: [String: any ParserProtocol<WindowBordersConfig>] = [
         parseString(raw, trace).flatMap { WindowBorderOrder(rawValue: $0).orFailure(.semantic(trace, "Must be 'below' or 'above'")) }
     },
     "exclude-apps": Parser(\.excludeApps, parseArrayOfStrings),
+    "hide-while-scrolling": Parser(\.hideWhileScrolling, parseBool),
     "active-color": Parser(\.activeColor, parseBorderColor),
     "inactive-color": Parser(\.inactiveColor, parseBorderColor),
 ]
