@@ -520,4 +520,33 @@ private final class MinimapPreviewHost: NSView {
         NSColor.windowBackgroundColor.setFill()
         bounds.fill()
     }
+
+    func testContinuousCornersStayInsideTheRectAndActuallyRoundIt() {
+        let rect = CGRect(x: 20, y: 10, width: 120, height: 60)
+        let path = continuousRoundedRect(rect, radius: 10)
+        XCTAssertEqual(path.bounds.minX, rect.minX, accuracy: 0.001)
+        XCTAssertEqual(path.bounds.maxX, rect.maxX, accuracy: 0.001)
+        XCTAssertEqual(path.bounds.minY, rect.minY, accuracy: 0.001)
+        XCTAssertEqual(path.bounds.maxY, rect.maxY, accuracy: 0.001)
+        for corner in [CGPoint(x: rect.minX, y: rect.minY), CGPoint(x: rect.maxX, y: rect.minY),
+                       CGPoint(x: rect.minX, y: rect.maxY), CGPoint(x: rect.maxX, y: rect.maxY)] {
+            let inward = CGPoint(x: corner.x + (corner.x == rect.minX ? 1 : -1), y: corner.y + (corner.y == rect.minY ? 1 : -1))
+            XCTAssertFalse(path.contains(inward), "The very corner of the rect is cut away")
+            let deeper = CGPoint(x: corner.x + (corner.x == rect.minX ? 6 : -6), y: corner.y + (corner.y == rect.minY ? 6 : -6))
+            XCTAssertTrue(path.contains(deeper), "and the shape is full a few points in")
+        }
+        for edge in [CGPoint(x: rect.midX, y: rect.minY + 0.5), CGPoint(x: rect.midX, y: rect.maxY - 0.5),
+                     CGPoint(x: rect.minX + 0.5, y: rect.midY), CGPoint(x: rect.maxX - 0.5, y: rect.midY)] {
+            XCTAssertTrue(path.contains(edge), "The straight edges reach the rect")
+        }
+        // A rect smaller than the radius gets a smaller radius instead of a tangled path.
+        let small = continuousRoundedRect(CGRect(x: 0, y: 0, width: 14, height: 14), radius: 10)
+        XCTAssertTrue(CGRect(x: 0, y: 0, width: 14, height: 14).contains(small.bounds))
+        XCTAssertTrue(small.contains(CGPoint(x: 7, y: 7)))
+    }
+
+    func testCornerRadiiNestFromTileToViewportToPanel() {
+        XCTAssertLessThan(scrollingMinimapTileRadius, scrollingMinimapViewportRadius)
+        XCTAssertLessThan(scrollingMinimapViewportRadius, scrollingMinimapPanelRadius)
+    }
 }

@@ -465,7 +465,7 @@ final class ScrollingMinimapButton: NSButton {
         let full = bounds.insetBy(dx: 2, dy: 2)
         let tile = CGRect(x: full.minX, y: full.minY + full.height * model.vertical.lowerBound, width: full.width,
                           height: full.height * (model.vertical.upperBound - model.vertical.lowerBound))
-        let path = NSBezierPath(roundedRect: tile, xRadius: 8, yRadius: 8)
+        let path = continuousRoundedRect(tile, radius: scrollingMinimapTileRadius)
         let accent = winMuxEmphasisColor
         (focused ? accent.withAlphaComponent(0.22)
             : isHighlighted ? accent.withAlphaComponent(0.14)
@@ -494,7 +494,7 @@ final class ScrollingMinimapButton: NSButton {
         if model.freeSize { path.setLineDash([4, 3], count: 2, phase: 0) }
         path.stroke()
         if keyboardSelected {
-            let ring = NSBezierPath(roundedRect: tile.insetBy(dx: -1.5, dy: -1.5), xRadius: 9, yRadius: 9)
+            let ring = continuousRoundedRect(tile.insetBy(dx: -1.5, dy: -1.5), radius: scrollingMinimapTileRadius + 1.5)
             accent.setStroke()
             ring.lineWidth = 2
             ring.stroke()
@@ -601,7 +601,7 @@ private final class ScrollingMinimapViewport: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func draw(_ dirtyRect: NSRect) {
         // The part of the strip on screen: a soft accent frame around those columns.
-        let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 10, yRadius: 10)
+        let outline = continuousRoundedRect(bounds.insetBy(dx: 1, dy: 1), radius: scrollingMinimapViewportRadius)
         winMuxEmphasisColor.withAlphaComponent(0.06).setFill()
         outline.fill()
         winMuxEmphasisColor.withAlphaComponent(0.6).setStroke()
@@ -617,4 +617,41 @@ private func drawMinimapText(_ text: String, in rect: CGRect, font: NSFont, colo
     style.lineBreakMode = .byTruncatingTail
     style.alignment = alignment
     (text as NSString).draw(in: rect, withAttributes: [.font: font, .foregroundColor: color, .paragraphStyle: style])
+}
+
+/// The minimap's corner radii, nested so that every edge that sits inside another follows its curve:
+/// a tile inside the viewport frame inside the panel.
+let scrollingMinimapPanelRadius: CGFloat = 18
+let scrollingMinimapTileRadius: CGFloat = 10
+let scrollingMinimapViewportRadius: CGFloat = scrollingMinimapTileRadius + 3
+
+/// A rounded rectangle with macOS's continuous corners: the curve eases into the straight edge
+/// instead of meeting it at a fixed arc, which is what system windows and controls use.
+func continuousRoundedRect(_ rect: CGRect, radius: CGFloat) -> NSBezierPath {
+    // A continuous corner reaches 1.5287 radii along each edge, so a small rect gets a smaller radius.
+    let r = min(radius, min(rect.width, rect.height) / (2 * 1.52866483))
+    guard r > 0 else { return NSBezierPath(rect: rect) }
+    let path = NSBezierPath()
+    // Offsets are written once for the top-right corner (x along the incoming edge, measured back
+    // from the corner; y inward) and turned a quarter each time to reach the others, clockwise.
+    func point(_ x: CGFloat, _ y: CGFloat, corner: Int) -> CGPoint {
+        switch corner {
+            case 0: CGPoint(x: rect.maxX - x * r, y: rect.minY + y * r) // top right
+            case 1: CGPoint(x: rect.maxX - y * r, y: rect.maxY - x * r) // bottom right
+            case 2: CGPoint(x: rect.minX + x * r, y: rect.maxY - y * r) // bottom left
+            default: CGPoint(x: rect.minX + y * r, y: rect.minY + x * r) // top left
+        }
+    }
+    path.move(to: point(0, 1.52866483, corner: 3))
+    for corner in 0 ..< 4 {
+        path.line(to: point(1.52866483, 0, corner: corner))
+        path.curve(to: point(0.63149379, 0.07491139, corner: corner),
+                   controlPoint1: point(1.08849296, 0, corner: corner), controlPoint2: point(0.86840694, 0, corner: corner))
+        path.curve(to: point(0.07491139, 0.63149379, corner: corner),
+                   controlPoint1: point(0.37282383, 0.16906013, corner: corner), controlPoint2: point(0.16906013, 0.37282383, corner: corner))
+        path.curve(to: point(0, 1.52866483, corner: corner),
+                   controlPoint1: point(0, 0.86840694, corner: corner), controlPoint2: point(0, 1.08849296, corner: corner))
+    }
+    path.close()
+    return path
 }

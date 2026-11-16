@@ -177,7 +177,8 @@ final class WorkspaceScrollingMinimap: NSObject {
         effect.blendingMode = .behindWindow
         effect.state = .active
         effect.wantsLayer = true
-        effect.layer?.cornerRadius = 14
+        effect.layer?.cornerRadius = scrollingMinimapPanelRadius
+        effect.layer?.cornerCurve = .continuous
         effect.layer?.masksToBounds = true
         if NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
             effect.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
