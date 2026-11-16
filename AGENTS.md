@@ -27,6 +27,12 @@ navigation, moves or the strip are affected.
 [Native Spaces](docs/NATIVE_SPACES.md) describes how desktops are observed and
 switched.
 
+**Never push a commit to `main` that has not passed `make check` on that exact
+tree.** Other sessions build and install from `main`; a commit that does not compile
+or fails a test breaks their work. If you cannot run `make check`, or it fails, do
+not push: report what blocked it. Writing that something is untested in a commit or
+status note does not make it safe to push.
+
 Use the checks specified in CONTRIBUTING and report manual desktop validation
 separately. Preserve the fork's configuration, bundle/signing identity and recovery
 data; follow [fork maintenance](docs/FORK.md) for the commit workflow and installation.
