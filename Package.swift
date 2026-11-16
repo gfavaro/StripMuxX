@@ -16,14 +16,12 @@ let package = Package(
         .executable(name: "WinMuxApp", targets: ["WinMuxApp"]),
         // We only need to expose this as a product for xcode
         .library(name: "AppBundle", targets: ["AppBundle"]),
-        .library(name: "SparkleSupport", targets: ["SparkleSupport"]),
     ],
     dependencies: [
         .package(path: "Vendor/TOMLKit"),
         .package(url: "https://github.com/rxhanson/MASShortcut", revision: "2f9fbb3f959b7a683c6faaf9638d22afad37a235"),
         .package(url: "https://github.com/apple/swift-collections.git", exact: "1.3.0"),
         .package(url: "https://github.com/soffes/HotKey.git", exact: "0.2.1"),
-        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
     ],
     // Targets are the basic building blocks of a package, defining a module or a test suite.
     // Targets can depend on other targets in this package and products from dependencies.
@@ -36,7 +34,6 @@ let package = Package(
             name: "PrivateApi",
             path: "Sources/PrivateApi",
             publicHeadersPath: "include",
-            linkerSettings: [.linkedFramework("IOKit")],
         ),
         .target(
             name: "Common",
@@ -63,13 +60,6 @@ let package = Package(
             name: "WinMuxApp",
             dependencies: [
                 .target(name: "AppBundle"),
-                .target(name: "SparkleSupport"),
-            ],
-        ),
-        .target(
-            name: "SparkleSupport",
-            dependencies: [
-                .product(name: "Sparkle", package: "Sparkle"),
             ],
         ),
         .executableTarget(

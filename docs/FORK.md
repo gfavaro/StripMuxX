@@ -132,10 +132,8 @@ git tag gf-v0.5.7 main  # example; must match VERSION
 git push origin gf-v0.5.7
 ```
 
-Automatic updates are disabled in code and the app plist: no upstream feed or
-Sparkle public key is bundled. To enable them later, create fork-owned Ed25519
-keys, store the private key as an Actions secret, publish a fork appcast, and
-configure the fork public key and feed. Keep the private key out of Git.
+There is no updater: the app contains no update framework, feed or public key. Releases are
+built and installed with the scripts above.
 Apple certificate-based signing/notarization is a separate future setup.
 
 ## Bootstrap verification

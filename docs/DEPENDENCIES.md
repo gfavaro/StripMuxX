@@ -11,7 +11,6 @@ certification. Existing dependency versions were not upgraded.
 | MASShortcut | 2f9fbb3f959b7a683c6faaf9638d22afad37a235 | Keep: native shortcut recorder and validation in Settings; a different responsibility from runtime registration. |
 | TOMLKit | Vendored 0.5.5 | Configuration decoding, validation and structured settings writes; local native-memory ownership patch described below. |
 | swift-collections | 1.3.0 | Keep: ordered workspace configuration and ordered diagnostic records; replacing these needs equivalent ordering and uniqueness guarantees. |
-| Sparkle | 2.9.6 | Keep: isolated automatic-update integration. Personal fork releases continue to disable updates. |
 
 Volume controls, their CoreAudio implementation and the volume HUD were removed.
 ISSoundAdditions is no longer a dependency.

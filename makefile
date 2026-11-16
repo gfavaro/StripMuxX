@@ -7,7 +7,6 @@ BUILD_NUMBER ?= 1
 RELEASE_DIR ?= .release
 RELEASE_TAG ?= v$(VERSION)
 APP_INSTALL_DIR ?= /Applications
-SPARKLE_PUBLIC_KEY ?=
 ARGS ?=
 
 .PHONY: generate xcodeproj build build-clean run run-clean cli check release install installed clean
@@ -24,7 +23,6 @@ xcodeproj:
 	export XCODEGEN_WINMUX_BUILD_NUMBER="$(BUILD_NUMBER)" && \
 	export XCODEGEN_WINMUX_CODE_SIGN_IDENTITY="$(CODESIGN_IDENTITY)" && \
 	export XCODEGEN_WINMUX_DEVELOPMENT_TEAM="$(DEVELOPMENT_TEAM)" && \
-	export XCODEGEN_WINMUX_SPARKLE_PUBLIC_KEY="$(SPARKLE_PUBLIC_KEY)" && \
 	./script/install-dep.sh --xcodegen && \
 	./.deps/xcodegen/xcodegen'
 
@@ -89,7 +87,6 @@ check:
 	python3 -m unittest script/test_contributor_guidance.py && \
 	./.deps/config-schema/bin/python script/test_config_schema.py && \
 	swift test --force-resolved-versions --no-parallel 2>&1 | tee .build/test-output.log && \
-	python3 -m unittest script/test_validate_appcast.py && \
 	python3 -m unittest script/test_fork_identity.py && \
 	python3 -m unittest script/test_swift_version.py && \
 	python3 -m unittest script/test_signing_cleanup.py && \

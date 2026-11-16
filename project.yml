@@ -32,19 +32,16 @@ targets:
     dependencies:
       - package: WinMuxPackage
         product: AppBundle
-      - package: WinMuxPackage
-        product: SparkleSupport
     # https://developer.apple.com/documentation/xcode/build-settings-reference
     settings:
       base:
         SWIFT_VERSION: 6.2 # Swift Language Version
         MARKETING_VERSION: ${XCODEGEN_WINMUX_VERSION}
         CURRENT_PROJECT_VERSION: ${XCODEGEN_WINMUX_BUILD_NUMBER}
-        SPARKLE_PUBLIC_KEY: ${XCODEGEN_WINMUX_SPARKLE_PUBLIC_KEY}
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: ${XCODEGEN_WINMUX_CODE_SIGN_IDENTITY}
         DEVELOPMENT_TEAM: ${XCODEGEN_WINMUX_DEVELOPMENT_TEAM}
-        # Explicit, so the embedded Sparkle.framework loads whatever Xcode's defaults are.
+        # Frameworks and SwiftPM resources sit next to the executable.
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
       configs:
         Debug:

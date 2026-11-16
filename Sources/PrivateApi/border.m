@@ -24,65 +24,6 @@ typedef int (*Update)(int);
 typedef CGContextRef (*Context)(int, uint32_t, CFDictionaryRef);
 static int cid(void) { return SYM("SLSMainConnectionID", Connection)(); }
 
-static WinMuxWindowClosedCallback closedCallback;
-static WinMuxWindowServerChangedCallback missionControlCallback;
-static void missionControlChanged(uint32_t event, void *data, size_t length, void *context) {
-    (void)context;
-    uint32_t window = 0;
-    size_t offset = (event == 1325 || event == 1326) ? sizeof(uint64_t) : 0;
-    if (data && length >= offset + sizeof(window))
-        memcpy(&window, (const char *)data + offset, sizeof(window));
-    // SkyLight can invoke notify procs on AppKit's event thread. Swift's
-    // registered closures are MainActor-isolated: cross that boundary here.
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (missionControlCallback) missionControlCallback(event, window);
-    });
-}
-
-bool winmux_watch_mission_control(WinMuxWindowServerChangedCallback callback) {
-    typedef int (*Register)(void *, uint32_t, void *);
-    Register registerNotify = sky() ? SYM("SLSRegisterNotifyProc", Register) : NULL;
-    if (!registerNotify) return false;
-    missionControlCallback = callback;
-    // WindowManager's display-sized overview window is ordered in/out on
-    // macOS 27. Also observe creation and level/size changes during transition.
-    const uint32_t events[] = {1204, 1325, 1326, 723, 806, 807, 808, 815, 816, 811};
-    bool success = true;
-    for (unsigned i = 0; i < sizeof(events) / sizeof(events[0]); ++i)
-        if (registerNotify((void *)missionControlChanged, events[i], NULL)) success = false;
-    return success;
-}
-static void nativeWindowClosed(uint32_t event, void *data, size_t length, void *context) {
-    (void)context;
-    // JankyBorders events.h: close (804) carries a window id; destroy
-    // (1326) carries a uint64 Space id followed by a uint32 window id.
-    size_t offset = event == 1326 ? sizeof(uint64_t) : 0;
-    if (!data || length < offset + sizeof(uint32_t)) return;
-    uint32_t window;
-    memcpy(&window, (const char *)data + offset, sizeof(window));
-    // 1326 can also mean "left this Space", not destruction of the window.
-    if (event == 1326 && winmux_window_exists(window)) return;
-    if (window) dispatch_async(dispatch_get_main_queue(), ^{
-        if (closedCallback) closedCallback(window);
-    });
-}
-
-bool winmux_watch_window_closures(WinMuxWindowClosedCallback callback) {
-    typedef int (*Register)(void *, uint32_t, void *);
-    Register registerNotify = sky() ? SYM("SLSRegisterNotifyProc", Register) : NULL;
-    if (!registerNotify) return false;
-    closedCallback = callback;
-    int closeResult = registerNotify((void *)nativeWindowClosed, 804, NULL);
-    int destroyResult = registerNotify((void *)nativeWindowClosed, 1326, NULL);
-    return !closeResult && !destroyResult;
-}
-
-void winmux_watch_windows(const uint32_t *windows, int count) {
-    typedef int (*Request)(int, const uint32_t *, int);
-    Request request = sky() ? SYM("SLSRequestNotificationsForWindows", Request) : NULL;
-    if (request && windows && count > 0) request(cid(), windows, count);
-}
-
 bool winmux_window_exists(uint32_t window) {
     typedef int (*Bounds)(int, uint32_t, CGRect *);
     Bounds bounds = sky() ? SYM("SLSGetWindowBounds", Bounds) : NULL;

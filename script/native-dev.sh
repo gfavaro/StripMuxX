@@ -29,9 +29,7 @@ case "${1:-run}" in
         rm -rf "$app"
         mkdir -p "$app/Contents/MacOS"
         cp .build/debug/WinMuxApp "$app/Contents/MacOS/WinMuxApp"
-        # The debug binary looks for frameworks and SwiftPM resources next to itself.
-        ditto .build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework \
-            "$app/Contents/MacOS/Sparkle.framework"
+        # The debug binary looks for SwiftPM resources next to itself.
         for bundle in .build/debug/*.bundle; do ditto "$bundle" "$app/Contents/MacOS/$(basename "$bundle")"; done
         /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.gfavaro.stripmuxx.debug" \
             -c "Add :CFBundleName string StripMuxX Native Dev" \

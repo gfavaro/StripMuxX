@@ -27,23 +27,6 @@ bool winmux_window_frame(uint32_t window, CGRect *frame);
 // non-document surface, and -1 when SkyLight metadata is unavailable.
 int winmux_window_document_kind(uint32_t window);
 bool winmux_window_is_document_kind(uint32_t parent, uint64_t tags);
-typedef void (*WinMuxWindowClosedCallback)(uint32_t window);
-bool winmux_watch_window_closures(WinMuxWindowClosedCallback callback);
-void winmux_watch_windows(const uint32_t *windows, int count);
-typedef void (*WinMuxWindowServerChangedCallback)(uint32_t event, uint32_t window);
-bool winmux_watch_mission_control(WinMuxWindowServerChangedCallback callback);
-
-// Raw trackpad frames: the callback copies these transient contact values immediately.
-typedef struct { int32_t identifier; double y; } WinMuxTouchContact;
-typedef void (*WinMuxTouchFrameCallback)(uint64_t generation, uint64_t device, int32_t fingers,
-                                       double x, double y, double timestamp, uint64_t contacts,
-                                       const WinMuxTouchContact *threeContacts);
-typedef void (*WinMuxTouchTopologyCallback)(void);
-int winmux_touch_start(uint64_t generation, WinMuxTouchFrameCallback callback);
-void winmux_touch_stop(void);
-bool winmux_touch_watch_topology(WinMuxTouchTopologyCallback callback);
-void winmux_touch_unwatch_topology(void);
-
 // Potential alternative 1?
 // func allWindowsOnCurrentMacOsSpace() {
 //     let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements, .optionOnScreenOnly)

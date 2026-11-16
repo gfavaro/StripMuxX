@@ -24,12 +24,10 @@ class ForkIdentityTests(unittest.TestCase):
         self.assertNotIn("SUFeedURL", project)
         self.assertNotIn("SUPublicEDKey", project)
 
-    def test_release_does_not_initialize_sparkle(self):
-        app = (ROOT / "Sources/WinMuxApp/WinMuxApp.swift").read_text()
-        updater = (ROOT / "Sources/SparkleSupport/AutomaticUpdates.swift").read_text()
-        self.assertNotIn("AutomaticUpdates.start()", app)
-        self.assertNotIn("AutomaticUpdates.checkForUpdates()", app)
-        self.assertNotIn("SPUStandardUpdaterController(", updater)
+    def test_release_has_no_updater(self):
+        package = (ROOT / "Package.swift").read_text()
+        self.assertNotIn("Sparkle", package)
+        self.assertFalse((ROOT / "Sources/SparkleSupport").exists())
 
     def test_fork_does_not_delete_upstream_login_items(self):
         login = (ROOT / "Sources/AppBundle/config/startAtLogin.swift").read_text()
