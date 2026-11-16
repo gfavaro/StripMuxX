@@ -22,6 +22,17 @@ single-window-alignment = 'center'
 
 # Theme for StripMuxX UI: system follows macOS, or choose light / dark.
 appearance = 'system'
+start-at-login = false
+after-startup-command = []
+auto-reload-config = true
+
+on-focus-changed = []
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+on-mode-changed = []
+
+# New windows become a column right of the focused one; false leaves them floating.
+automatically-tile-new-windows = true
+
 # Set a shared UI accent colour, or omit to follow the system accent.
 # accent-color = '#5E9EFF'
 
@@ -34,17 +45,6 @@ appearance = 'system'
     inactive-color = '#00000000'
     order = 'below'
     exclude-apps = []
-
-start-at-login = false
-after-startup-command = []
-auto-reload-config = true
-
-on-focus-changed = []
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
-on-mode-changed = []
-
-# New windows become a column right of the focused one; false leaves them floating.
-automatically-tile-new-windows = true
 
 [key-mapping]
     preset = 'qwerty'
