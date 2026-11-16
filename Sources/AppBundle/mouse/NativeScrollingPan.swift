@@ -30,6 +30,9 @@ final class NativeScrollingPan {
     /// After a resize ends with the fingers, macOS still streams that gesture's momentum.
     /// It belongs to the resize: swallow it, changing nothing, until it ends.
     private var absorbingResizeMomentum = false
+    /// A resize the idle timer ended while the fingers still rest: the rest of that touch,
+    /// lift included, still belongs to the resize. A new touch (phase 1) ends this.
+    private var awaitingIdleResizeLift = false
     private weak var resizeWindow: Window?
     private var idleTask: Task<Void, Never>?
     /// Why the last Option scroll did or did not pan, for doctor.
@@ -80,6 +83,17 @@ final class NativeScrollingPan {
 
     /// Returns whether the event belongs to a pan and must not reach the app.
     func handle(_ scroll: Scroll) -> Bool {
+        if awaitingIdleResizeLift, workspace == nil {
+            if scroll.phase == 1 && scroll.momentumPhase == 0 {
+                awaitingIdleResizeLift = false
+            } else {
+                if scroll.phase == 4 || scroll.momentumPhase != 0 {
+                    awaitingIdleResizeLift = false
+                    absorbingResizeMomentum = scroll.momentumPhase != 3
+                }
+                return true
+            }
+        }
         if absorbingResizeMomentum {
             if scroll.momentumPhase != 0 {
                 if scroll.momentumPhase == 3 { absorbingResizeMomentum = false }
@@ -267,8 +281,10 @@ final class NativeScrollingPan {
         idleTask = Task { @MainActor [weak self] in
             do { try await Task.sleep(for: .milliseconds(awaitingMomentum ? 420 : 250)) }
             catch { return }
-            guard !Task.isCancelled else { return }
-            self?.settle()
+            guard !Task.isCancelled, let self else { return }
+            let wasResizing = self.resizingColumn
+            self.settle()
+            if wasResizing { self.awaitingIdleResizeLift = true }
         }
     }
 

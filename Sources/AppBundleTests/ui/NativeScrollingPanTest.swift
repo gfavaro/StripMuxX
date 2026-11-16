@@ -77,6 +77,38 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertFalse(pan.handle(scroll(30, option: false, phase: 1, at: point)), "A new plain scroll reaches the app")
     }
 
+    func testALiftAfterTheFingersRestedMidResizeStaysWithTheResize() async throws {
+        let (workspace, _) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        func resize(_ dx: CGFloat, phase: Int64, momentum: Int64 = 0, keys: Bool = true) -> NativeScrollingPan.Scroll {
+            .init(deltaX: dx, deltaY: 0, isContinuous: true, optionOnly: false, resizeOnly: keys,
+                  phase: phase, momentumPhase: momentum, point: point)
+        }
+        XCTAssertTrue(pan.handle(resize(90, phase: 1)))
+        XCTAssertTrue(pan.handle(resize(40, phase: 2)))
+        try await Task.sleep(for: .milliseconds(400)) // Fingers rest: the idle timer ends the resize.
+        XCTAssertFalse(pan.isPanning)
+        let width = workspace.scrollingMetrics.columns[0].width
+        XCTAssertTrue(pan.handle(resize(0, phase: 2, keys: false)), "Still the same touch")
+        XCTAssertTrue(pan.handle(resize(0, phase: 4, keys: false)), "The lift must not reach the app")
+        XCTAssertTrue(pan.handle(resize(30, phase: 0, momentum: 1, keys: false)), "Nor its momentum")
+        XCTAssertTrue(pan.handle(resize(10, phase: 0, momentum: 3, keys: false)))
+        XCTAssertEqual(workspace.scrollingMetrics.columns[0].width, width, accuracy: 0.5)
+        XCTAssertFalse(pan.handle(scroll(30, option: false, phase: 1, at: point)), "A new plain scroll reaches the app")
+    }
+
+    func testANewTouchAfterAnIdleEndedResizeIsNotSwallowed() async throws {
+        let (workspace, _) = fixture()
+        let pan = NativeScrollingPan()
+        let point = workspace.workspaceMonitor.rect.center
+        XCTAssertTrue(pan.handle(.init(deltaX: 90, deltaY: 0, isContinuous: true, optionOnly: false, resizeOnly: true,
+                                       phase: 1, momentumPhase: 0, point: point)))
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertFalse(pan.handle(scroll(30, option: false, phase: 1, at: point)), "Missing lift: the next touch is the app's")
+        XCTAssertFalse(pan.handle(scroll(30, option: false, phase: 2, at: point)))
+    }
+
     func testFiveThousandRandomScrollEventsKeepEveryInvariant() {
         let (workspace, windows) = fixture()
         windows[2].scrollingColumnWidth = 0.2
