@@ -598,6 +598,14 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
                     metrics: metrics, offset: 0, focused: models[0].id)
         XCTAssertTrue(view.subviews.compactMap { $0 as? ScrollingMinimapDesktopChip }.isEmpty, "No row for one desktop")
     }
+
+    func testAnOpenMinimapFollowsItsDisplayToTheDesktopNowShowingThere() {
+        let shown = focus.workspace
+        let next = Workspace.get(byName: "b")
+        XCTAssertTrue(scrollingMinimapDesktopToFollow(shown: shown, active: next) === next, "It moves to the new desktop")
+        XCTAssertNil(scrollingMinimapDesktopToFollow(shown: shown, active: shown), "and stays put while nothing changed")
+        XCTAssertNil(scrollingMinimapDesktopToFollow(shown: shown, active: nil), "or while the display shows no ordinary desktop")
+    }
 }
 
 @MainActor

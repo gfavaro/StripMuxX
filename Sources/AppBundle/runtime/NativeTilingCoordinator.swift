@@ -168,6 +168,7 @@ final class NativeTilingCoordinator {
         ready = true
         hasCompletedInitialLayout = true
         NativeWindowBorder.shared.resume()
+        WorkspaceScrollingMinimap.shared.desktopsDidChange()
         if scrollingReadRequestedAt != nil { scrollingReadRequestedAt = nil; relayoutVisibleScrolling() }
         status = "Native tiling active"
     }

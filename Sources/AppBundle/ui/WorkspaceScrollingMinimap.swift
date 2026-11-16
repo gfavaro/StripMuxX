@@ -1,6 +1,14 @@
 import AppKit
 import Common
 
+/// The desktop an open minimap should move to: the one its display now shows, when that is not the
+/// one it is drawing. Nil leaves it alone (nothing changed, or the display shows no ordinary desktop).
+@MainActor
+func scrollingMinimapDesktopToFollow(shown: Workspace, active: Workspace?) -> Workspace? {
+    guard let active, active !== shown else { return nil }
+    return active
+}
+
 func scrollingMinimapFrame(size: CGSize, visibleFrames: [CGRect], screenIndex: Int) -> CGRect? {
     guard visibleFrames.indices.contains(screenIndex - 1) else { return nil }
     let screen = visibleFrames[screenIndex - 1]
@@ -171,14 +179,22 @@ final class WorkspaceScrollingMinimap: NSObject {
         refreshTitles(representatives, in: workspace)
     }
 
-    /// Switches to a desktop as the menu does (`workspace N`), then shows that desktop's strip here.
+    /// Switches to a desktop as the menu does (`workspace N`). The minimap follows once the switch is
+    /// accepted (`desktopsDidChange`), because the new desktop is not showing yet when the command returns.
     private func switchToDesktop(_ number: Int) {
         guard case .cmd(let command) = parseCommand("workspace \(number)") else { return }
-        Task { @MainActor [weak self] in
-            _ = try? await [command].runCmdSeq(CmdEnv.defaultEnv, .emptyStdin)
-            guard let target = nativeDesktopWorkspaces().first(where: { $0.number == number })?.workspace else { return }
-            self?.show(target)
-        }
+        Task { _ = try? await [command].runCmdSeq(CmdEnv.defaultEnv, .emptyStdin) }
+    }
+
+    /// A desktop change was accepted: an open minimap follows its display to the desktop now showing
+    /// there, whether the switch came from a button, a shortcut or a swipe, and closes when that desktop
+    /// has no columns to show.
+    func desktopsDidChange() {
+        guard panel?.isVisible == true, let shown = workspace,
+              let next = scrollingMinimapDesktopToFollow(shown: shown, active: nativeActiveDesktop(on: shown.workspaceMonitor))
+        else { return }
+        let explicit = isExplicitlyOpen
+        if !show(next, explicitly: explicit) { dismiss() }
     }
 
     /// The panel's blurred background and the minimap view in it, built once and reused.
