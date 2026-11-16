@@ -17,6 +17,10 @@ final class DocumentationExamplesTest: XCTestCase {
             """)
     }
 
+    func testSceneAccentRecipeParses() {
+        assertParses("accent-color = '#205ea6'")
+    }
+
     func testColumnWidthRecipeParses() {
         assertParses("""
             [scrolling]

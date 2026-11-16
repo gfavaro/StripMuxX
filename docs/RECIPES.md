@@ -15,6 +15,22 @@ single-window-alignment = 'center'
 Set the ratio to `0` to let a lone window fill the display again. See the
 [full explanation](../README.md#lone-windows).
 
+## Follow Scene's theme
+
+[Scene](https://github.com/gfavaro/Scene) can set StripMuxX's accent whenever it applies a theme.
+The accent colors the focused border (while `borders.active-color` is `'accent'`, the default),
+the minimap's focused tile and viewport, and the shortcut cheat sheet.
+
+```sh
+ln -s "$PWD/script/scene-stripmuxx.sh" ~/.config/scene/scene-stripmuxx
+```
+
+Then add `~/.config/scene/scene-stripmuxx` in Scene → Settings → Scripts. On each theme Scene runs
+it with `SCENE_ACCENT`; it sets the root `accent-color` in `~/.config/stripmuxx/stripmuxx.toml` and
+reloads the config. The first time, it records your own `accent-color` (or that you had none), and
+Scene's Restore puts that back. It changes nothing else in the file. Set `STRIPMUXX_CONFIG` or
+`STRIPMUXX_CLI` to use other paths.
+
 ## Two columns per screen, or three
 
 ```toml
