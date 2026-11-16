@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/winmux-logo.svg" width="96" alt="StripMuxX logo">
+  <img src="resources/app-icon/icon.png" width="96" alt="StripMuxX logo">
 </p>
 
 <h1 align="center">StripMuxX</h1>

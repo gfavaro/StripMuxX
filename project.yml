@@ -29,7 +29,6 @@ targets:
         excludes:
           - "app-icon"
           - "test-fixtures"
-          - "winmux-logo.svg"
     dependencies:
       - package: WinMuxPackage
         product: AppBundle
@@ -39,6 +38,8 @@ targets:
         SWIFT_VERSION: 6.2 # Swift Language Version
         MARKETING_VERSION: ${XCODEGEN_WINMUX_VERSION}
         CURRENT_PROJECT_VERSION: ${XCODEGEN_WINMUX_BUILD_NUMBER}
+        # Without this the asset compiler ignores the AppIcon set and the app has no icon.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: ${XCODEGEN_WINMUX_CODE_SIGN_IDENTITY}
         DEVELOPMENT_TEAM: ${XCODEGEN_WINMUX_DEVELOPMENT_TEAM}

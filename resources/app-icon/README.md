@@ -1,20 +1,15 @@
-# App icon sources
+# App icon
 
-`gen.py` generates every SVG here; edit it rather than the SVGs and run `python3 gen.py`.
-The icon shows a display with the sidebar rail and a Dwindle layout: a tall window
-on the left, one at top right and two side by side below it. Windows use the
-menu-bar colours, shaded from light to dark under a darker title bar.
+`gen.swift` draws the icon with Core Graphics, so there are no SVG sources to keep in step. Edit it and run
+`swift gen.swift` in this folder; it rewrites the ten PNGs of `../Assets.xcassets/AppIcon.appiconset` and
+`icon.png` (1024 px, used by the README).
 
-| File | Use |
-|---|---|
-| `winmux-icon.svg` | App icon at 64 px and larger: 824 px body on the 1024 px macOS grid |
-| `winmux-icon-small.svg` | 16 and 32 pt slots at 1x and 2x: no title bars, shading or sidebar dots, wider gutters |
-| `composer-background.svg` | Icon Composer layer 1: opaque full-bleed background |
-| `composer-display.svg` | Icon Composer layer 2: the display and its windows |
+The icon is a screen showing a strip of columns: the focused one in the middle with a ring, a stack of two
+windows beside it, and the neighbours cut off by the screen's edges. It echoes the menu bar icon, which is drawn
+in code by `Sources/AppBundle/ui/menubar/MenuBarLayoutIcon.swift`. The body is 824 px on the 1024 px macOS grid
+with the same continuous corner curve as the minimap.
 
-`../Assets.xcassets/AppIcon.appiconset` holds PNGs rendered from the two `winmux-icon*` SVGs.
-Re-render them with a renderer that supports SVG filters (for example WebKit) after
-changing the artwork.
+The 16 and 32 point slots (up to 64 px) use a simpler drawing: three wide columns, no title bars and no stacked
+windows, so the shapes stay readable at that size.
 
-Not yet done: an Icon Composer `.icon` for macOS 26 appearances, and replacing the
-circular-arc `rx=185` body with Apple's template silhouette.
+Not yet done: an Icon Composer `.icon` for macOS 26 appearances.
