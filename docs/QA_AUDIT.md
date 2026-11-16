@@ -385,6 +385,21 @@ call with no replacement).
 | Thrown errors in shortcut, menu-bar reload and app-startup tasks are logged instead of dropped | startup failures also show a message |
 | 17 compiler warnings cleared | `swift build` from a full rebuild: none |
 
+## Polish round (builds 78–79)
+
+| Finding | Evidence | Fix |
+| --- | --- | --- |
+| Cheat sheet kept 13 MB and the minimap 4 MB after closing | `footprint`: fresh 24 MB → 38 MB after one cheat sheet, never returned | Cheat sheet frees its panel on close; the minimap frees its panel 6 s after closing. 38 → 26 MB, 28 → 25 MB |
+| A held key skipped about half its repeats | 25 `focus right` at 33 ms: 13 refused with "target changed during reconciliation" | Pure navigation (focus, scrolling-focus, scrolling-center) follows the current focus; edits and closes keep the strict fence. 25/25 accepted both directions |
+| Stale planning docs | 9 broken links, a "WinStrip on SpaceMux" plan, three "missing" features that exist | `docs/architecture` removed; the accurate events note is `docs/STATE_AND_EVENTS.md`. No broken links in any markdown file |
+
+Stress (20 fixture windows, 120 random commands, 6 pans each way, three rounds): no
+crash, tiling stayed active, borders and columns returned to their idle counts,
+footprint plateaued at about 38 MB from round 1 (no growth in rounds 2 and 3). A
+hidden SwiftUI Settings window accounts for about 12 MB of the 24 MB baseline; removing
+it needs macOS 15 as the minimum, so it stays. The CLI's local socket logs harmless
+`nw_path_evaluator` errors from Network.framework on every command.
+
 The earlier P2 "lift after an idle-settled resize" is closed. Three-finger swipes with
 `borders.hide-while-scrolling`: by code path they share the Option pan's `pan` call and
 hide the same way; still not exercisable by synthetic events (user trackpad test with the
