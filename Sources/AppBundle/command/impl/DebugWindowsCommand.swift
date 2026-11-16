@@ -29,7 +29,7 @@ struct DebugWindowsCommand: Command {
         if eventFlags > 1 || (eventFlags > 0 && args.windowId != nil) {
             return io.err("Use only one event/model diagnostic flag, without --window-id")
         }
-        if args.gestureTraceStart { return GestureTrace.shared.start(io: io, sampleWindows: !args.noWindowSamples) }
+        if args.gestureTraceStart { return GestureTrace.shared.start(io: io) }
         if args.gestureTraceStop { return GestureTrace.shared.stop(io: io) }
         if args.gestureProbeStart { return PublicGestureProbe.shared.start(io: io) }
         if args.gestureProbeStop { return PublicGestureProbe.shared.stop(io: io) }

@@ -59,11 +59,6 @@ final class NativeScrollingPan {
                     MainActor.assumeIsolated { NativeScrollingPan.shared.reenable() }
                     return Unmanaged.passUnretained(event)
                 }
-                let tapStarted = GestureTrace.isRecording ? GestureTrace.now() : 0
-                if tapStarted != 0 {
-                    // How late the event reached this tap, and below, how long the tap then held it.
-                    GestureTrace.mark("tap-late", value: Double(Int64(clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) - Int64(event.timestamp)) / 1e6)
-                }
                 let flags = event.flags.intersection([.maskAlternate, .maskCommand, .maskControl, .maskShift])
                 let scroll = Scroll(
                     deltaX: CGFloat(event.getDoubleValueField(.scrollWheelEventPointDeltaAxis2)),
@@ -78,7 +73,6 @@ final class NativeScrollingPan {
                     PublicGestureProbe.shared.observeCGScroll(scroll)
                     return nativePanTiming.measure("scroll event") { NativeScrollingPan.shared.handle(scroll) }
                 }
-                if tapStarted != 0 { GestureTrace.mark("tap-held", value: Double(GestureTrace.now() - tapStarted) / 1e6) }
                 return consumed ? nil : Unmanaged.passUnretained(event)
             }, userInfo: nil) else { return }
         self.tap = tap

@@ -407,18 +407,10 @@ final class MacApp: AbstractApp {
 
     @MainActor
     func setAnimatedAxFrame(_ windowId: UInt32, _ frame: CGRect, session: UUID) {
-        let appName = name ?? "pid \(pid)"
         setFrameJobs.removeValue(forKey: windowId)?.cancel()
         let full = nativeFrameValidation(windowId)
         let permit = nativePermitCheck(windowId)
         setFrameJobs[windowId] = withWindowAsync(windowId) { [axApp, animatedSizes, validatedSessions] window, job in
-            let started = ContinuousClock.now
-            GestureTrace.mark("ax-begin", window: windowId)
-            defer {
-                GestureTrace.mark("ax-end", window: windowId)
-                let elapsed = started.duration(to: .now).components
-                AxWriteTiming.shared.record(Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1e15, app: appName)
-            }
             // Intermediate steps need no readback or minimum-size confirmation.
             // Finish both writes of a started step; cancellation drops queued steps.
             // Native ownership is read once per gesture session; later steps only

@@ -96,7 +96,7 @@ def analyse(trace, cap_ms=700):
 
 def smoothness(trace):
     """Gaps between input steps and between a window's position updates while the fingers are
-    down (gestures over 300 pt), and how late scroll events reach the app when recorded."""
+    down (gestures over 300 pt)."""
     changes = sorted(trace['windowChanges'], key=lambda c: c[0])
     inputs, windows = [], []
     for moves, _ in split_gestures(trace['inputs']):
@@ -112,8 +112,7 @@ def smoothness(trace):
             best = max(per.values(), key=len)
             if len(best) >= 4:
                 windows += [b - a for a, b in zip(best, best[1:])]
-    late = [r[3] for r in trace.get('pipeline', []) if r[1] == 'tap-late']
-    return inputs, windows, late
+    return inputs, windows
 
 
 def gap_line(values):
@@ -174,10 +173,7 @@ if __name__ == '__main__':
     with open(arguments[0]) as handle:
         trace = json.load(handle)
     print(report(analyse(trace), each='--each' in sys.argv))
-    inputs, windows, late = smoothness(trace)
+    inputs, windows = smoothness(trace)
     print('smoothness while the fingers are down (a steady 60 Hz is 16.7 ms):')
     print('   input steps:                ' + gap_line(inputs))
     print('   window position updates:    ' + gap_line(windows))
-    if late:
-        print(f"   scroll events reached the app {statistics.median(late):.2f} ms after they were made "
-              f"(p90 {percentile(late, 0.9):.2f}, max {max(late):.0f})")

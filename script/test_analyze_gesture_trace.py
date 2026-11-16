@@ -62,11 +62,10 @@ class AnalyseGestureTraceTest(unittest.TestCase):
         times = [100, 116, 132, 148, 228, 244, 260]
         changes = [[0, 1, 'App', 2000, 0, 800, 600]] + [[t, 1, 'App', 2000 - 100 * i, 0, 800, 600]
                                                          for i, t in enumerate(times, 1)]
-        in_gaps, window_gaps, late = a.smoothness(trace(inputs, changes))
+        in_gaps, window_gaps = a.smoothness(trace(inputs, changes))
         self.assertEqual(len(in_gaps), 7)
         self.assertEqual(sorted(window_gaps)[-1], 80)
         self.assertEqual(sum(g > 50 for g in window_gaps), 1)
-        self.assertEqual(late, [])
         self.assertIn('over 50 ms', a.gap_line(window_gaps))
 
     def test_report_runs_on_an_empty_trace(self):

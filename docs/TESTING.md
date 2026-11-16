@@ -118,7 +118,8 @@ python3 script/analyze_gesture_trace.py <that path>
 The trace records every input step and every on-screen window and border piece on one
 clock (it stops by itself after 120 s). The analysis reports, per gesture, the input rate
 and travel, how often and how late the busiest window follows the fingers, when the last
-move lands, and how far border pieces sit from a window edge. Use it before and after a
+move lands, and how far border pieces sit from a window edge, and how evenly the input and the windows move
+(gaps over 33 and 50 ms are what shows as stutter). Use it before and after a
 change that claims to improve gesture feel or border tracking, and keep the numbers in the
 commit or in `docs/QA_AUDIT.md`.
 

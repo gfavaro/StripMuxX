@@ -49,7 +49,6 @@ func nativeSpacesDiagnosticReport() -> String {
     lines.append("Three-finger swipe: \(NativeScrollingPan.shared.lastDockSwipeReport)")
     lines.append("Chrome refreshes after observations: \(NativeObservationChrome.shared.refreshes) for \(NativeObservationChrome.shared.requests) completed reads")
     lines.append("Scrolling pan layouts: \(runtime.native.tiling.scrollingLayoutTiming)")
-    lines.append("Gesture frame writes as the apps apply them: \(AxWriteTiming.shared.summary)")
     lines.append("Window borders: \(NativeWindowBorder.shared.backendDiagnosticSummary)")
     let frameRequests = NativeFrameWriteMetrics.shared
     lines.append("Frame requests since launch: \(frameRequests.requests) total, \(frameRequests.gestureRequests) gesture, \(frameRequests.normalRequests) normal; \(frameRequests.repeatedTargets) repeated normal targets; \(frameRequests.gestureSkipped) unchanged gesture steps not written. These count requests, not confirmed AX writes.")

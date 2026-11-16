@@ -512,8 +512,9 @@ draws a lone window at its real height and vertical position when it does not fi
 
 Found by measuring the real trackpad trace (windows updated every 18 to 23 ms at the median but
 20% of the time more than 50 ms apart, in every app alike), then instrumenting the pipeline
-(`debug-windows --gesture-trace-start`, which now also records request, layout, write and AX
-timing, how late each scroll event reaches the event tap, and how long the tap holds it).
+temporarily (request, layout, write and AX timing, how late each scroll event reaches the event
+tap, and how long the tap holds it; that scaffolding was removed once the cause was found and
+the trace's own input and window-update gaps are enough to catch a regression).
 Layout (0.5 ms) and the apps' writes (0.8 ms) were fast; input arrived late. Sampling the main
 thread showed why: borders were refreshed every display frame (about 17% of the thread, with
 a 49-sample wait inside the window server), including the transparent unfocused ones, and the
