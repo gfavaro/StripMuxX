@@ -507,19 +507,6 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
                 .write(to: directory.appendingPathComponent("\(appearance.rawValue).png"))
         }
     }
-}
-
-@MainActor
-func minimapDescendants(of view: NSView) -> [NSView] {
-    view.subviews.flatMap { [$0] + minimapDescendants(of: $0) }
-}
-
-@MainActor
-private final class MinimapPreviewHost: NSView {
-    override func draw(_ dirtyRect: NSRect) {
-        NSColor.windowBackgroundColor.setFill()
-        bounds.fill()
-    }
 
     func testContinuousCornersStayInsideTheRectAndActuallyRoundIt() {
         let rect = CGRect(x: 20, y: 10, width: 120, height: 60)
@@ -548,5 +535,30 @@ private final class MinimapPreviewHost: NSView {
     func testCornerRadiiNestFromTileToViewportToPanel() {
         XCTAssertLessThan(scrollingMinimapTileRadius, scrollingMinimapViewportRadius)
         XCTAssertLessThan(scrollingMinimapViewportRadius, scrollingMinimapPanelRadius)
+    }
+
+    func testBlurMaskIsRoundedAndStretchesWithItsCornersIntact() throws {
+        let mask = roundedBlurMask(radius: 18)
+        XCTAssertEqual(mask.resizingMode, .stretch)
+        XCTAssertEqual(mask.capInsets.top, 28, "The fixed corners hold a whole continuous corner")
+        XCTAssertEqual(mask.size.width, 28 * 2 + 2)
+        let rep = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(mask.tiffRepresentation)))
+        func alpha(_ x: Int, _ y: Int) -> CGFloat { rep.colorAt(x: x, y: y)?.alphaComponent ?? -1 }
+        XCTAssertEqual(alpha(0, 0), 0, accuracy: 0.01, "The corner is cut away, so the blur there is not drawn")
+        XCTAssertEqual(alpha(rep.pixelsWide / 2, rep.pixelsHigh / 2), 1, accuracy: 0.01)
+        XCTAssertEqual(alpha(rep.pixelsWide / 2, 0), 1, accuracy: 0.01, "and the straight edges are full")
+    }
+}
+
+@MainActor
+func minimapDescendants(of view: NSView) -> [NSView] {
+    view.subviews.flatMap { [$0] + minimapDescendants(of: $0) }
+}
+
+@MainActor
+private final class MinimapPreviewHost: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.windowBackgroundColor.setFill()
+        bounds.fill()
     }
 }

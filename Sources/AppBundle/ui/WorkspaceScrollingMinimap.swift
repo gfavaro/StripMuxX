@@ -177,6 +177,7 @@ final class WorkspaceScrollingMinimap: NSObject {
         effect.blendingMode = .behindWindow
         effect.state = .active
         effect.wantsLayer = true
+        effect.maskImage = roundedBlurMask(radius: scrollingMinimapPanelRadius)
         effect.layer?.cornerRadius = scrollingMinimapPanelRadius
         effect.layer?.cornerCurve = .continuous
         effect.layer?.masksToBounds = true
@@ -199,6 +200,7 @@ final class WorkspaceScrollingMinimap: NSObject {
         view.dismissRequested = { [weak self] in self?.dismiss() }
         effect.addSubview(view)
         panel.contentView = effect
+        panel.invalidateShadow()
         self.view = view
         return view
     }

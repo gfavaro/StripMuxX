@@ -621,7 +621,7 @@ private func drawMinimapText(_ text: String, in rect: CGRect, font: NSFont, colo
 
 /// The minimap's corner radii, nested so that every edge that sits inside another follows its curve:
 /// a tile inside the viewport frame inside the panel.
-let scrollingMinimapPanelRadius: CGFloat = 18
+let scrollingMinimapPanelRadius = overlayPanelCornerRadius
 let scrollingMinimapTileRadius: CGFloat = 10
 let scrollingMinimapViewportRadius: CGFloat = scrollingMinimapTileRadius + 3
 

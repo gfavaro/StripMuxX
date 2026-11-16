@@ -81,13 +81,16 @@ final class ShortcutCheatSheet {
         effect.blendingMode = .behindWindow
         effect.state = .active
         effect.wantsLayer = true
-        effect.layer?.cornerRadius = 16
+        effect.maskImage = roundedBlurMask(radius: overlayPanelCornerRadius)
+        effect.layer?.cornerRadius = overlayPanelCornerRadius
+        effect.layer?.cornerCurve = .continuous
         effect.layer?.masksToBounds = true
         // Text-heavy: a mostly solid backdrop keeps it readable over busy windows.
         effect.layer?.backgroundColor = NSColor.windowBackgroundColor
             .withAlphaComponent(NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency ? 1 : 0.82).cgColor
         effect.addSubview(view)
         panel.contentView = effect
+        panel.invalidateShadow()
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(view)
     }
