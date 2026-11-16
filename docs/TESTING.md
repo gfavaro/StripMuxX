@@ -122,6 +122,17 @@ move lands, and how far border pieces sit from a window edge. Use it before and 
 change that claims to improve gesture feel or border tracking, and keep the numbers in the
 commit or in `docs/QA_AUDIT.md`.
 
+## The Atlas helper
+
+A first run on an account that has never seen the app (config bootstrap, the first-run Settings
+window, Settings UI) can be tested in the Atlas helper without touching your desktop:
+`atlas install-app` or `atlas open --app StripMuxX`, reset the first-run flag with
+`atlas run -- /usr/bin/defaults delete com.gfavaro.stripmuxx setupCheck.shown.native`, relaunch,
+and screenshot. The helper cannot test tiling: its desktop has no readable Space identity, so
+StripMuxX reports "Tiling paused: no active ordinary desktop". Desktop switching, Mission
+Control, multiple displays and sleep/wake need a real session. A second login's StripMuxX does
+not interfere with the installer, but quit the helper's copy when you finish (`atlas close`).
+
 ## Review and verification
 
 For code changes, run focused tests while editing, then the complete `make check`. Investigate failures

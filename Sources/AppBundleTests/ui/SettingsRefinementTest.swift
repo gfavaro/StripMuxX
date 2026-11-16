@@ -20,6 +20,16 @@ final class SettingsRefinementTest: WorkspaceTestCase {
     }
 
 
+    func testAWindowThatMissedItsOpenRequestStillTurnsItsPagesOn() {
+        // First run: the setup check requests the window at startup, before the scene observes
+        // the request, so the window appeared with its pages off (an empty placeholder).
+        let model = ShortcutSettingsModel.shared
+        model.isWindowShown = false
+        defer { model.isWindowShown = false }
+        showRequestedSettingsWindow()
+        XCTAssertTrue(model.isWindowShown, "The pages are switched on when the window appears for a missed request")
+    }
+
     func testStoredNavigationIdentifiersRestoreAndUnknownValuesFallBack() {
         for page in SettingsSidebarItem.allCases {
             XCTAssertEqual(SettingsSidebarItem.restored(page.rawValue), page)

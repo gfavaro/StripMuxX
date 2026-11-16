@@ -439,6 +439,24 @@ pans, about 60 input steps a second.
   also open). The analysis now stops at the next gesture and records where the strip was
   before each step; it is covered by `script/test_analyze_gesture_trace.py`.
 
+## Clean account via the Atlas helper (build 83, then 84)
+
+The helper is a second login on this Mac. StripMuxX runs there with Accessibility granted but
+reports "Tiling paused: no active ordinary desktop": the helper's desktop has no readable
+Space identity (`uuid=unavailable`) and one shared display. So Atlas cannot exercise desktop
+switching, Mission Control, multiple displays or sleep/wake (those remain untested); it does
+give a real first run on an account that has never seen the app.
+
+| Check | Result |
+| --- | --- |
+| Config bootstrap on a clean account | 175-line reference config written; **`hide-while-scrolling` was missing from it** (fixed, both reference configs) |
+| First-run Settings window | **Blank** (title bar, no content; AX tree had only the window chrome). Control: Calculator rendered fine, so not the helper. Cause: the setup check requests the window at startup before the scene observes the request, so the pages were never switched on. Fixed; reproduced the same procedure on build 84 and the General page rendered fully |
+| Settings search "border" in the real UI | Lists all 7 border options; picking "Hide borders while the strip scrolls" opens Appearance on that toggle (off by default) |
+| Installer with a second login's StripMuxX running | **Failed with "Operation not permitted" after already stopping the person's own app**, leaving no window manager running (relaunched by hand). Cause: `pgrep -x StripMuxX` matched every user's process. Fixed: current user only, and a failed stop relaunches the installed app. Build 84 then installed cleanly beside the helper's copy |
+
+Everything opened in the helper was closed and its install moved aside (`atlas cleanup
+--apply`); its two earlier windows were not touched.
+
 The earlier P2 "lift after an idle-settled resize" is closed. Three-finger swipes with
 `borders.hide-while-scrolling`: by code path they share the Option pan's `pan` call and
 hide the same way; still not exercisable by synthetic events (user trackpad test with the
