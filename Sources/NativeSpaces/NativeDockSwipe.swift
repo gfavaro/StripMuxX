@@ -26,7 +26,7 @@ public enum NativeDockSwipe {
         guard isSupported, steps > 0, let displayID = displayID(for: displayIdentifier) else { return false }
         // After a warp macOS drops real mouse events for a quarter second unless the
         // suppression interval is zero; yabai and Dinky set this for the same reason.
-        suppressionReset?(0)
+        _ = suppressionReset?(0)
         let restore = cursorLocation()
         let warp = !CGDisplayBounds(displayID).contains(restore)
         if warp {

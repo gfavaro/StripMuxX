@@ -53,8 +53,8 @@ final class ClientServerTest: XCTestCase {
             case .success(let request):
                 XCTAssertEqual(request.args, ["foo", "bar"])
                 XCTAssertEqual(request.stdin, "stdin")
-                XCTAssertNil(request.windowId)
-                XCTAssertNil(request.workspace)
+                XCTAssertNil(request.windowId.flatMap { $0 })
+                XCTAssertNil(request.workspace.flatMap { $0 })
             case .failure(let error): XCTFail(error)
         }
     }

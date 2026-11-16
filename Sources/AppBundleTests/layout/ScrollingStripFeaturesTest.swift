@@ -65,7 +65,7 @@ final class ScrollingStripFeaturesTest: XCTestCase {
         XCTAssertEqual(exit, 0)
         XCTAssertTrue(focus.windowOrNil === windows[2], "Back to the strip where it was")
         _ = windows[4].focusWindow()
-        _ = windows[0].markAsMostRecentChild()
+        windows[0].markAsMostRecentChild()
         exit = try await run("focus floating")
         exit = try await run("focus floating")
         exit = try await run("focus floating")

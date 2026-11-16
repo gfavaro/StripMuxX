@@ -168,16 +168,20 @@ extension HotKey {
     let expected = session.generation
     guard let token = session.begin(expected: expected) else { return }
     Task {
-        try await owner.withValue {
-            defer { session.finish(token) }
-            guard session.generation == token.generation else { return }
-            if activeMode != nil {
-                guard RunSessionGuard.isServerEnabled != nil else { return }
-                try await runCommand(isQuery: commands.allSatisfy(\.isQuery)) { () throws in
-                    let result = try await commands.runCmdSeq(.defaultEnv, .emptyStdin)
-                    showShortcutFailure(binding, result)
+        do {
+            try await owner.withValue {
+                defer { session.finish(token) }
+                guard session.generation == token.generation else { return }
+                if activeMode != nil {
+                    guard RunSessionGuard.isServerEnabled != nil else { return }
+                    try await runCommand(isQuery: commands.allSatisfy(\.isQuery)) { () throws in
+                        let result = try await commands.runCmdSeq(.defaultEnv, .emptyStdin)
+                        showShortcutFailure(binding, result)
+                    }
                 }
             }
+        } catch {
+            NSLog("StripMuxX shortcut %@ failed: %@", binding, String(describing: error))
         }
     }
 }

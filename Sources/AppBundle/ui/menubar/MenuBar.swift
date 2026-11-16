@@ -27,7 +27,8 @@ func reloadConfigButton(showShortcutGroup: Bool = false) -> some View {
     if RunSessionGuard.isServerEnabled != nil {
         let button = Button("Reload config") {
             Task {
-                _ = try await reloadConfig()
+                do { _ = try await reloadConfig() }
+                catch { NSLog("StripMuxX config reload failed: %@", String(describing: error)) }
             }
         }.keyboardShortcut("R", modifiers: .command)
         if showShortcutGroup {

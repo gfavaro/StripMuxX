@@ -34,7 +34,8 @@ public enum NativeSpaceTransitionGuard {
     /// a system call rather than a synchronous LaunchServices request per process.
     public static func windowManagerBundleIdentifier(_ pid: pid_t) -> String? {
         var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
-        guard proc_pidpath(pid, &path, UInt32(path.count)) > 0 else { return nil }
-        return String(cString: path) == windowManagerPath ? "com.apple.WindowManager" : nil
+        let length = Int(proc_pidpath(pid, &path, UInt32(path.count)))
+        guard length > 0 else { return nil }
+        return String(decoding: path.prefix(length).map { UInt8(bitPattern: $0) }, as: UTF8.self) == windowManagerPath ? "com.apple.WindowManager" : nil
     }
 }

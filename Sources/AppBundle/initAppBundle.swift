@@ -4,57 +4,65 @@ import Foundation
 
 @MainActor public func initAppBundle() {
     Task {
-        initTerminationHandler()
-        isCli = false
-        AssistiveTechnology.startObserving()
-        initServerArgs()
-        var bootstrappedConfigUrl: URL? = nil
-        do {
-            bootstrappedConfigUrl = try ensureBootstrapConfigExistsIfNeeded()
-            let editable = bootstrappedConfigUrl ?? preferredEditableConfigUrl()
-            if FileManager.default.fileExists(atPath: editable.path) {
-                try migrateLegacyConfiguration(at: editable)
-            }
-        } catch {
-            MessageModel.shared.message = Message(
-                description: "Config Bootstrap Error",
-                body: error.localizedDescription,
-            )
+        do { try await startAppBundle() }
+        catch {
+            NSLog("StripMuxX startup failed: %@", String(describing: error))
+            MessageModel.shared.message = Message(description: "Startup Error", body: error.localizedDescription)
         }
-        if try await !reloadConfig(forceConfigUrl: bootstrappedConfigUrl) {
-            // The error stays on screen; the shipped defaults run until the file is fixed.
-            var out = ""
-            check(
-                try await reloadConfig(forceConfigUrl: defaultConfigUrl, stdout: &out),
-                """
-                Can't load default config. Your installation is probably corrupted.
-                Please don't modify '\(defaultConfigUrl)'
-
-                \(out)
-                """,
-            )
-        }
-        // Startup never prompts for permissions: tiling reports what it is missing.
-        let owner = runtime
-        if !serverArgs.isReadOnly {
-            NativeScrollingPan.shared.start()
-            StripDockSwipeSource.shared.syncConfiguration()
-        }
-        GlobalObserver.initObserver()
-        // Rules that move windows apply only to windows opened from now on.
-        owner.native.windowsPresentAtLaunch = Set(
-            (CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? [])
-                .compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
-        owner.native.startObservation { [weak owner] inventory, _ in
-            // The observer reports both a read's start and its result; chrome follows results.
-            guard inventory.status != .reading else { return }
-            owner?.withValue { NativeObservationChrome.shared.schedule() }
-        }
-        isWinMuxRuntimeReady = true
-        startUnixSocketServer()
-        syncConfigFileWatcher()
-        showSetupCheckIfNeeded()
     }
+}
+
+@MainActor private func startAppBundle() async throws {
+    initTerminationHandler()
+    isCli = false
+    AssistiveTechnology.startObserving()
+    initServerArgs()
+    var bootstrappedConfigUrl: URL? = nil
+    do {
+        bootstrappedConfigUrl = try ensureBootstrapConfigExistsIfNeeded()
+        let editable = bootstrappedConfigUrl ?? preferredEditableConfigUrl()
+        if FileManager.default.fileExists(atPath: editable.path) {
+            try migrateLegacyConfiguration(at: editable)
+        }
+    } catch {
+        MessageModel.shared.message = Message(
+            description: "Config Bootstrap Error",
+            body: error.localizedDescription,
+        )
+    }
+    if try await !reloadConfig(forceConfigUrl: bootstrappedConfigUrl) {
+        // The error stays on screen; the shipped defaults run until the file is fixed.
+        var out = ""
+        check(
+            try await reloadConfig(forceConfigUrl: defaultConfigUrl, stdout: &out),
+            """
+            Can't load default config. Your installation is probably corrupted.
+            Please don't modify '\(defaultConfigUrl)'
+
+            \(out)
+            """,
+        )
+    }
+    // Startup never prompts for permissions: tiling reports what it is missing.
+    let owner = runtime
+    if !serverArgs.isReadOnly {
+        NativeScrollingPan.shared.start()
+        StripDockSwipeSource.shared.syncConfiguration()
+    }
+    GlobalObserver.initObserver()
+    // Rules that move windows apply only to windows opened from now on.
+    owner.native.windowsPresentAtLaunch = Set(
+        (CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? [])
+            .compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
+    owner.native.startObservation { [weak owner] inventory, _ in
+        // The observer reports both a read's start and its result; chrome follows results.
+        guard inventory.status != .reading else { return }
+        owner?.withValue { NativeObservationChrome.shared.schedule() }
+    }
+    isWinMuxRuntimeReady = true
+    startUnixSocketServer()
+    syncConfigFileWatcher()
+    showSetupCheckIfNeeded()
 }
 
 @TaskLocal
