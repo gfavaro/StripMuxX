@@ -37,4 +37,29 @@ final class NativeActionMenuTest: XCTestCase {
         XCTAssertEqual(desktops.items.first { $0.title == "Space 2" }?.keyEquivalent, "2")
         XCTAssertTrue(runtime.native.accepts(try XCTUnwrap(parseCommand("retile").cmdOrNil)))
     }
+
+    func testAFloatingWindowCanBeAddedToTheStripFromTheMenuWhetherOrNotItHasFocus() throws {
+        let workspace = focus.workspace
+        let tiled = TestWindow.new(id: 97010, parent: workspace.rootTilingContainer)
+        XCTAssertTrue(tiled.focusWindow())
+        func titles() -> [String] { let menu = NSMenu(); NativeActionMenu().menuNeedsUpdate(menu); return menu.items.map(\.title) }
+        XCTAssertFalse(titles().contains { $0.contains("to Strip") }, "Nothing to add: no entry")
+
+        let floating = TestWindow.new(id: 97011, parent: workspace)
+        floating.nativeLayoutEligible = true
+        let single = titles().first { $0.hasSuffix("to Strip") }
+        XCTAssertNotNil(single, "One floating window is a single item")
+        let menu = NSMenu(); NativeActionMenu().menuNeedsUpdate(menu)
+        let item = try XCTUnwrap(menu.items.first { $0.title == single })
+        XCTAssertTrue(item.isEnabled, "It is enabled although the tiled window has focus")
+        let payload = try XCTUnwrap(item.representedObject as? MenuCommandPayload)
+        let layout = try XCTUnwrap(payload.commands.first as? LayoutCommand)
+        XCTAssertEqual(layout.args.windowId, 97011, "It acts on that window, not the focused one")
+
+        let second = TestWindow.new(id: 97012, parent: workspace)
+        second.nativeLayoutEligible = true
+        let several = NSMenu(); NativeActionMenu().menuNeedsUpdate(several)
+        let submenu = try XCTUnwrap(several.items.first { $0.title == "Add Floating Window to Strip" }?.submenu)
+        XCTAssertEqual(submenu.items.count, 2, "Several are a submenu with one entry each")
+    }
 }

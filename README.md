@@ -106,7 +106,9 @@ and learned application sizes remain local session data. See
 The menu bar item shows a strip icon, or the focused space's number. Its menu
 offers Center Column, Show Minimap, Cycle Column Width, Pin Column Left/Right,
 Retile, Balance Sizes, Fullscreen and **Always Float “App”…** (hold Option for
-**Float Windows by Title…**), with the rest under Commands: spaces, displays,
+**Float Windows by Title…**). When the space has floating windows, **Add “App” to
+Strip** (a submenu when there are several) puts one into the strip whether or not it
+has focus. The rest under Commands: spaces, displays,
 focus, moves, stacking, resizing, Toggle Floating, Undo Layout Change, Refresh
 Spaces and Reload Config. Shortcuts shown come from the active mode.
 

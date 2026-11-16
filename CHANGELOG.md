@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- The menu bar menu shows **Add “App” to Strip** when the space has a floating window (a submenu when there are several), which tiles that window whether or not it has focus.
 - The minimap shows where your windows are: a "Spaces" row of numbered buttons with the icons of the apps on each space (click to switch, as `workspace N` does). An open minimap follows the switch, and a click anywhere outside it dismisses it.
 - `scene-stripmuxx.sh`, bundled in the app's Resources, a hook for Scene (Settings → Scripts) that sets the root `accent-color` from the theme on screen and restores your own value afterwards. See the recipe in `docs/RECIPES.md`.
 - Default keys for the previous window (`focus-back-and-forth`), focusing and moving a window to the neighbouring display, the first column, and window height ±50, in the default config and the ergonomic preset.

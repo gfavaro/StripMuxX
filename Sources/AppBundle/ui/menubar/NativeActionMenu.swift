@@ -139,6 +139,7 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
         addCommand("Balance Sizes", script: "balance-sizes", to: menu)
         addCommand("Fullscreen", script: "fullscreen", to: menu)
         menu.addItem(.separator())
+        addFloatingWindowItems(to: menu)
         if let target = capturedRuleTarget {
             let appName = target.window.macApp.name ?? "This App"
             menu.addItem(callbackItem("Always Float “\(appName)”…", #selector(alwaysFloatApp)))
@@ -154,6 +155,24 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
         let enabled = addCommand("Enabled", script: "enable toggle", to: menu, requiresWindow: false, allowDisabled: true)
         enabled?.state = TrayMenuModel.shared.isEnabled ? .on : .off
         menu.addItem(callbackItem("Quit StripMuxX", #selector(quit)))
+    }
+
+    /// A floating window (a dialog, or a window that floated by mistake) can be put into the strip from here
+    /// whether or not it has focus. One window is a single item; several are a submenu; none shows nothing.
+    private func addFloatingWindowItems(to menu: NSMenu) {
+        let floating = floatingWindowsOfFocusedSpace()
+        guard !floating.isEmpty else { return }
+        func addToStrip(_ window: Window, title: String, in menu: NSMenu) {
+            guard case .cmd(let command) = parseCommand(["layout", "--window-id", String(window.windowId), "tiling"]) else { return }
+            addCommand(title, command: command, to: menu, requiresWindow: false)
+        }
+        if floating.count == 1, let window = floating.first {
+            addToStrip(window, title: "Add “\(window.app.name ?? "Window")” to Strip", in: menu)
+            return
+        }
+        addSubmenu("Add Floating Window to Strip", to: menu) { submenu in
+            for window in floating { addToStrip(window, title: floatingWindowMenuTitle(window), in: submenu) }
+        }
     }
 
     private func addCommandsMenu(to menu: NSMenu) {
@@ -481,4 +500,18 @@ func aboutPanelCredits() -> NSAttributedString {
     paragraph.alignment = .center
     text.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: text.length))
     return text
+}
+
+/// The floating windows of the space the menu is for, oldest first.
+@MainActor
+func floatingWindowsOfFocusedSpace() -> [Window] {
+    focus.workspace.floatingWindows.filter(\.nativeLayoutEligible).sorted { $0.windowId < $1.windowId }
+}
+
+/// "App — title" for a menu entry, the title cut to fit.
+@MainActor
+func floatingWindowMenuTitle(_ window: Window) -> String {
+    let app = window.app.name ?? "Window"
+    guard let title = cachedWindowTitle(for: window), !title.isEmpty, title != app else { return app }
+    return "\(app) — \(title.count > 40 ? String(title.prefix(40)) + "…" : title)"
 }
