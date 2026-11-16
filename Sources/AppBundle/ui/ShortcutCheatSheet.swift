@@ -94,6 +94,11 @@ final class ShortcutCheatSheet {
     func dismiss() {
         panel?.orderOut(nil)
     }
+
+    func refreshColors() {
+        guard isShown else { return }
+        panel?.contentView?.subviews.compactMap { $0 as? ShortcutCheatSheetView }.forEach { $0.needsDisplay = true }
+    }
 }
 
 @MainActor
@@ -153,8 +158,9 @@ final class ShortcutCheatSheetView: NSView {
     override func mouseDown(with event: NSEvent) { dismiss?() }
 
     override func draw(_ dirtyRect: NSRect) {
+        let accent = winMuxEmphasisColor
         draw("Keyboard shortcuts", in: CGRect(x: padding, y: padding - 4, width: bounds.width / 2, height: 22),
-             font: .systemFont(ofSize: 15, weight: .semibold), color: .labelColor)
+             font: .systemFont(ofSize: 15, weight: .semibold), color: accent)
         draw("Press any key to close", in: CGRect(x: bounds.width / 2, y: padding - 1, width: bounds.width / 2 - padding, height: 16),
              font: .systemFont(ofSize: 11), color: .secondaryLabelColor, alignment: .right)
         for (index, column) in columns.enumerated() {
@@ -162,15 +168,15 @@ final class ShortcutCheatSheetView: NSView {
             var y = padding + 34
             for section in column {
                 draw(section.title.uppercased(), in: CGRect(x: x, y: y + 8, width: columnWidth, height: 14),
-                     font: .systemFont(ofSize: 10, weight: .semibold), color: .secondaryLabelColor)
+                     font: .systemFont(ofSize: 10, weight: .semibold), color: accent)
                 y += headingHeight
                 for row in section.rows {
                     let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
                     let keyWidth = min(keysWidth - 6, (row.keys as NSString).size(withAttributes: [.font: font]).width + 12)
                     let pill = CGRect(x: x + keysWidth - 6 - keyWidth, y: y + 2, width: keyWidth, height: rowHeight - 5)
-                    NSColor.labelColor.withAlphaComponent(0.09).setFill()
+                    accent.withAlphaComponent(0.15).setFill()
                     NSBezierPath(roundedRect: pill, xRadius: 5, yRadius: 5).fill()
-                    draw(row.keys, in: pill.insetBy(dx: 6, dy: 1.5), font: font, color: .labelColor, alignment: .center)
+                    draw(row.keys, in: pill.insetBy(dx: 6, dy: 1.5), font: font, color: accent, alignment: .center)
                     draw(row.action, in: CGRect(x: x + keysWidth + 4, y: y + 3.5, width: columnWidth - keysWidth - 4, height: 15),
                          font: .systemFont(ofSize: 11.5), color: .labelColor)
                     y += rowHeight
