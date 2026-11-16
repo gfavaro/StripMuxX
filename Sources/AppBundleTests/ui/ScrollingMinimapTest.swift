@@ -548,6 +548,56 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertEqual(alpha(rep.pixelsWide / 2, rep.pixelsHigh / 2), 1, accuracy: 0.01)
         XCTAssertEqual(alpha(rep.pixelsWide / 2, 0), 1, accuracy: 0.01, "and the straight edges are full")
     }
+
+    func testDesktopRowOffersEachDesktopOfTheDisplayAndSwitchesOnClick() throws {
+        let workspace = focus.workspace
+        let other = Workspace.get(byName: "b")
+        let window = TestWindow.new(id: 96300, parent: workspace.rootTilingContainer)
+        let metrics = workspace.scrollingMetrics
+        let desktops = scrollingMinimapDesktops([(1, workspace), (2, other)], showing: workspace)
+        XCTAssertEqual(desktops, [.init(number: 1, isCurrent: true), .init(number: 2, isCurrent: false)])
+        XCTAssertEqual(scrollingMinimapDesktops([(1, workspace)], showing: workspace), [], "One desktop has nothing to switch to")
+
+        let models = [ScrollingMinimapTile(id: ObjectIdentifier(window), title: "Window", applications: [], count: 1)]
+        let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 360, height: rowHeight + 68 + scrollingMinimapDesktopRowHeight))
+        var selected: Int?
+        view.desktopSelected = { selected = $0 }
+        view.update(workspaceName: "Desktop 1", models: models, desktops: desktops, icons: [:], metrics: metrics,
+                    offset: 0, focused: models[0].id)
+        let chips = view.subviews.compactMap { $0 as? ScrollingMinimapDesktopChip }
+        XCTAssertEqual(chips.map(\.model.number), [1, 2])
+        XCTAssertEqual(chips.map(\.model.isCurrent), [true, false])
+        XCTAssertTrue(chips.allSatisfy { !$0.isHidden })
+        chips[1].performClick(nil)
+        XCTAssertEqual(selected, 2, "Clicking a desktop asks to switch to it")
+        XCTAssertGreaterThan(chips[0].frame.minY, 29 + rowHeight, "The row sits below the tiles")
+        XCTAssertLessThanOrEqual(chips[0].frame.maxY, view.bounds.height - 23, "and above the footer")
+        XCTAssertEqual(chips[0].accessibilityLabel(), "Desktop 1")
+        XCTAssertEqual(chips[0].accessibilityValue() as? String, "Current")
+        XCTAssertEqual(chips[1].accessibilityValue() as? String, "")
+    }
+
+    func testDesktopRowSitsAboveTheFloatingWindowsRowAndLeavesWhenThereIsNoChoice() throws {
+        let workspace = focus.workspace
+        let other = Workspace.get(byName: "b")
+        let window = TestWindow.new(id: 96310, parent: workspace.rootTilingContainer)
+        let metrics = workspace.scrollingMetrics
+        let models = [ScrollingMinimapTile(id: ObjectIdentifier(window), title: "Window", applications: [], count: 1)]
+        let floating = [ScrollingMinimapFloatingWindow(windowId: 1, pid: 1, title: "Calculator", focused: false)]
+        let height = scrollingMinimapRowHeight(metrics: metrics) + 68 + scrollingMinimapFloatingRowHeight + scrollingMinimapDesktopRowHeight
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 360, height: height))
+        let desktops = scrollingMinimapDesktops([(1, workspace), (2, other)], showing: workspace)
+        view.update(workspaceName: "Desktop 1", models: models, floating: floating, desktops: desktops, icons: [:],
+                    metrics: metrics, offset: 0, focused: models[0].id)
+        let desktopChip = try XCTUnwrap(view.subviews.compactMap { $0 as? ScrollingMinimapDesktopChip }.first)
+        let floatingChip = try XCTUnwrap(view.subviews.compactMap { $0 as? ScrollingMinimapFloatingChip }.first)
+        XCTAssertLessThanOrEqual(desktopChip.frame.maxY, floatingChip.frame.minY, "Desktops above floating windows")
+
+        view.update(workspaceName: "Desktop 1", models: models, floating: floating, desktops: [], icons: [:],
+                    metrics: metrics, offset: 0, focused: models[0].id)
+        XCTAssertTrue(view.subviews.compactMap { $0 as? ScrollingMinimapDesktopChip }.isEmpty, "No row for one desktop")
+    }
 }
 
 @MainActor

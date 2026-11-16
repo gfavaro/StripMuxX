@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- The minimap has a "Desktops" row of numbered buttons for the display's desktops; clicking one switches to it, as `workspace N` does. It appears only when the display has more than one desktop.
 - `scene-stripmuxx.sh`, bundled in the app's Resources, a hook for Scene (Settings → Scripts) that sets the root `accent-color` from the theme on screen and restores your own value afterwards. See the recipe in `docs/RECIPES.md`.
 - Default keys for the previous window (`focus-back-and-forth`), focusing and moving a window to the neighbouring display, the first column, and window height ±50, in the default config and the ergonomic preset.
 - Floating windows stay floating and are easy to find: the minimap lists them under the strip (click to focus), and `focus floating` (Alt-Shift-V) steps through them, then back to the strip window you left.

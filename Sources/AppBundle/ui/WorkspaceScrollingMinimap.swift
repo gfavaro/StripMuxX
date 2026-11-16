@@ -135,8 +135,10 @@ final class WorkspaceScrollingMinimap: NSObject {
         let width = scrollingMinimapPanelWidth(metrics: workspace.scrollingMetrics,
                                                maximum: min(680, max(1, screens[index - 1].visibleFrame.width - 48)))
         let floatingWindows = workspace.floatingWindows.filter(\.nativeLayoutEligible).sorted { $0.windowId < $1.windowId }
+        let desktops = scrollingMinimapDesktops(nativeDesktopWorkspaces(), showing: workspace)
         let height = scrollingMinimapRowHeight(metrics: workspace.scrollingMetrics) + 68
             + (floatingWindows.isEmpty ? 0 : scrollingMinimapFloatingRowHeight)
+            + (desktops.isEmpty ? 0 : scrollingMinimapDesktopRowHeight)
         guard let frame = scrollingMinimapFrame(size: CGSize(width: width, height: height),
             visibleFrames: screens.map(\.visibleFrame), screenIndex: index) else { dismiss(); return }
         let panel = self.panel ?? makePanel()
@@ -163,10 +165,20 @@ final class WorkspaceScrollingMinimap: NSObject {
                 focused: focus.windowOrNil === window)
         }
         view.update(workspaceName: userFacingDesktopName(workspace), models: models, pinned: pinned,
-                    floating: floating, icons: icons,
+                    floating: floating, desktops: desktops, icons: icons,
                     metrics: workspace.scrollingMetrics, offset: workspace.scrollingOffset,
                     focused: focus.windowOrNil.flatMap { $0.nodeWorkspace === workspace ? ObjectIdentifier($0.topLevelWorkspaceGroup) : nil })
         refreshTitles(representatives, in: workspace)
+    }
+
+    /// Switches to a desktop as the menu does (`workspace N`), then shows that desktop's strip here.
+    private func switchToDesktop(_ number: Int) {
+        guard case .cmd(let command) = parseCommand("workspace \(number)") else { return }
+        Task { @MainActor [weak self] in
+            _ = try? await [command].runCmdSeq(CmdEnv.defaultEnv, .emptyStdin)
+            guard let target = nativeDesktopWorkspaces().first(where: { $0.number == number })?.workspace else { return }
+            self?.show(target)
+        }
     }
 
     /// The panel's blurred background and the minimap view in it, built once and reused.
@@ -198,6 +210,7 @@ final class WorkspaceScrollingMinimap: NSObject {
             self.scheduleDismissal()
         }
         view.dismissRequested = { [weak self] in self?.dismiss() }
+        view.desktopSelected = { [weak self] number in self?.switchToDesktop(number) }
         effect.addSubview(view)
         panel.contentView = effect
         panel.invalidateShadow()

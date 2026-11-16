@@ -27,7 +27,9 @@ unpin. `balance-sizes` gives every column the configured width again.
 `focus left|right` moves between columns and `move left|right` carries the focused
 column along the strip. `scrolling-focus 1-9|first|last` and `scrolling-move …` go by
 place, 9 being the last column, like browser tabs. The minimap (`scrolling-minimap`)
-shows the whole strip; click or drag a column there to focus or reorder it.
+shows the whole strip; click or drag a column there to focus or reorder it. When the display has
+more than one desktop, a "Desktops" row of numbered buttons switches to one (the current one is
+highlighted), the same as `workspace N`.
 
 ## Stacks
 
