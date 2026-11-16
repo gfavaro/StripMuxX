@@ -94,6 +94,36 @@ def analyse(trace, cap_ms=700):
     return rows
 
 
+def smoothness(trace):
+    """Gaps between input steps and between a window's position updates while the fingers are
+    down (gestures over 300 pt), and how late scroll events reach the app when recorded."""
+    changes = sorted(trace['windowChanges'], key=lambda c: c[0])
+    inputs, windows = [], []
+    for moves, _ in split_gestures(trace['inputs']):
+        times = [m['t'] for m in moves]
+        inputs += [b - a for a, b in zip(times, times[1:])]
+        if abs(moves[-1]['offset'] - moves[0].get('from', moves[0]['offset'])) < 300:
+            continue
+        per = {}
+        for c in changes:
+            if times[0] <= c[0] <= times[-1] and c[2] != 'StripMuxX':
+                per.setdefault(c[1], []).append(c[0])
+        if per:
+            best = max(per.values(), key=len)
+            if len(best) >= 4:
+                windows += [b - a for a, b in zip(best, best[1:])]
+    late = [r[3] for r in trace.get('pipeline', []) if r[1] == 'tap-late']
+    return inputs, windows, late
+
+
+def gap_line(values):
+    if not values:
+        return 'n/a'
+    return (f"median {statistics.median(values):.1f} ms, p90 {percentile(values, 0.9):.1f} ms, max {max(values):.0f} ms; "
+            f"{100 * sum(v > 33 for v in values) // len(values)}% over 33 ms, "
+            f"{100 * sum(v > 50 for v in values) // len(values)}% over 50 ms ({len(values)} gaps)")
+
+
 def fmt(values):
     if not values:
         return 'n/a'
@@ -142,4 +172,12 @@ if __name__ == '__main__':
     if len(arguments) != 1:
         sys.exit(__doc__)
     with open(arguments[0]) as handle:
-        print(report(analyse(json.load(handle)), each='--each' in sys.argv))
+        trace = json.load(handle)
+    print(report(analyse(trace), each='--each' in sys.argv))
+    inputs, windows, late = smoothness(trace)
+    print('smoothness while the fingers are down (a steady 60 Hz is 16.7 ms):')
+    print('   input steps:                ' + gap_line(inputs))
+    print('   window position updates:    ' + gap_line(windows))
+    if late:
+        print(f"   scroll events reached the app {statistics.median(late):.2f} ms after they were made "
+              f"(p90 {percentile(late, 0.9):.2f}, max {max(late):.0f})")

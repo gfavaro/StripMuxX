@@ -56,6 +56,19 @@ class AnalyseGestureTraceTest(unittest.TestCase):
         rows = a.analyse(trace(inputs, changes))
         self.assertEqual(sorted(rows[0]['border']), [0, 54])
 
+    def test_smoothness_counts_the_gaps_between_updates(self):
+        inputs = [pan(100 + 16 * i, 100 * i, 0 if i == 1 else None) for i in range(1, 9)] + [end(300)]
+        # A window that updates every 16 ms, except for one stall of 80 ms.
+        times = [100, 116, 132, 148, 228, 244, 260]
+        changes = [[0, 1, 'App', 2000, 0, 800, 600]] + [[t, 1, 'App', 2000 - 100 * i, 0, 800, 600]
+                                                         for i, t in enumerate(times, 1)]
+        in_gaps, window_gaps, late = a.smoothness(trace(inputs, changes))
+        self.assertEqual(len(in_gaps), 7)
+        self.assertEqual(sorted(window_gaps)[-1], 80)
+        self.assertEqual(sum(g > 50 for g in window_gaps), 1)
+        self.assertEqual(late, [])
+        self.assertIn('over 50 ms', a.gap_line(window_gaps))
+
     def test_report_runs_on_an_empty_trace(self):
         self.assertEqual(a.report(a.analyse(trace([], []))), '')
 

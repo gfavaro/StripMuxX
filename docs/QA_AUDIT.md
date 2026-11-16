@@ -475,6 +475,23 @@ At the end every window was identical to the baseline and focus was back where i
 Not tested: unplugging or plugging a display, display arrangement changes, desktop switching,
 Mission Control, sleep/wake, fullscreen on the second display.
 
+## Real trackpad session after the stutter fix (build 93, easing 40 ms, 29 three-finger swipes)
+
+| | Build 82 session (easing off) | Build 93 session |
+| --- | --- | --- |
+| Window position updates more than 50 ms after the previous | 20% | 2% |
+| ... more than 33 ms | 33% | 17% |
+| Window update gaps, p90 / max | 68 / 542 ms | 38 / 92 ms |
+| Input step gaps, p90 / max | 46 / 531 ms | 34 / 237 ms |
+| Longest window lag behind the fingers | 664 ms | 173 ms (median 55 ms, which includes the 40 ms easing) |
+| Border more than 6 pt from a window edge | 21%, p90 93 pt | 18%, p90 48 pt |
+| Windows still moving after the last input | median 53 ms | median 290 ms (the easing glide) |
+
+The stutter is largely gone on the real trackpad. What remains: 6% of input steps still arrive
+more than 50 ms apart (the app holds an event 0.5 ms at most, so this is the event stream itself)
+and the easing costs about 40 ms of lag and a 290 ms glide after release. `analyze_gesture_trace.py`
+now prints the smoothness figures (input and window-update gaps, scroll event lateness) itself.
+
 ## Minimap proportions (build 92)
 
 Reported: a full-width window looked like it was on a wide screen. Cause (measured from a
