@@ -50,7 +50,7 @@ final class NativeTilingCoordinator {
         // identity even while the mouse is down. Do not leave overlay panels
         // on a different Space after that transition.
         dragPreview.hide()
-        if spacesMayChange { NativeWindowBorder.shared.hide() }
+        if spacesMayChange { NativeWindowBorder.shared.hide(reason) }
         nativePanTiming.count("invalidate: \(reason)")
         generation &+= 1
         ready = false

@@ -20,6 +20,8 @@ final class NativeWorkspaceLifecycle {
     private(set) var topUpTimer: Task<Void, Never>?
     private var topUpGeneration = 0
     private var topUpSuspended = false
+    /// The desktops the displays showed at the last read that had a snapshot.
+    private var lastShownSpaces: Set<String>?
     /// Every window WindowServer knew when native mode started, on any desktop. Rules
     /// that move windows apply only to windows opened later, even if a pre-existing
     /// window is first seen when its desktop is visited.
@@ -70,8 +72,12 @@ final class NativeWorkspaceLifecycle {
             defer { nativePanTiming.record("observation change", start.duration(to: .now)) }
             owner.withValue {
                 self.writeAuthority.invalidate()
+                // A read without a snapshot says nothing about the desktops; only a
+                // different set of shown desktops hides the borders.
                 let shown = inventory.currentSnapshot.map { Set($0.displays.map(\.activeSpaceID)) }
-                self.tiling.invalidate("read: \(event)", spacesMayChange: shown != Set(self.layouts.currentBySpaceID.keys))
+                let spacesChanged = shown.map { $0 != self.lastShownSpaces } ?? false
+                if let shown { self.lastShownSpaces = shown }
+                self.tiling.invalidate("read: \(event)", spacesMayChange: spacesChanged)
                 self.windows.invalidate()
                 for window in MacWindow.allWindows { window.suspendMinimumObservationForMotion() }
                 self.layouts.reconcile(inventory, displays: owner.displays.all())

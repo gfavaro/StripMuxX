@@ -49,6 +49,7 @@ func nativeSpacesDiagnosticReport() -> String {
     lines.append("Three-finger swipe: \(NativeScrollingPan.shared.lastDockSwipeReport)")
     lines.append("Chrome refreshes after observations: \(NativeObservationChrome.shared.refreshes) for \(NativeObservationChrome.shared.requests) completed reads")
     lines.append("Scrolling pan layouts: \(runtime.native.tiling.scrollingLayoutTiming)")
+    lines.append("Window borders: \(NativeWindowBorder.shared.backendDiagnosticSummary)")
     let frameRequests = NativeFrameWriteMetrics.shared
     lines.append("Frame requests since launch: \(frameRequests.requests) total, \(frameRequests.gestureRequests) gesture, \(frameRequests.normalRequests) normal; \(frameRequests.repeatedTargets) repeated normal targets. These count requests, not confirmed AX writes.")
     for monitor in sortedMonitors {

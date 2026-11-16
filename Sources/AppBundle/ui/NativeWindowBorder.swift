@@ -22,9 +22,14 @@ final class NativeWindowBorder {
     private let motionOwner = MotionOwner()
     private var motionDeadline: CFTimeInterval = 0
 
+    /// Why borders disappeared since launch, for doctor.
+    private(set) var hideCounts: [String: Int] = [:]
+    private func count(_ reason: String) { hideCounts[reason, default: 0] += 1 }
+
     var backendDiagnosticSummary: String {
         let native = borders.values.filter(\.usesNativeBackend).count
-        return "native=\(native) AppKitFallback=\(borders.count - native) activeBorders=\(borders.count)"
+        let hidden = hideCounts.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")
+        return "native=\(native) AppKitFallback=\(borders.count - native) activeBorders=\(borders.count); hidden: \(hidden.isEmpty ? "never" : hidden)"
     }
 
     func startColorMonitoring() {
@@ -42,7 +47,8 @@ final class NativeWindowBorder {
 
     /// A native Space / Mission Control transition invalidates the display
     /// inventory. Hide rather than moving borders to a different desktop.
-    func hide() {
+    func hide(_ reason: String = "desktop change") {
+        count("all, " + reason)
         isSuspended = true
         for border in borders.values { border.hide() }
         for border in spareBorders { border.hide() }
@@ -57,6 +63,9 @@ final class NativeWindowBorder {
         guard TrayMenuModel.shared.isEnabled, settings.enabled, settings.width > 0,
               !serverArgs.isReadOnly else { clear(); return }
         guard !isSuspended else { return }
+        // Mid-reconciliation, eligibility and membership are being rebuilt; removing a
+        // border then only to restore it on accept makes it blink. accept() resumes.
+        guard runtime.native.tiling.ready else { return }
         let activeDesktops = runtime.native.layouts.currentBySpaceID.values.filter { $0.isVisible }
         guard !activeDesktops.isEmpty else { clear(); return }
 
@@ -114,6 +123,7 @@ final class NativeWindowBorder {
         for id in Array(borders.keys) where !visible.contains(id) {
             documentWindowCache[id] = nil
             guard let old = borders.removeValue(forKey: id) else { continue }
+            count(id == focus.windowOrNil?.windowId ? "focused window left the visible set" : "window left the visible set")
             old.hide()
             if spareBorders.count < spareBorderLimit { spareBorders.append(old) }
             else { old.destroy() }
@@ -170,6 +180,7 @@ final class NativeWindowBorder {
     }
 
     func clear() {
+        if !borders.isEmpty { count("all, cleared") }
         lastDragLocation = nil
         documentWindowCache.removeAll()
         DisplayRefreshDriver.shared.remove(owner: self)
