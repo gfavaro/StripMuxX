@@ -37,7 +37,7 @@ var defaultConfigUrl: URL {
         let previousAccent = runtime.configuration.value.accentColor
         runtime.configuration.value = newValue
         if previousBorders != newValue.windowBorders || previousAccent != newValue.accentColor {
-            NativeWindowBorder.shared.resume()
+            NativeWindowBorder.shared.refresh()
         }
     }
 }
