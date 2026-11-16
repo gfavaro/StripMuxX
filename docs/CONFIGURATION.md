@@ -160,8 +160,6 @@ keeps Validate and Save and apply, including stale-file conflict protection.
 column-width = 0.49
 width-presets = [0.25, 0.3333, 0.5, 0.6667, 0.75, 1.0]
 gesture-enabled = true
-gesture-sensitivity = 1.0
-gesture-smoothing = 0       # experimental: ms to ease windows toward the fingers; 0 = off
 minimap-enabled = true
 center-focused-column = 'never'   # never, on-overflow or always
 minimap-hold-modifiers = []       # e.g. ['ctrl', 'alt']
@@ -176,7 +174,7 @@ aligned to the top, instead of filling the column; stacks still share the full
 height.
 
 Option plus a two-finger horizontal trackpad scroll pans the strip
-(`gesture-enabled`, `gesture-sensitivity`); plain scrolls stay with the app. A
+(`gesture-enabled`); plain scrolls stay with the app. A
 fitting strip is centered. An overflowing strip clamps at both ends; explicit
 centering respects those bounds. Scrolled-out columns leave a 25-point edge preview.
 

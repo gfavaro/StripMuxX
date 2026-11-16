@@ -135,8 +135,7 @@ stay on their desktop and reachable. Overlap order uses AX raises, which do not
 activate the window's app.
 
 macOS keeps three- and four-finger swipes for switching Spaces, so StripMuxX pans with
-**Option + two-finger horizontal scroll** on a trackpad (`[scrolling] gesture-enabled`
-and `gesture-sensitivity`). Those scroll events are consumed, including the momentum
+**Option + two-finger horizontal scroll** on a trackpad (`[scrolling] gesture-enabled`). Those scroll events are consumed, including the momentum
 macOS adds after the fingers lift, so the pan moves with the system's own scrolling
 curve; other scrolls, mouse wheels and fullscreen Spaces are untouched. When the
 momentum ends, the column nearest the middle is revealed and focused. The minimap

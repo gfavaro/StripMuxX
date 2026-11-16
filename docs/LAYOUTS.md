@@ -83,9 +83,9 @@ exclude-apps = []
 Colors accept `accent`, `#RRGGBB`, or `#RRGGBBAA`; widths may be fractional.
 A border follows its window's real position, so while the strip scrolls it trails
 by one display frame (more for a fast flick, which arrives as a few large steps).
-The experimental `[scrolling] gesture-smoothing = 40` eases windows toward the fingers over about
-that many milliseconds, so a flick moves them in many small steps and the border trails less,
-at the cost of that much delay; 0 (the default) follows the input directly. It is off while macOS Reduce Motion is on.
+Windows ease toward the fingers over about 40 milliseconds, so a flick moves them in many small
+steps and the border trails less, at the cost of that much delay. It is off while macOS Reduce
+Motion is on.
 The minimap's focused tiles, viewport outline, and insertion indicators and
 the shortcut cheat sheet's headings/key badges share the **same resolved
 active border color**. Set `active-color = 'accent'` to use the optional root

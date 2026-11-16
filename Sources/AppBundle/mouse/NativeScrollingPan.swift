@@ -209,7 +209,7 @@ final class NativeScrollingPan {
         let current = metrics.clampedOffset(workspace.scrollingOffset)
         // Content follows the fingers: moving them left reveals columns to the right.
         guard deltaX.isFinite else { return }
-        let next = metrics.clampedOffset(current - deltaX * CGFloat(config.scrolling.gestureSensitivity))
+        let next = metrics.clampedOffset(current - deltaX)
         GestureTrace.shared.note(isDockSwipeActive ? "dock" : "pan", delta: Double(deltaX), from: current, offset: next)
         // At the strip boundary or on an empty momentum event there is nothing
         // to reposition. Avoid queuing duplicate AX frames for a stationary camera.
@@ -232,7 +232,7 @@ final class NativeScrollingPan {
                   $0.node === window.topLevelWorkspaceGroup
               }) else { return }
         let requested = max(minimumTiledResizeWeight,
-                            column.width + deltaX * CGFloat(config.scrolling.gestureSensitivity))
+                            column.width + deltaX)
         guard abs(requested - column.width) >= 0.5 else { return }
         let applied: CGFloat?
         if window.freeSizeRect != nil {

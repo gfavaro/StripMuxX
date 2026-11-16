@@ -12,7 +12,7 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     }
     var scrollingSessionEpoch: UInt64 = 0
     var scrollingOffset: CGFloat = 0
-    /// While a gesture eases the windows toward `scrollingOffset` (`gesture-smoothing`), the
+    /// While a gesture eases the windows toward `scrollingOffset` (`ScrollingViewportEaser`), the
     /// offset the layout places them by. Nil everywhere else: the layout then uses the real one.
     var scrollingRenderedOffset: CGFloat?
     /// Preserve a restored viewport until the first focused window is observed.

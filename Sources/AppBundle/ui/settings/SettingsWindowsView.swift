@@ -10,7 +10,6 @@ struct ShortcutBehaviorSettingsView: View {
     @SettingsDraft("scrolling.width-presets", load: { config.scrolling.widthPresets.map { String($0 * 100) }.joined(separator: ", ") }) private var scrollingWidthPresets: String
     @SettingsDraft("scrolling.gesture-enabled", load: { config.scrolling.gestureEnabled }) private var scrollingGestureEnabled: Bool
     @SettingsDraft("scrolling.three-finger-swipe", load: { config.scrolling.threeFingerSwipe }) private var threeFingerSwipe: Bool
-    @SettingsDraft("scrolling.gesture-sensitivity", load: { String(config.scrolling.gestureSensitivity) }) private var scrollingSensitivity: String
     @SettingsDraft("scrolling.minimap-enabled", load: { config.scrolling.minimapEnabled }) private var scrollingMinimapEnabled: Bool
     @SettingsDraft("scrolling.keep-window-height", load: { config.scrolling.keepWindowHeight }) private var scrollingKeepWindowHeight: Bool
     @SettingsDraft("scrolling.center-focused-column", load: { config.scrolling.centerFocusedColumn }) private var scrollingCenterMode: ScrollingCenterMode
@@ -195,13 +194,6 @@ struct ShortcutBehaviorSettingsView: View {
                                   value: "'\(scrollingCenterMode.rawValue)'")
                 }
                 DisclosureGroup("Advanced navigation", isExpanded: $showsAdvancedNavigation) {
-                    SettingsTextField("Gesture sensitivity", id: "scrolling.gesture-sensitivity",
-                                      text: $scrollingSensitivity,
-                                      help: "Positive movement multiplier.", validate: scrollingSensitivityError) {
-                        if let value = Double(scrollingSensitivity), value.isFinite, value > 0 {
-                            persistConfig(section: "scrolling", key: "gesture-sensitivity", value: String(value))
-                        }
-                    }
                     SettingsToggle("Keep opening window height", id: "scrolling.keep-window-height",
                                    isOn: $scrollingKeepWindowHeight,
                                    help: "A window alone in a column retains its original height.") {
@@ -235,7 +227,6 @@ struct ShortcutBehaviorSettingsView: View {
 
     private func revealSearchedControl() {
         switch searchTarget?.id {
-            case "scrolling.gesture-sensitivity": showsAdvancedNavigation = true
             case "lone-window-width", "fullscreen-width", "single-window-alignment":
                 showsSingleWindowOptions = true
             case "scrolling.width-presets.custom", "scrolling.column-width.custom":
@@ -296,11 +287,6 @@ private func scrollingPresetValues(_ text: String) -> [Double]? {
 
 private func scrollingPresetError(_ text: String) -> String? {
     scrollingPresetValues(text) == nil ? "Enter ascending percentages between 10 and 100, separated by commas." : nil
-}
-
-private func scrollingSensitivityError(_ text: String) -> String? {
-    guard let value = Double(text), value.isFinite, value > 0 else { return "Enter a finite value greater than zero." }
-    return nil
 }
 
 func settingsLoneWindowPreviewFrame(in bounds: CGRect, fraction: Double, alignment: SingleWindowAlignment) -> CGRect {

@@ -130,13 +130,6 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertEqual(easedViewportOffset(rendered: 10, target: 250, elapsed: 0.016, smoothingMilliseconds: 0), 250, "Off follows the input")
     }
 
-    func testSmoothingIsParsedAndBounded() {
-        XCTAssertEqual(parseConfig("[scrolling]\n    gesture-smoothing = 40").config.scrolling.gestureSmoothing, 40)
-        XCTAssertEqual(parseConfig("").config.scrolling.gestureSmoothing, 0, "Off by default")
-        XCTAssertFalse(parseConfig("[scrolling]\n    gesture-smoothing = 300").errors.isEmpty)
-        XCTAssertFalse(parseConfig("[scrolling]\n    gesture-smoothing = -1").errors.isEmpty)
-    }
-
     func testFiveThousandRandomScrollEventsKeepEveryInvariant() {
         let (workspace, windows) = fixture()
         windows[2].scrollingColumnWidth = 0.2
@@ -402,8 +395,7 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
     }
 
     func testReducedMotionTurnsGestureSmoothingOff() {
-        XCTAssertEqual(effectiveGestureSmoothing(configured: 40, reduceMotion: false), 40)
-        XCTAssertEqual(effectiveGestureSmoothing(configured: 40, reduceMotion: true), 0)
-        XCTAssertEqual(effectiveGestureSmoothing(configured: 0, reduceMotion: false), 0)
+        XCTAssertEqual(viewportEasingMilliseconds(reduceMotion: false), 40)
+        XCTAssertEqual(viewportEasingMilliseconds(reduceMotion: true), 0)
     }
 }

@@ -29,11 +29,7 @@ final class ScrollingWorkspaceStateTest: WorkspaceTestCase {
         XCTAssertEqual(try XCTUnwrap(workspace.scrollingMetrics.columns.first).width, before + 80, accuracy: 1)
     }
 
-    func testConfigurationRejectsInvalidWidthsAndAcceptsAnyFinitePositiveSensitivity() {
-        for value in ["nan", "inf", "0", "-1"] {
-            XCTAssertFalse(parseConfig("[scrolling]\ngesture-sensitivity = \(value)").errors.isEmpty)
-        }
-        XCTAssertTrue(parseConfig("[scrolling]\ngesture-sensitivity = 12.5").errors.isEmpty)
+    func testConfigurationRejectsInvalidWidths() {
         for presets in ["[]", "[0.5, 0.25]", "[0.5, 0.5]", "[0.09, 0.5]"] {
             XCTAssertFalse(parseConfig("[scrolling]\nwidth-presets = \(presets)").errors.isEmpty)
         }

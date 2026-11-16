@@ -20,7 +20,6 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case gestures = "scrolling.gesture-enabled"
     case threeFingers = "scrolling.three-finger-swipe"
     case minimap = "scrolling.minimap-enabled"
-    case sensitivity = "scrolling.gesture-sensitivity"
     case width = "scrolling.column-width"
     case widthPresets = "scrolling.width-presets"
     case fullscreenWidth = "fullscreen-width"
@@ -52,7 +51,6 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .gestures: "Option + two-finger pan"
             case .threeFingers: "Three-finger horizontal pan (experimental)"
             case .minimap: "Show scrolling minimap"
-            case .sensitivity: "Gesture sensitivity"
             case .width: "Default column width"
             case .widthPresets: "Column size shortcuts"
             case .fullscreenWidth: "Managed fullscreen width"
@@ -77,7 +75,7 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     var page: SettingsSidebarItem {
         switch self {
             case .startAtLogin, .autoReload, .restoreLayouts, .restoreFrames: .general
-            case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .loneWidth, .loneAlignment, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
+            case .autoTile, .gestures, .threeFingers, .minimap, .width, .widthPresets, .fullscreenWidth, .loneWidth, .loneAlignment, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
             case .gapHorizontal, .gapOuterLeft: .appearance
             case .appearance, .menuBar, .bordersEnabled, .borderWidth, .borderActiveColor, .borderInactiveColor,
                  .borderOrder, .borderExcludeApps: .appearance

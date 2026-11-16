@@ -5,7 +5,7 @@ import Common
 /// Input still moves the real offset at once (focus, the minimap, saving and commands read
 /// that); this only moves the offset the layout places windows by, one step per display frame,
 /// so a flick delivered as a few large steps reaches the windows as many small ones and the
-/// border has less to trail. Off unless `[scrolling] gesture-smoothing` is set.
+/// border has less to trail. Off while macOS Reduce Motion is on.
 @MainActor
 final class ScrollingViewportEaser {
     static let shared = ScrollingViewportEaser()
@@ -15,8 +15,7 @@ final class ScrollingViewportEaser {
 
     /// Called by a pan step before it moves the real offset.
     func begin(_ workspace: Workspace, from current: CGFloat) {
-        guard effectiveGestureSmoothing(configured: config.scrolling.gestureSmoothing,
-                                        reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion) > 0,
+        guard viewportEasingMilliseconds(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion) > 0,
               !isUnitTest else { return }
         if workspace.scrollingRenderedOffset == nil { workspace.scrollingRenderedOffset = current }
         guard self.workspace !== workspace else { return }
@@ -43,7 +42,7 @@ final class ScrollingViewportEaser {
         lastTick = now
         let target = workspace.scrollingOffset
         let next = easedViewportOffset(rendered: rendered, target: target, elapsed: dt,
-                                       smoothingMilliseconds: config.scrolling.gestureSmoothing)
+                                       smoothingMilliseconds: viewportEasingMilliseconds(reduceMotion: false))
         if abs(target - next) < 0.5 {
             workspace.scrollingRenderedOffset = nil
             runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
@@ -78,7 +77,9 @@ func easedViewportOffset(rendered: CGFloat, target: CGFloat, elapsed: Double, sm
     return rendered + (target - rendered) * CGFloat(1 - exp(-elapsed / tau))
 }
 
-/// The easing time that applies: none when the system asks for reduced motion.
-func effectiveGestureSmoothing(configured: Int, reduceMotion: Bool) -> Int {
-    reduceMotion ? 0 : configured
+/// How long windows take to catch up with the fingers, in milliseconds; none when the system asks
+/// for reduced motion. About one flick step: long enough that a flick reads as motion and the
+/// border can keep up, short enough that the windows do not feel behind the fingers.
+func viewportEasingMilliseconds(reduceMotion: Bool) -> Int {
+    reduceMotion ? 0 : 40
 }

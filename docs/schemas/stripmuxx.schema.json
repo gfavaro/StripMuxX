@@ -288,17 +288,6 @@
           "default": false,
           "description": "Experimental: use macOS three-finger horizontal swipe to pan the strip, with Option-scroll as fallback."
         },
-        "gesture-sensitivity": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "gesture-smoothing": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 200,
-          "default": 0,
-          "description": "Experimental: milliseconds over which windows ease toward the fingers during a scroll gesture; 0 follows the input directly."
-        },
         "minimap-enabled": {
           "type": "boolean"
         },
