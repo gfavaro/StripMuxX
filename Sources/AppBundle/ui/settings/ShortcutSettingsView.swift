@@ -113,7 +113,7 @@ enum SettingsSidebarItem: String, Hashable, Identifiable, CaseIterable {
         switch self {
             case .general: "General"
             case .shortcuts: "Shortcuts"
-            case .workspaces: "Desktops"
+            case .workspaces: "Spaces"
             case .displays: "Displays"
             case .windows: "Windows"
             case .appearance: "Appearance"
@@ -325,13 +325,13 @@ struct ShortcutCategoryView: View {
             }
 
             if category == .common {
-                Section("Desktops kept") {
-                    SettingsTextField("Desktop numbers", id: "persistent-workspaces", text: $persistentWorkspaces,
-                        help: "Comma-separated desktop numbers, for example 1, 2, 3. StripMuxX adds macOS desktops until the highest number exists.") {
+                Section("Spaces kept") {
+                    SettingsTextField("Space numbers", id: "persistent-workspaces", text: $persistentWorkspaces,
+                        help: "Comma-separated space numbers, for example 1, 2, 3. StripMuxX adds macOS spaces until the highest number exists.") {
                         persistSettingsConfig(section: nil, key: "persistent-workspaces",
                             renderedValue: tomlCommaSeparatedStringArray(persistentWorkspaces), model: model)
                     }
-                    SettingsDescription("Desktops are macOS Spaces: create, remove and reorder them in Mission Control. StripMuxX only adds missing ones, and never removes any.")
+                    SettingsDescription("Spaces are macOS Spaces: create, remove and reorder them in Mission Control. StripMuxX only adds missing ones, and never removes any.")
                 }
             }
 

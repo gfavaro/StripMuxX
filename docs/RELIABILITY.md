@@ -39,7 +39,7 @@ stripmuxx move-workspace-to-monitor --workspace 5 'uuid:AAAAAAAA-0000-4000-8000-
 ```
 
 Replace the sample UUID with the value printed on your machine. `--workspace`
-takes the desktop number reported by `list-workspaces`. UUIDs are case-insensitive; malformed UUID selectors are errors,
+takes the space number reported by `list-workspaces`. UUIDs are case-insensitive; malformed UUID selectors are errors,
 and a disconnected or ambiguous UUID never silently selects a different display.
 The same selector strings work in existing per-monitor config values and assignment
 lists. Existing main/secondary/index/name selectors retain their behavior. UUID

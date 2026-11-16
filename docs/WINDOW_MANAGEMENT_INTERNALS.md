@@ -1,6 +1,6 @@
 # Window management internals
 
-Each desktop's strip is a shallow tree: the root's children are columns, and a
+Each space's strip is a shallow tree: the root's children are columns, and a
 column is a window or a vertical stack. Layout geometry is calculated from value
 inputs (column widths, stack weights, gaps and learned window minimum sizes) before
 the traversal applies frame changes. The geometry functions are pure and contain no
@@ -32,5 +32,5 @@ and workload.
 `doctor` reports whether a tracked window's WindowServer frame agrees with the
 public CoreGraphics window list within one point. A missing public witness is
 inconclusive. The report is observational and does not change macOS preferences.
-Desktop switching and moves between desktops are described in
+Space switching and moves between spaces are described in
 [Native Spaces](NATIVE_SPACES.md).

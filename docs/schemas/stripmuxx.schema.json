@@ -11,7 +11,7 @@
         "restore-layouts": {
           "type": "boolean",
           "default": true,
-          "description": "Remember each desktop's strip and restore it after StripMuxX or the Mac restarts."
+          "description": "Remember each space's strip and restore it after StripMuxX or the Mac restarts."
         },
         "restore-frames-on-quit": {
           "type": "boolean",

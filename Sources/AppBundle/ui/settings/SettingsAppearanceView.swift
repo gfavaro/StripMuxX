@@ -37,9 +37,9 @@ struct ShortcutAppearanceSettingsView: View {
             }
             SettingsSection("Menu bar") {
                 SettingsPicker("Menu bar indicator", id: "menu-bar.indicator", selection: $menuBarIndicator,
-                               help: "Desktop shows the number of the focused display's desktop.") {
+                               help: "Space shows the number of the focused display's space.") {
                     Text("Icon").tag(MenuBarIndicator.icon)
-                    Text("Desktop").tag(MenuBarIndicator.workspace)
+                    Text("Space").tag(MenuBarIndicator.workspace)
                 } onChange: {
                     persist("menu-bar", "indicator", "'\(menuBarIndicator.rawValue)'")
                 }

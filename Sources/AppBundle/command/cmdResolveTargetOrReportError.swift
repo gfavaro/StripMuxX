@@ -8,7 +8,7 @@ extension CmdArgs {
         guard let snapshot = layouts.snapshot,
               snapshot.displays.contains(where: { layouts.activeWorkspace(on: $0.identifier) === target.workspace }),
               target.windowOrNil?.nativeLayoutEligible != false else {
-            io.err("The target is not an eligible window or a showing desktop")
+            io.err("The target is not an eligible window or a showing space")
             return nil
         }
         return target
@@ -58,7 +58,7 @@ extension Window {
         if let result = toLiveFocusOrNil() {
             return result
         } else {
-            io.err("Window \(windowId) doesn't belong to any desktop")
+            io.err("Window \(windowId) doesn't belong to any space")
             return nil
         }
     }

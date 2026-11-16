@@ -57,7 +57,7 @@ func buildShortcutSections() -> [ShortcutSettingsModel.Section] {
                 ),
                 shortcutAction(
                     id: "fullscreen",
-                    title: "Maximize in This Desktop",
+                    title: "Maximize in This Space",
                     subtitle: "Resize the focused window without entering native macOS fullscreen.",
                     command: "fullscreen"
                 ),
@@ -72,7 +72,7 @@ func buildShortcutSections() -> [ShortcutSettingsModel.Section] {
             title: "Strip",
             summary: "Columns on the strip: jump, reorder, pin and size them.",
             actions: [
-                shortcutAction(id: "scrolling-minimap", title: "Show Minimap", subtitle: "Reveal the entire column strip without switching desktops.", command: "scrolling-minimap"),
+                shortcutAction(id: "scrolling-minimap", title: "Show Minimap", subtitle: "Reveal the entire column strip without switching spaces.", command: "scrolling-minimap"),
                 shortcutAction(id: "scrolling-first", title: "Focus First Column", command: "scrolling-focus first"),
                 shortcutAction(id: "scrolling-last", title: "Focus Last Column", command: "scrolling-focus last"),
             ] + (1...4).map {
@@ -109,8 +109,8 @@ func buildShortcutSections() -> [ShortcutSettingsModel.Section] {
         .init(
             id: "workspaces",
             category: .common,
-            title: "Desktops",
-            summary: "Use one modifier pattern for desktop numbers, then override specific desktops only when needed.",
+            title: "Spaces",
+            summary: "Use one modifier pattern for space numbers, then override specific spaces only when needed.",
             actions: [],
         ),
     ]

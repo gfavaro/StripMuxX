@@ -47,7 +47,7 @@ final class NativeWindowBorder {
 
     /// A native Space / Mission Control transition invalidates the display
     /// inventory. Hide rather than moving borders to a different desktop.
-    func hide(_ reason: String = "desktop change") {
+    func hide(_ reason: String = "space change") {
         count("all, " + reason)
         isSuspended = true
         for border in borders.values { border.hide() }

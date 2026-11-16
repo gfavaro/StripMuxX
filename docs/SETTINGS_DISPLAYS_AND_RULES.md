@@ -3,13 +3,13 @@
 ## Displays
 
 Settings → Displays lists connected screens, their point resolution, UUID and the
-desktop each shows. Copy UUID produces a ready-to-use `uuid:…` selector. Hardware
+space each shows. Copy UUID produces a ready-to-use `uuid:…` selector. Hardware
 selectors are offered when the display supplies nonzero vendor, model and serial
 identifiers.
 
 **Configured assignments** edits `[workspace-to-monitor-force-assignment]` using
-desktop and display pickers. They only choose the display on which
-`persistent-workspaces` creates a missing desktop; macOS decides which desktop each
+space and display pickers. They only choose the display on which
+`persistent-workspaces` creates a missing space; macOS decides which space each
 display shows, and nothing is moved. Advanced entry supports custom selectors or
 ordered selector arrays. Existing assignments remain visible even when their display
 is unavailable. Choose Edit to change one, then Save changes. Merely opening the

@@ -82,7 +82,7 @@ alt = 'left'
 This lets right Option type characters while StripMuxX bindings use left Option.
 Values are `both`, `left` and `right`. Remove the setting to use both sides.
 
-## Send an app to a desktop only when it launches
+## Send an app to a space only when it launches
 
 ```toml
 [[on-window-detected]]
@@ -93,6 +93,6 @@ run = 'move-node-to-workspace 5'
 
 The rule moves only the window an app opens when it launches, while StripMuxX manages
 no other window of it. Windows the app opens later, such as login or dialog windows,
-open on the current desktop, next to the app, instead of following the rule.
+open on the current space, next to the app, instead of following the rule.
 Settings › Automation › Rules offers this as **App windows › Only the app's first window**.
 

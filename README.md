@@ -4,7 +4,7 @@
 
 <h1 align="center">StripMuxX</h1>
 
-<p align="center">One scrolling strip of windows on each macOS desktop.</p>
+<p align="center">One scrolling strip of windows on each macOS space.</p>
 
 <p align="center">
   <a href="https://github.com/gfavaro/StripMuxX/releases">Download</a> ·
@@ -27,11 +27,11 @@ Automatic updates are disabled.
 
 ## What it does
 
-- **Your desktops, as macOS has them.** A workspace is a macOS desktop (Space).
-  Control-1 … Control-9, Control-arrow and trackpad swipes switch desktops as usual,
+- **Your spaces, as macOS has them.** A workspace is a macOS space.
+  Control-1 … Control-9, Control-arrow and trackpad swipes switch spaces as usual,
   and Mission Control still creates, orders and removes them. StripMuxX can add the
-  desktops `persistent-workspaces` lists; it never removes one.
-- **One strip per desktop.** Tiled windows are columns laid left to right. When they
+  spaces `persistent-workspaces` lists; it never removes one.
+- **One strip per space.** Tiled windows are columns laid left to right. When they
   are wider than the display the strip scrolls to keep the focused column in view,
   as in [niri](https://github.com/YaLTeR/niri) or PaperWM. A column is one window or
   a vertical stack of windows.
@@ -40,8 +40,8 @@ Automatic updates are disabled.
   while the rest scrolls beside it.
 - **A minimap.** The whole strip at a glance; click or drag a column to focus or
   reorder it.
-- **Strips survive.** Switching away and back, moving windows between desktops and
-  displays, Mission Control renumbering and restarts all keep each desktop's strip.
+- **Strips survive.** Switching away and back, moving windows between spaces and
+  displays, Mission Control renumbering and restarts all keep each space's strip.
 - **Floating when you want it.** Toggle any window, or float apps by rule; floating
   windows keep their own frames above the strip.
 - **Free-size strip columns (experimental).** `stripmuxx layout free-size` makes a
@@ -70,10 +70,10 @@ borders. A WinMux or AeroSpace-style configuration that uses them still loads, a
 | Alt-Shift-T | Float or tile the window |
 | Alt-Shift-M | StripMuxX fullscreen |
 | Ctrl-Alt-M | Show the minimap |
-| Ctrl-1 … Ctrl-9, Ctrl-0 | Desktop 1 … 9, 10 |
-| Ctrl-H / Ctrl-L | Previous / next desktop |
-| Alt-Shift-1 … Alt-Shift-9 | Move the window to desktop 1 … 9 |
-| Ctrl-Shift-H / Ctrl-Shift-L | Move the window to the previous / next desktop, and follow it |
+| Ctrl-1 … Ctrl-9, Ctrl-0 | Space 1 … 9, 10 |
+| Ctrl-H / Ctrl-L | Previous / next space |
+| Alt-Shift-1 … Alt-Shift-9 | Move the window to space 1 … 9 |
+| Ctrl-Shift-H / Ctrl-Shift-L | Move the window to the previous / next space, and follow it |
 
 Option with a two-finger horizontal trackpad scroll pans the strip. All shortcuts
 are editable in Settings → Shortcuts; the reference configuration is
@@ -89,34 +89,34 @@ Transparency, and increased contrast.
 | --- | --- |
 | General | Start at login, configuration reload, restoring strips, putting windows back on quit, and the setup check |
 | Shortcuts | Presets, editable shortcuts, modifier sides and binding modes |
-| Desktops | Desktops to keep (`persistent-workspaces`) and desktop shortcuts |
-| Displays | Connected displays, and the display each added desktop goes to |
+| Spaces | Spaces to keep (`persistent-workspaces`) and space shortcuts |
+| Displays | Connected displays, and the display each added space goes to |
 | Windows | New windows, lone-window width and alignment, column widths and centering, the minimap, the Option pan and learned minimum sizes |
 | Appearance | Theme, menu-bar indicator and window spacing |
 | Automation | Window rules, and startup and event commands |
 | Configuration | Complete TOML editor, validation and advanced reference |
 
 Settings writes the TOML configuration and reloads it; your drafts stay in place
-when you switch pages, and a failed save can be retried. Each desktop's saved strip
+when you switch pages, and a failed save can be retried. Each space's saved strip
 and learned application sizes remain local session data. See
 [configuration and migration](docs/CONFIGURATION.md).
 
 ## The menu
 
-The menu bar item shows a strip icon, or the focused desktop's number. Its menu
+The menu bar item shows a strip icon, or the focused space's number. Its menu
 offers Center Column, Show Minimap, Cycle Column Width, Pin Column Left/Right,
 Retile, Balance Sizes, Fullscreen and **Always Float “App”…** (hold Option for
-**Float Windows by Title…**), with the rest under Commands: desktops, displays,
+**Float Windows by Title…**), with the rest under Commands: spaces, displays,
 focus, moves, stacking, resizing, Toggle Floating, Undo Layout Change, Refresh
-Desktops and Reload Config. Shortcuts shown come from the active mode.
+Spaces and Reload Config. Shortcuts shown come from the active mode.
 
 Run `stripmuxx doctor` to inspect the loaded config path, permissions, displays and
-desktops, the tiling state, conflicting window managers and configuration that no
+spaces, the tiling state, conflicting window managers and configuration that no
 longer applies. Review local paths and app names before sharing a report.
 
 ## Lone windows
 
-A window alone on a desktop is limited to a shape, not a share of the screen width, so it looks
+A window alone on a space is limited to a shape, not a share of the screen width, so it looks
 the same on a laptop and on an ultrawide:
 
 ```toml
@@ -137,10 +137,10 @@ unaffected.
 
 ## Restarts
 
-With `[native-spaces] restore-layouts = true`, the default, each desktop's strip is
+With `[native-spaces] restore-layouts = true`, the default, each space's strip is
 saved as you work and restored after StripMuxX or the Mac restarts: columns, stacks,
 widths, the pinned column and floating windows. Windows are matched by app and
-identity; after a reboot, an app's windows are paired in order. A desktop whose
+identity; after a reboot, an app's windows are paired in order. A space whose
 windows have not all returned keeps its saved strip, protected from autosave, for up
 to 90 seconds before the windows that did return are arranged without the rest.
 With `restore-frames-on-quit = true`, quitting or `enable off` puts tiled windows
@@ -148,7 +148,7 @@ back where they were before tiling.
 
 ## Launching apps
 
-A shortcut that opens a new window helps you launch an app onto the current desktop
+A shortcut that opens a new window helps you launch an app onto the current space
 instead of returning to a window elsewhere. Tap bindings fire on a lone modifier:
 
 ```toml

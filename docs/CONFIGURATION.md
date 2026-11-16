@@ -1,10 +1,10 @@
 # Configuration
 
-StripMuxX keeps one scrolling strip per macOS desktop; see [the strip](LAYOUTS.md).
-`[native-spaces] restore-layouts = true`, the default, restores each desktop's strip
+StripMuxX keeps one scrolling strip per macOS space; see [the strip](LAYOUTS.md).
+`[native-spaces] restore-layouts = true`, the default, restores each space's strip
 after StripMuxX or the Mac restarts; `restore-frames-on-quit = true` puts tiled
 windows back where they started on quit or `enable off`. See
-[Native Spaces](NATIVE_SPACES.md) for how desktops are observed and switched.
+[Native Spaces](NATIVE_SPACES.md) for how spaces are observed and switched.
 
 A WinMux or AeroSpace-style configuration that sets features StripMuxX does not have
 (virtual workspaces, other layouts, a sidebar, tabs, borders, dimming and similar)
@@ -50,17 +50,17 @@ changes use the same configuration fields. `stripmuxx doctor` reports the loaded
 path; `stripmuxx reload-config --dry-run --no-gui` validates without writing or
 publishing changes. The default file is `~/.config/stripmuxx/stripmuxx.toml`.
 
-## Persistent desktops
+## Persistent spaces
 
 ```toml
 config-version = 2
 persistent-workspaces = ['1', '2', '3', '4', '5']
 ```
 
-StripMuxX adds macOS desktops until the highest number listed exists, one at a time
-and each confirmed before the next. It never removes a desktop; manage them in
-Mission Control. Text names have no effect: desktops are numbered, as Control-1 …
-Control-9 count them. A new desktop goes to the display
+StripMuxX adds macOS spaces until the highest number listed exists, one at a time
+and each confirmed before the next. It never removes a space; manage them in
+Mission Control. Text names have no effect: spaces are numbered, as Control-1 …
+Control-9 count them. A new space goes to the display
 `[workspace-to-monitor-force-assignment]` names for its number, else the main one:
 
 ```toml
@@ -76,14 +76,14 @@ Automatic conversion accepts counts from 0 to 4096.
 
 ```toml
 [menu-bar]
-indicator = 'icon'          # icon or workspace (the desktop number)
+indicator = 'icon'          # icon or workspace (the space number)
 icon-appearance = 'color'  # color or monochrome
 ```
 
 Menu-bar settings apply on reload and have no runtime fallback to UserDefaults.
 The icon shows a strip of columns. Color uses the macOS system accent; monochrome
 is a template icon that follows the menu bar. An active keyboard mode tints either
-icon. The text indicator shows the focused desktop's number.
+icon. The text indicator shows the focused space's number.
 
 ## Migration and backups
 
@@ -102,9 +102,9 @@ idempotent. Parsing, diagnostics and dry-run reloads do not modify files.
 ## Configuration versus session data
 
 TOML holds user-selectable behavior, appearance, shortcuts, automation and the
-displays for added desktops. Copying the file reproduces those choices.
+displays for added spaces. Copying the file reproduces those choices.
 
-Each desktop's saved strip, windows' original frames and learned app minimum sizes
+Each space's saved strip, windows' original frames and learned app minimum sizes
 are runtime state. The last-opened Settings page is UI state. These remain outside TOML and
 do not override its preferences. macOS permissions and login-service registration
 are OS state; the TOML `start-at-login` preference controls the desired registration.
@@ -133,7 +133,7 @@ key is pressed, passing that key through to the focused app. This is opt-in and
 ignored in `main`. Modifier-only taps do not exit the mode. Configure `esc = 'mode main'` explicitly; append `'mode main'` to a
 binding's command array for one-shot use. Re-entering a mode starts a fresh session.
 
-The existing icon gains the mode color; the desktop indicator gains ` | L` for
+The existing icon gains the mode color; the space indicator gains ` | L` for
 Leader. The tooltip/accessibility label gives its full name. Custom colors are
 adjusted for native menu-bar contrast. No extra overlay window or countdown runs.
 Shortcut recording suspends the deadline and badge; resuming starts a fresh interval.
@@ -191,10 +191,10 @@ or right, and `join-with` puts it into a neighbouring column.
 `scrolling-pin left|right` pins the focused column to that screen edge at full height
 while the rest of the strip scrolls in the space beside it; the same command unpins
 it. The pinned column keeps its width, leaves the strip and the minimap, and blocks
-edge previews on its side. Pins are saved with the desktop's strip, so they return
+edge previews on its side. Pins are saved with the space's strip, so they return
 after a restart.
 
-The minimap shows the strip on its desktop's display, with app icons and titles,
+The minimap shows the strip on its space's display, with app icons and titles,
 with a dashed outline for the visible area. Click a column to focus it; drag it
 sideways to reorder the strip. It appears while navigating and fades after 1.5
 seconds of inactivity. With `minimap-hold-modifiers` set, holding exactly those keys

@@ -12,9 +12,9 @@ It deliberately does **not** drop parser support or silently delete existing TOM
   Option-scroll and experimental three-finger horizontal Dock swipe.
 - Appearance: macOS appearance, menu-bar display, inner/outer gaps and their live
   preview. Gaps matter both for tiled windows and usable strip bounds.
-- Shortcuts: native desktop navigation, moving a window to a native desktop,
+- Shortcuts: native space navigation, moving a window to a native space,
   keyboard modes and modifier-side control.
-- Displays: connected display information and native desktop creation placement.
+- Displays: connected display information and native space creation placement.
 
 ## Retain but clarify or deemphasize
 
@@ -36,7 +36,7 @@ It deliberately does **not** drop parser support or silently delete existing TOM
   virtual workspace changes. Preserve its parser and any existing user value.
   Existing users can inspect it in the raw TOML editor; audit its runtime
   dispatch separately before any deprecation/removal.
-- `workspace-to-monitor-force-assignment`: keep for desktop creation and
+- `workspace-to-monitor-force-assignment`: keep for space creation and
   clearly describe its limited effect.
 - Virtual workspace layouts, Dwindle, BSP, tabs, projects, sidebar, hover bar,
   dimming and follow-focus mouse features are already removed/ignored through
@@ -45,9 +45,9 @@ It deliberately does **not** drop parser support or silently delete existing TOM
 ## Open follow-ups
 
 1. Confirm whether the legacy `exec-on-workspace-change` hook is dispatched for
-   native Space changes; migrate it to an explicitly named native-desktop event
+   native Space changes; migrate it to an explicitly named native-space event
    only after observing behavior in the running app.
 2. Move display-assignment editing behind a dedicated advanced disclosure, once
-   the live desktop movement workflow has a straightforward primary UI.
+   the live space movement workflow has a straightforward primary UI.
 3. Recheck Settings search indexes whenever settings controls are renamed,
    and exercise live config saving / draft reconciliation on macOS.

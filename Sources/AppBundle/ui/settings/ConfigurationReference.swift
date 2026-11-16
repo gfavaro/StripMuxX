@@ -15,7 +15,7 @@ var configurationReferenceSections: [ConfigurationReferenceSection] {
     let defaults = defaultConfig
     return [
         .init(id: "general", title: "General", description: "start-at-login launches StripMuxX at login. auto-reload-config watches the configuration file for changes.", defaults: "start-at-login = \(defaults.startAtLogin), auto-reload-config = \(defaults.autoReloadConfig)", pane: .general),
-        .init(id: "workspaces", title: "Desktops", description: "persistent-workspaces lists stable desktop numbers; missing ones are added automatically.", defaults: "persistent-workspaces = []", example: "persistent-workspaces = ['1', '2', '3']", pane: .workspaces),
+        .init(id: "workspaces", title: "Spaces", description: "persistent-workspaces lists stable space numbers; missing ones are added automatically.", defaults: "persistent-workspaces = []", example: "persistent-workspaces = ['1', '2', '3']", pane: .workspaces),
         .init(id: "scrolling", title: "Scrolling strip", description: "Configures column widths, edge preview, keep-window-height and the minimap.", defaults: "column-width = \(defaults.scrolling.columnWidth), gesture-enabled = \(defaults.scrolling.gestureEnabled), minimap-enabled = \(defaults.scrolling.minimapEnabled), keep-window-height = \(defaults.scrolling.keepWindowHeight)", example: "[scrolling]\ncolumn-width = 0.5\nwidth-presets = [0.3333, 0.5, 0.6667, 1.0]", pane: .windows),
         .init(id: "windows", title: "Windows", description: "Controls automatic new-window tiling and the shape and alignment of a lone window (single-window-aspect-ratio, single-window-alignment).", defaults: "automatically-tile-new-windows = \(defaults.automaticallyTileNewWindows), single-window-alignment = '\(defaults.singleWindowAlignment.rawValue)'", pane: .windows),
         .init(id: "appearance", title: "Appearance", description: "[gaps] controls spacing. Root appearance chooses system, light or dark for StripMuxX UI. [menu-bar] indicator chooses icon or workspace; icon-appearance chooses color or monochrome.", defaults: "appearance = '\(defaults.appearance.rawValue)', indicator = '\(defaults.menuBar.indicator.rawValue)', icon-appearance = '\(defaults.menuBar.iconAppearance.rawValue)'", pane: .appearance),
@@ -26,12 +26,12 @@ var configurationReferenceSections: [ConfigurationReferenceSection] {
         check-further-callbacks = false
         run = 'layout floating'
         """),
-        .init(id: "assignments", title: "[workspace-to-monitor-force-assignment]", description: "Assign desktop numbers to displays. Display selectors include uuid:<UUID>, hardware:<vendor>:<model>:<serial>, main, secondary, display numbers and name patterns. Native Spaces uses them to place new desktops.", defaults: "No forced assignments.", example: """
+        .init(id: "assignments", title: "[workspace-to-monitor-force-assignment]", description: "Assign space numbers to displays. Display selectors include uuid:<UUID>, hardware:<vendor>:<model>:<serial>, main, secondary, display numbers and name patterns. Native Spaces uses them to place new spaces.", defaults: "No forced assignments.", example: """
         [workspace-to-monitor-force-assignment]
         '1' = 'main'
         '2' = 'secondary'
         """),
-        .init(id: "window-width", title: "Lone-window shape", description: "single-window-aspect-ratio (0 to 6; 0 fills the width) limits a window alone on a desktop to that many times its height in width, so it keeps one shape on any display; single-window-alignment places it. Both can be set globally or in a [display.<pattern>] table. StripMuxX fullscreen always fills the display.", defaults: "single-window-aspect-ratio = 0, single-window-alignment = center", example: """
+        .init(id: "window-width", title: "Lone-window shape", description: "single-window-aspect-ratio (0 to 6; 0 fills the width) limits a window alone on a space to that many times its height in width, so it keeps one shape on any display; single-window-alignment places it. Both can be set globally or in a [display.<pattern>] table. StripMuxX fullscreen always fills the display.", defaults: "single-window-aspect-ratio = 0, single-window-alignment = center", example: """
         single-window-aspect-ratio = 1.6
         single-window-alignment = 'center'
         [display.'Built-in']

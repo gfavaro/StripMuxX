@@ -5,7 +5,7 @@
 All mutable workspace state is owned on the **main actor** by one runtime object,
 `WinMuxRuntime` (`runtime/WinMuxRuntime.swift`), whose `native` member
 (`NativeWorkspaceLifecycle`, `runtime/NativeWorkspaceLifecycle.swift`) owns the
-observation, the per-desktop strips (`NativeSpaceLayouts`), the tiling fence, write
+observation, the per-space strips (`NativeSpaceLayouts`), the tiling fence, write
 permits, navigation, moves, persistence and focus holds. There is no second copy of
 the trees: commands, observation, the pan, the minimap and persistence all read and
 mutate the same `Workspace` objects, on the main actor.
@@ -29,7 +29,7 @@ flowchart TD
     R --> READ["read snapshot (generation N)"]
     READ -->|"newer request arrived"| DROP["superseded: discarded"]
     READ --> REC["reconcile trees, accept, grant permits"]
-    REC --> LAY["layout showing desktops"]
+    REC --> LAY["layout showing spaces"]
     F -->|"wait for ready; target unchanged?"| EDIT["mutate tree"] --> RL
     RL --> LAY
     LAY --> AXW["AX frame writes (per-app threads)"]
@@ -39,7 +39,7 @@ flowchart TD
 | --- | --- | --- |
 | Deterministic, serialized transitions | Main-actor ownership; one observation read at a time | `NativeSpacesObservation` |
 | Stale events | Generation numbers; an invalidation revokes membership before a new snapshot is published; superseded reads cannot publish older membership | `NativeSpaceLayouts.reconcile`, `NativeTilingCoordinator.invalidate`  |
-| Commands against moved targets | `NativeCommandTargetFence` records the target desktop, display and window; refuses after reconciliation if any changed | `runtime/NativeCommandTargetFence.swift`, `NativeTilingTest` |
+| Commands against moved targets | `NativeCommandTargetFence` records the target space, display and window; refuses after reconciliation if any changed | `runtime/NativeCommandTargetFence.swift`, `NativeTilingTest` |
 | No AX feedback loops | Own writes during a pan do not revoke permits (`nativePanIgnoresNotification`); app-originated moves are put back at most 3× per 10 s | `layout/refresh.swift`, `runtime/NativeFrameRecovery.swift` |
 | Coalescing | `relayoutVisibleScrolling` coalesces requests into one pass; one pending AX write per window | `NativeTilingCoordinator.swift`, `MacApp.setFrameJobs` |
 | Safe cancellation | Invalidation cancels pending frame writes; navigation supersedes older requests | `NativeTilingCoordinator.invalidate`, `NativeSpaceNavigator` |

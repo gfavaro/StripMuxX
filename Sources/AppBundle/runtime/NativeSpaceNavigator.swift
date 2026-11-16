@@ -50,7 +50,7 @@ final class NativeSpaceNavigator {
         if plan.isNoop, let shown = runtime.native.layouts.currentBySpaceID[plan.targetSpaceID],
            shown.isVisible, shown !== focus.workspace {
             guard let window = shown.mostRecentWindowRecursive, window.focusWindow() else {
-                return io.err("That desktop is showing on another display and has no window to focus")
+                return io.err("That space is showing on another display and has no window to focus")
             }
             window.nativeFocus()
             return true
@@ -71,7 +71,7 @@ final class NativeSpaceNavigator {
               let display = displays.first(where: { $0.identifier == id }) else { return false }
         guard let previous = runtime.native.activity.previousDesktop(on: display),
               let plan = NativeSpaceNavigation.toward(spaceID: previous, on: display) else {
-            return io.err("No previous desktop on this display")
+            return io.err("No previous space on this display")
         }
         return await perform(plan, failIfNoop: false, io: io)
     }
@@ -138,11 +138,11 @@ final class NativeSpaceNavigator {
         switch args.target.val {
             case .direct(let name):
                 guard let number = Int(name.raw) else {
-                    _ = io.err("Native Spaces are addressed by desktop number, as in Mission Control")
+                    _ = io.err("Native Spaces are addressed by space number, as in Mission Control")
                     return nil
                 }
                 guard let plan = NativeSpaceNavigation.desktop(number: number, in: displays) else {
-                    _ = io.err("Desktop \(number) doesn't exist; add it in Mission Control")
+                    _ = io.err("Space \(number) doesn't exist; add it in Mission Control")
                     return nil
                 }
                 return plan

@@ -19,7 +19,7 @@ func shortcutCheatSheetSections(_ mode: Mode?) -> [ShortcutCheatSheetSection] {
         ("Move", [.move, .swap, .joinWith, .scrollingMove, .moveNodeToWorkspace, .moveNodeToMonitor, .moveWorkspaceToMonitor]),
         ("Columns", [.scrollingWidth, .scrollingWidthPixels, .resize, .balanceSizes, .scrollingCenter, .scrollingPin,
                      .scrollingPan, .layout, .fullscreen, .macosNativeFullscreen, .macosNativeMinimize, .flattenWorkspaceTree]),
-        ("Desktops", [.workspace, .workspaceBackAndForth]),
+        ("Spaces", [.workspace, .workspaceBackAndForth]),
     ]
     var rows: [String: [(order: String, row: ShortcutCheatSheetSection.Row)]] = [:]
     let bindings = mode.bindings.values.map { ($0.descriptionWithKeyNotation, $0.modifiers, $0.commands) }

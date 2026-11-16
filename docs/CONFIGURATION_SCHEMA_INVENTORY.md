@@ -13,7 +13,7 @@ TOML inline dotted keys and table headers can express equivalent structures.
 | `after-startup-command`, `on-focus-changed`, `on-mode-changed`, `on-focused-monitor-changed` | command string or string array | `parseCommandOrCommands` |
 | `exec-on-workspace-change` | string array | root parser |
 | `start-at-login`, `auto-reload-config`, `automatically-tile-new-windows` | booleans | root parser |
-| `persistent-workspaces` | string array; requires version 2 | numeric names are desktops to keep |
+| `persistent-workspaces` | string array; requires version 2 | numeric names are spaces to keep |
 | `single-window-aspect-ratio` | number 0–6 (0 fills the width) | `WindowWidthConfig.swift` |
 | `single-window-alignment` | `center`, `left`, `right` | root parser |
 | `display` | display patterns to width and alignment overrides | `WindowWidthConfig.swift` |
@@ -22,7 +22,7 @@ TOML inline dotted keys and table headers can express equivalent structures.
 | `native-spaces` | `restore-layouts`, `restore-frames-on-quit` booleans | root parser |
 | `menu-bar` | indicator and icon appearance enums | `parseMenuBar.swift` |
 | `modifiers` | modifier names mapped to `both`, `left`, `right` | `ModifierSides.swift` |
-| `workspace-to-monitor-force-assignment` | desktop numbers to monitor-selector arrays | `parseWorkspaceToMonitorAssignment.swift`; chooses the display for added desktops |
+| `workspace-to-monitor-force-assignment` | space numbers to monitor-selector arrays | `parseWorkspaceToMonitorAssignment.swift`; chooses the display for added spaces |
 | `on-window-detected` | array of matcher/run tables | `parseOnWindowDetected.swift` |
 | `mode` | dynamic mode names; binding and mode settings | mode parsers and keyboard mapping |
 | `key-mapping` | dynamic key names and mappings | key mapping parser |

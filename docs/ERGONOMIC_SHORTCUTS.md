@@ -9,7 +9,7 @@ It uses **Control + Option + H/J/K/L** for focus,
 **Control + Option + R** (next width),
 **Control + Option + Shift + R** (previous width),
 **Control + Option + S** (minimap), and
-**Control + Command + 1…9** for desktop switching.
+**Control + Command + 1…9** for space switching.
 The full config also remaps the other default shortcuts to avoid plain
 Option-letter combinations and common Command+Shift shortcuts.
 

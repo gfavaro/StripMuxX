@@ -41,7 +41,7 @@ behavior, record a source link and version/date when possible.
 - The mouse/trackpad should manipulate a visible spatial object (column or
   viewport), not an arbitrary opaque workspace number.
 - Gestures must have predictable direction, bounded effects, clear cancellation
-  and no unexpected focus theft. Apple's native desktop gestures remain Apple's.
+  and no unexpected focus theft. Apple's native space gestures remain Apple's.
 - The same operation should be discoverable and accessible through a keyboard
   command and, where appropriate, the minimap.
 - Preserve column size and location across insertion/removal, and never reorder

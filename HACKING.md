@@ -4,11 +4,11 @@ Start with [core principles](docs/PRINCIPLES.md) and [CONTRIBUTING](CONTRIBUTING
 for product expectations and the contribution workflow. Coding agents enter through
 [AGENTS.md](AGENTS.md) and its repository-local skill.
 
-StripMuxX keeps one scrolling strip per macOS desktop. macOS owns the desktops;
+StripMuxX keeps one scrolling strip per macOS space. macOS owns the spaces;
 `runtime.native` (`NativeWorkspaceLifecycle`) owns everything StripMuxX does with
-them: observation, the strip of each desktop (`NativeSpaceLayouts`, keyed by desktop
-UUID), the tiling fence (`NativeTilingCoordinator`), desktop navigation, window moves
-between desktops, layout persistence and the desktops `persistent-workspaces` adds.
+them: observation, the strip of each space (`NativeSpaceLayouts`, keyed by space
+UUID), the tiling fence (`NativeTilingCoordinator`), space navigation, window moves
+between spaces, layout persistence and the spaces `persistent-workspaces` adds.
 The `NativeSpaces` target isolates dynamic SkyLight access and generation-checked
 event reconciliation. See [native Spaces](docs/NATIVE_SPACES.md) and
 [state and events](docs/STATE_AND_EVENTS.md) (who owns the state, how events are ordered).
@@ -85,8 +85,8 @@ coverage, regression requirements and CI reports.
 | `Sources/AppBundleTests` | Tests organized alongside runtime subsystems |
 | `resources`, `script`, `.github/workflows` | App resources/default config, build helpers, automation |
 
-Within AppBundle, `tree` owns windows, desktops and the strip's tree; `layout`
-computes geometry; `command` implements actions; `runtime` owns the native desktop
+Within AppBundle, `tree` owns windows, spaces and the strip's tree; `layout`
+computes geometry; `command` implements actions; `runtime` owns the native space
 services; `mouse` handles the Option-scroll pan; `config` parses TOML. `ui` holds the
 menu bar item, the minimap and Settings. Keep pure geometry/policy separate from
 AppKit side effects.
@@ -100,7 +100,7 @@ and writes each window's frame; columns macOS currently hides take no place.
 
 Strip commands run inside the tiling fence: `runCmdSeq` hands them to
 `NativeTilingCoordinator.run`, which waits for a reconciled observation and refuses a
-command whose target changed meanwhile. Navigation, moves between desktops, queries
+command whose target changed meanwhile. Navigation, moves between spaces, queries
 and diagnostics run outside it (`runtime/NativeCommandPolicy.swift`).
 
 Settings saves are owned by a model-local `SettingsSaveQueue`. Scalar/document,
@@ -119,7 +119,7 @@ which writes each key the way Settings does and parses the result back. Deprecat
 keys, hooks and `config-version` stay config-only.
 
 `runtime/WinMuxRuntime.swift` is the composition point for configuration, the
-workspace registry, the native desktop services, focus history and native focus
+workspace registry, the native space services, focus history and native focus
 holds, monitor caches, hotkeys and event history. Production uses one
 process-lifetime owner. The `config`, `configUrl` and focus accessors are domain
 conveniences over that owner, not independent storage. Config reload publishes value
@@ -136,13 +136,13 @@ persistence adapters and UI singletons still have process lifetimes, so this
 does not make the complete suite parallel-safe. Do not replace production runtime
 state or alter AX/multitouch thread ownership to simplify a test.
 
-Desktop navigation (`runtime/NativeSpaceNavigator.swift`) posts a Dock swipe toward
-the target desktop and succeeds only once a fresh read confirms the landing.
-Moves between desktops (`runtime/NativeWindowSpaceMoves.swift`) move windows by ID
+Space navigation (`runtime/NativeSpaceNavigator.swift`) posts a Dock swipe toward
+the target space and succeeds only once a fresh read confirms the landing.
+Moves between spaces (`runtime/NativeWindowSpaceMoves.swift`) move windows by ID
 and rehome them in the destination strip only after macOS confirms each arrival.
-`move-workspace-to-monitor` moves a desktop's windows, since macOS cannot move the
-desktop itself. `workspace-to-monitor-force-assignment` only chooses the display on
-which `persistent-workspaces` creates a missing desktop.
+`move-workspace-to-monitor` moves a space's windows, since macOS cannot move the
+space itself. `workspace-to-monitor-force-assignment` only chooses the display on
+which `persistent-workspaces` creates a missing space.
 
 Settings navigation lives in `ui/settings/ShortcutSettingsView.swift`. Each config
 pane has a `Settings*View.swift` file; controls and TOML persistence are shared in

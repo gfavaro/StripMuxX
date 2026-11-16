@@ -122,7 +122,7 @@ final class NativeScrollingPan {
               config.scrolling.gestureEnabled, TrayMenuModel.shared.isEnabled,
               nativeActiveDesktop(on: workspace.workspaceMonitor) === workspace else {
             cancel()
-            lastDecision = "gesture cancelled: desktop or session changed"
+            lastDecision = "gesture cancelled: space or session changed"
             return false
         }
         if resizingColumn {
@@ -173,7 +173,7 @@ final class NativeScrollingPan {
         guard abs(scroll.deltaX) > abs(scroll.deltaY) else { lastDecision = "vertical: left to the app"; return false }
         guard let monitor = sortedMonitors.first(where: { $0.rect.contains(scroll.point) }),
               let target = nativeActiveDesktop(on: monitor), target.isVisible else {
-            lastDecision = "no desktop under the pointer"; return false
+            lastDecision = "no space under the pointer"; return false
         }
         let resizing = scroll.resizeOnly
         let resizingWindow = focus.windowOrNil
@@ -181,7 +181,7 @@ final class NativeScrollingPan {
             guard let resizingWindow, resizingWindow.nodeWorkspace === target,
                   resizingWindow.parent is TilingContainer, !resizingWindow.isFullscreen,
                   resizingWindow.nativeLayoutEligible else {
-                lastDecision = "resize needs a focused tiled window on this desktop"
+                lastDecision = "resize needs a focused tiled window on this space"
                 return false
             }
         }

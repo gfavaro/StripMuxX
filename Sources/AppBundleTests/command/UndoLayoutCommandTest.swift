@@ -29,7 +29,7 @@ final class UndoLayoutCommandTest: XCTestCase {
         XCTAssertEqual(columnIds(workspace), [1, 2, 3])
         let result = try await run("undo-layout")
         XCTAssertNotEqual(result.exitCode, 0)
-        XCTAssertEqual(result.stderr, ["Nothing to undo on this desktop"])
+        XCTAssertEqual(result.stderr, ["Nothing to undo on this space"])
     }
 
     func testCommandsThatChangeNothingAreNotRecorded() async throws {

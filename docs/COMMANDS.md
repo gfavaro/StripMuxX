@@ -20,30 +20,30 @@ column there, and `scrolling-pin left|right` pins it to an edge of the display (
 to unpin). `scrolling-minimap` opens or closes the clickable map of the strip; it
 supports Left/Right, Return and Escape. `balance-sizes` resets column widths and
 stack heights; `flatten-workspace-tree` turns stacks into columns. See
-[the strip](LAYOUTS.md). `focus floating` steps through the desktop's floating windows,
+[the strip](LAYOUTS.md). `focus floating` steps through the space's floating windows,
 then back to the strip. `focus-back-and-forth` returns to the previously focused window.
 
 **Cheat sheet:** `shortcuts` (Alt-Shift-/) shows the current mode's shortcuts grouped
 by what they do; any key or click closes it.
 
-**Undo:** `undo-layout` puts the focused desktop's strip back as it was before its
+**Undo:** `undo-layout` puts the focused space's strip back as it was before its
 last layout command (`layout`, `move`, `join-with`, `resize`, `balance-sizes`,
 scrolling moves, widths and pins, and similar), one step at a time, up to 20 steps.
 
-**Retile:** `retile` puts every tiled window on the showing desktops back in its
+**Retile:** `retile` puts every tiled window on the showing spaces back in its
 place and reports how many had moved. An app that moves its tiled window again and
 again is put back at most three times in 10 seconds per place, then left alone until
 that time passes or the layout changes; `retile` renews that budget.
 
-**Desktops:** `workspace 1-9|next|prev` switches the focused display's desktop, as
+**Spaces:** `workspace 1-9|next|prev` switches the focused display's space, as
 Control-N does; `workspace-back-and-forth` returns to the previous one.
-`move-node-to-workspace` moves the focused window to another desktop, optionally
-following it with `--focus-follows-window`. Desktops are numbered in Mission Control
+`move-node-to-workspace` moves the focused window to another space, optionally
+following it with `--focus-follows-window`. Spaces are numbered in Mission Control
 order.
 
 **Displays:** `focus-monitor` and `move-node-to-monitor` act on displays.
-`move-workspace-to-monitor` moves a desktop's windows and strip to the desktop the
-other display shows; macOS keeps the desktop itself where it is.
+`move-workspace-to-monitor` moves a space's windows and strip to the space the
+other display shows; macOS keeps the space itself where it is.
 
 **Experimental input diagnostics:** `debug-windows --gesture-probe-start` starts an opt-in,
 non-intercepting public-API gesture probe. With another app focused, try a horizontal

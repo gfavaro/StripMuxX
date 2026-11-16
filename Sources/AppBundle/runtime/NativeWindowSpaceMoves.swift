@@ -45,7 +45,7 @@ final class NativeWindowSpaceMoves {
         return await move(window, focusFollowsWindow: args.focusFollowsWindow, failIfNoop: args.failIfNoop, io: io) { _, _, displays in
             guard let display = displays.first(where: { nativeDisplay($0, isShownOn: monitor) }),
                   let space = display.spaces.first(where: { $0.id == display.activeSpaceID }), space.isDesktop else {
-                _ = io.err("\(monitor.name) shows no desktop a window can join")
+                _ = io.err("\(monitor.name) shows no space a window can join")
                 return nil
             }
             return space
@@ -61,13 +61,13 @@ final class NativeWindowSpaceMoves {
         // Any desktop may be the source, including one not showing: windows move by ID and
         // each arrival is confirmed, so the active-desktop fence of tiling commands is not needed.
         guard let source = args.resolveUncheckedTarget(env, io)?.workspace else { return false }
-        guard nativeDesktopNumber(of: source) != nil else { return io.err("Only a native desktop can move to another display") }
+        guard nativeDesktopNumber(of: source) != nil else { return io.err("Only a native space can move to another display") }
         let monitor: Monitor
         switch args.target.val.resolve(source.workspaceMonitor, wrapAround: args.wrapAround) {
             case .success(let target): monitor = target
             case .failure(let message): return io.err(message)
         }
-        guard let destination = nativeActiveDesktop(on: monitor) else { return io.err("\(monitor.name) shows no desktop windows can join") }
+        guard let destination = nativeActiveDesktop(on: monitor) else { return io.err("\(monitor.name) shows no space windows can join") }
         guard destination !== source else { return true }
         let windows = source.allLeafWindowsRecursive
         let ids = windows.map(\.windowId)
@@ -77,7 +77,7 @@ final class NativeWindowSpaceMoves {
         guard let display = state.displays.first(where: { nativeDisplay($0, isShownOn: monitor) }),
               let target = display.spaces.first(where: { $0.id == display.activeSpaceID }), target.isDesktop,
               let spaceID = UInt64(target.id) else {
-            return io.err("\(monitor.name) shows no desktop windows can join")
+            return io.err("\(monitor.name) shows no space windows can join")
         }
         let desktops = Set(state.displays.flatMap { $0.spaces.filter(\.isDesktop).map(\.id) })
         let movable = ids.filter { id in
@@ -128,7 +128,7 @@ final class NativeWindowSpaceMoves {
     private func movableWindow(_ args: some CmdArgs, _ env: CmdEnv, _ io: CmdIo) -> Window? {
         guard let window = args.resolveUncheckedTarget(env, io)?.windowOrNil else { _ = io.err(noWindowIsFocused); return nil }
         guard runtime.native.layouts.retainedByUUID.values.contains(where: { $0 === window.nodeWorkspace }) else {
-            _ = io.err("Window \(window.windowId) is not on a native desktop StripMuxX manages"); return nil
+            _ = io.err("Window \(window.windowId) is not on a native space StripMuxX manages"); return nil
         }
         return window
     }
@@ -172,7 +172,7 @@ final class NativeWindowSpaceMoves {
         guard let target = resolveTarget(source, display, state.displays) else { return false }
         if target.id == source {
             if failIfNoop { return false }
-            io.err("Window \(id) is already on that desktop. Tip: use --fail-if-noop to exit with non-zero code")
+            io.err("Window \(id) is already on that space. Tip: use --fail-if-noop to exit with non-zero code")
             return true
         }
         guard let spaceID = UInt64(target.id), move(id, spaceID) else {
@@ -203,7 +203,7 @@ final class NativeWindowSpaceMoves {
                       let plan = NativeSpaceNavigation.desktop(number: number, in: displays),
                       let space = displays.first(where: { $0.identifier == plan.displayIdentifier })?
                           .spaces.first(where: { $0.id == plan.targetSpaceID }) else {
-                    _ = io.err("Desktop \(name.raw) doesn't exist; add it in Mission Control")
+                    _ = io.err("Space \(name.raw) doesn't exist; add it in Mission Control")
                     return nil
                 }
                 return space
@@ -217,7 +217,7 @@ final class NativeWindowSpaceMoves {
                 var to = from + (direction == .next ? 1 : -1)
                 if !desktops.indices.contains(to) {
                     guard args.wrapAround else {
-                        _ = io.err("No \(direction == .next ? "next" : "previous") desktop on this display")
+                        _ = io.err("No \(direction == .next ? "next" : "previous") space on this display")
                         return nil
                     }
                     to = (to + desktops.count) % desktops.count

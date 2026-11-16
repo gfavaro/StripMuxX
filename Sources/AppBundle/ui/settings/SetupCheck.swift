@@ -42,10 +42,10 @@ func setupCheckItems(_ input: SetupCheckInput) -> [SetupCheckItem] {
                        detail: input.otherWindowManagers.isEmpty ? "None running." : "\(input.otherWindowManagers.joined(separator: ", ")) also moves windows; quit it so the two do not fight."),
     ]
     items.append(SetupCheckItem(id: "separate-spaces", title: "Displays have separate Spaces", ok: input.separateSpaces,
-        detail: input.separateSpaces ? "On." : "Each display's own desktop gets a strip. Turn on Displays have separate Spaces in Desktop & Dock, then log out and back in.",
+        detail: input.separateSpaces ? "On." : "Each display's own space gets a strip. Turn on Displays have separate Spaces in Desktop & Dock, then log out and back in.",
         fixURL: input.separateSpaces ? nil : desktopSettings))
-    items.append(SetupCheckItem(id: "rearrange-spaces", title: "Desktops keep their order", ok: !input.rearrangesSpaces,
-        detail: input.rearrangesSpaces ? "macOS reorders desktops by recent use, so desktop numbers and shortcuts change. Turn off Automatically rearrange Spaces based on most recent use in Desktop & Dock." : "Off.",
+    items.append(SetupCheckItem(id: "rearrange-spaces", title: "Spaces keep their order", ok: !input.rearrangesSpaces,
+        detail: input.rearrangesSpaces ? "macOS reorders spaces by recent use, so space numbers and shortcuts change. Turn off Automatically rearrange Spaces based on most recent use in Desktop & Dock." : "Off.",
         fixURL: input.rearrangesSpaces ? desktopSettings : nil))
     return items
 }

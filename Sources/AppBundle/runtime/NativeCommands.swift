@@ -17,14 +17,14 @@ extension NativeWorkspaceLifecycle {
     /// tiling to be ready, then focuses the window directly. Never re-dispatches `focus`.
     func focusWindowOnHiddenDesktop(_ id: UInt32?, _ io: CmdIo) async throws -> Bool {
         guard let id, let window = Window.get(byId: id), let desktop = window.nodeWorkspace,
-              let number = nativeDesktopNumber(of: desktop) else { return io.err("Window \(id ?? 0) is not on a desktop") }
+              let number = nativeDesktopNumber(of: desktop) else { return io.err("Window \(id ?? 0) is not on a space") }
         if !desktop.isVisible {
             guard case .cmd(let command) = parseCommand("workspace \(number)"), let switchTo = command as? WorkspaceCommand,
                   await state.navigation.selectDesktop(switchTo.args, io: io) else { return false }
         }
         _ = await state.stateChanges.wait(timeout: .seconds(2)) { desktop.isVisible && state.tiling.ready }
         try Task.checkCancellation()
-        guard desktop.isVisible, window.focusWindow() else { return io.err("Desktop \(number) did not show in time; try again") }
+        guard desktop.isVisible, window.focusWindow() else { return io.err("Space \(number) did not show in time; try again") }
         window.nativeFocus()
         return true
     }

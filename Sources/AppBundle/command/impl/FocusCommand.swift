@@ -86,7 +86,7 @@ struct FocusCommand: Command {
     /// after the last, back to the strip's most recent window.
     @MainActor private func focusNextFloating(after current: Window?, in workspace: Workspace, _ io: CmdIo) -> Bool {
         let floating = workspace.floatingWindows.sorted { $0.windowId < $1.windowId }
-        guard !floating.isEmpty else { return io.err("No floating windows on this desktop") }
+        guard !floating.isEmpty else { return io.err("No floating windows on this space") }
         guard let current, let index = floating.firstIndex(where: { $0 === current }) else {
             // Remember the strip window being left, to come back to it exactly.
             if let current { floatingReturnWindows[ObjectIdentifier(workspace)] = current.windowId }
@@ -119,7 +119,7 @@ struct FocusCommand: Command {
                     return io.err("Should never happen. Can't find the current monitor")
                 }
                 if let monitor = monitors.getOrNil(atIndex: index) {
-                    guard let shown = nativeActiveDesktop(on: monitor) else { return io.err("\(monitor.name) shows no desktop") }
+                    guard let shown = nativeActiveDesktop(on: monitor) else { return io.err("\(monitor.name) shows no space") }
                     return shown.focusWorkspace()
                 }
                 switch args.boundariesAction {

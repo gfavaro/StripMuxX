@@ -110,7 +110,7 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
             return QuickFloatingRuleTarget(window: app, focus: focus, bundleId: bundleId,
                 pid: app.macApp.pid, launchDate: app.macApp.nsApp.launchDate, workspaceId: focus.workspace.id)
         }
-        let place = nativeDesktopNumber(of: focus.workspace).map { nativeDesktopDisplayName($0) } ?? "No desktop"
+        let place = nativeDesktopNumber(of: focus.workspace).map { nativeDesktopDisplayName($0) } ?? "No space"
         menu.addItem(NSMenuItem(title: "StripMuxX · \(place)", action: nil, keyEquivalent: ""))
         if !runtime.native.tiling.ready {
             menu.addItem(NSMenuItem(title: runtime.native.tiling.status, action: nil, keyEquivalent: ""))
@@ -157,7 +157,7 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
     }
 
     private func addCommandsMenu(to menu: NSMenu) {
-        addSubmenu("Desktops", to: menu) { workspacesMenu in
+        addSubmenu("Spaces", to: menu) { workspacesMenu in
             addCommand("Previous", script: "workspace prev", to: workspacesMenu)
             addCommand("Next", script: "workspace next", to: workspacesMenu)
             addCommand("Back and Forth", script: "workspace-back-and-forth", to: workspacesMenu)
@@ -221,7 +221,7 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
             }
         }
         menu.addItem(.separator())
-        menu.addItem(callbackItem("Refresh Desktops", #selector(refreshNativeSpaces)))
+        menu.addItem(callbackItem("Refresh Spaces", #selector(refreshNativeSpaces)))
         addCommand("Reload Config", script: "reload-config", to: menu, requiresWindow: false, allowDisabled: true)
     }
 
@@ -286,7 +286,7 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
         if payload.commands.count == 1, payload.commands.first is CloseAllWindowsButCurrentCommand {
             environment = environment.withFocus(focus)
             let alert = NSAlert()
-            alert.messageText = "Close other windows on this desktop?"
+            alert.messageText = "Close other windows on this space?"
             alert.informativeText = "Applications may ask you to save unsaved changes. The focused window will stay open."
             alert.addButton(withTitle: "Cancel")
             alert.addButton(withTitle: "Close Other Windows")

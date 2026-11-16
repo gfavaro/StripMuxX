@@ -16,11 +16,11 @@ struct ShortcutGeneralSettingsView: View {
                     persistRootBool("start-at-login", startAtLogin)
                 }
             }
-            SettingsSection("Desktops") {
-                SettingsToggle("Restore strips", id: "native-spaces.restore-layouts", isOn: $restoreNativeLayouts, help: "Remember each desktop's strip and put it back after StripMuxX or the Mac restarts.") {
+            SettingsSection("Spaces") {
+                SettingsToggle("Restore strips", id: "native-spaces.restore-layouts", isOn: $restoreNativeLayouts, help: "Remember each space's strip and put it back after StripMuxX or the Mac restarts.") {
                     persistSettingsConfig(section: "native-spaces", key: "restore-layouts", renderedValue: restoreNativeLayouts ? "true" : "false", model: model)
                 }
-                SettingsToggle("Put windows back on quit", id: "native-spaces.restore-frames-on-quit", isOn: $restoreFramesOnQuit, help: "Quitting StripMuxX or turning it off returns tiled windows on the desktops showing to where they were before tiling.") {
+                SettingsToggle("Put windows back on quit", id: "native-spaces.restore-frames-on-quit", isOn: $restoreFramesOnQuit, help: "Quitting StripMuxX or turning it off returns tiled windows on the spaces showing to where they were before tiling.") {
                     persistSettingsConfig(section: "native-spaces", key: "restore-frames-on-quit", renderedValue: restoreFramesOnQuit ? "true" : "false", model: model)
                 }
             }

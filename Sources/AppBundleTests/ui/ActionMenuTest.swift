@@ -55,7 +55,7 @@ final class ActionMenuTest: XCTestCase {
         let menu = NSMenu()
         NativeActionMenu().menuNeedsUpdate(menu)
         let header = try XCTUnwrap(menu.items.first).title
-        XCTAssertEqual(header, "StripMuxX · Desktop 1")
+        XCTAssertEqual(header, "StripMuxX · Space 1")
     }
 
     func testAboutItemSitsAboveSettingsAndCreditsTheFork() throws {
@@ -82,12 +82,12 @@ final class ActionMenuTest: XCTestCase {
                       "Commands", "About StripMuxX", "Settings…", "Enabled", "Quit StripMuxX"] {
             XCTAssertTrue(titles.contains(title), title)
         }
-        for title in ["Desktops", "Focus", "Move Window", "Stack With Column", "Resize", "Reload Config", "Clear Saved Minimum Sizes…"] {
+        for title in ["Spaces", "Focus", "Move Window", "Stack With Column", "Resize", "Reload Config", "Clear Saved Minimum Sizes…"] {
             XCTAssertFalse(titles.contains(title), "\(title) is not at the top level")
         }
         XCTAssertEqual(menu.items.filter { $0.submenu != nil }.map(\.title), ["Commands"])
         let commands = try submenu("Commands", in: menu)
-        for title in ["Desktops", "Focus", "Move Window", "Stack With Column", "Resize", "Toggle Floating", "Reload Config"] {
+        for title in ["Spaces", "Focus", "Move Window", "Stack With Column", "Resize", "Toggle Floating", "Reload Config"] {
             XCTAssertTrue(commands.items.contains { $0.title == title }, title)
         }
         XCTAssertFalse(titles.contains("Mode: main"))
@@ -98,7 +98,7 @@ final class ActionMenuTest: XCTestCase {
         for title in ["Advanced", "Projects", "Utilities", "Other Key Bindings", "Bring Here", "Copy Version", "Open Config", "Diagnostics…", "Close Other Windows…", "New Opposite Container", "Next Tab"] {
             XCTAssertFalse(allTitles.contains(title), title)
         }
-        let workspaces = try submenu("Desktops", in: commands)
+        let workspaces = try submenu("Spaces", in: commands)
         XCTAssertNotNil(workspaces.items.first { $0.title == "Move and Follow" }?.submenu)
         XCTAssertNotNil(workspaces.items.first { $0.title == "Move Window to" }?.submenu)
         if sortedMonitors.count == 1 { XCTAssertFalse(commands.items.contains { $0.title == "Display" }) }
@@ -202,7 +202,7 @@ final class ActionMenuTest: XCTestCase {
         let menu = NSMenu()
         NativeActionMenu().menuNeedsUpdate(menu)
         XCTAssertFalse(try XCTUnwrap(menu.items.first { $0.title == "Fullscreen" }).isEnabled)
-        let workspaces = try submenu("Desktops", in: try submenu("Commands", in: menu))
+        let workspaces = try submenu("Spaces", in: try submenu("Commands", in: menu))
         XCTAssertTrue(try XCTUnwrap(workspaces.items.first { $0.title == "Next" }).isEnabled)
         XCTAssertTrue(try XCTUnwrap(menu.items.first { $0.title == "Settings…" }).isEnabled)
     }
@@ -233,7 +233,7 @@ final class ActionMenuTest: XCTestCase {
         }
         let commands = try submenu("Commands", in: menu)
         XCTAssertTrue(try XCTUnwrap(commands.items.first { $0.title == "Reload Config" }).isEnabled)
-        let workspaces = try submenu("Desktops", in: commands)
+        let workspaces = try submenu("Spaces", in: commands)
         XCTAssertFalse(try XCTUnwrap(workspaces.items.first { $0.title == "Next" }).isEnabled)
     }
 

@@ -54,11 +54,11 @@ parallel execution solely to obtain XML.
 
 - Test pure policy and geometry with deterministic inputs and observable results.
 - Test command behavior through parsing and execution when command routing matters.
-  Also assert that unrelated displays and desktops remain unchanged.
+  Also assert that unrelated displays and spaces remain unchanged.
 - Keep filesystem integration tests identifiable.
 - Use isolated manual validation for physical trackpad feel, Mission Control, real application Accessibility behavior, permission changes, and
   display hot-plugging. Mocked monitors and rendered curves do not prove those
-  behaviors work on the desktop.
+  behaviors work on the space.
 
 For a bug fix, reproduce the user's sequence and confirm the regression test fails
 against the old behavior before fixing it. Assert the expected result and relevant
@@ -76,10 +76,10 @@ explicitly. Main-actor isolation alone does not isolate tests across suspension.
 
 New tests using the workspace world should inherit `WorkspaceTestCase`, which
 pairs `setUpWorkspacesForTests()` in setup and teardown even when a test throws.
-`setUpWorkspacesForTests(desktops:)` publishes an observation of that many native
-desktops on one display and marks tiling ready; `observeTestDesktops` lays out
+`setUpWorkspacesForTests(spaces:)` publishes an observation of that many native
+spaces on one display and marks tiling ready; `observeTestDesktops` lays out
 several displays. Both are defined in `Sources/AppBundleTests/testUtil.swift`.
-`TestWindow.new` records each window's desktop membership, so commands pass the
+`TestWindow.new` records each window's space membership, so commands pass the
 tiling fence as real windows do.
 Pure helper tests should continue using XCTestCase without a workspace fixture.
 The fixture replaces the runtime as a unit (configuration, monitor caches/overrides,
@@ -126,11 +126,11 @@ commit or in `docs/QA_AUDIT.md`.
 ## The Atlas helper
 
 A first run on an account that has never seen the app (config bootstrap, the first-run Settings
-window, Settings UI) can be tested in the Atlas helper without touching your desktop:
+window, Settings UI) can be tested in the Atlas helper without touching your space:
 `atlas install-app` or `atlas open --app StripMuxX`, reset the first-run flag with
 `atlas run -- /usr/bin/defaults delete com.gfavaro.stripmuxx setupCheck.shown.native`, relaunch,
-and screenshot. The helper cannot test tiling: its desktop has no readable Space identity, so
-StripMuxX reports "Tiling paused: no active ordinary desktop". Desktop switching, Mission
+and screenshot. The helper cannot test tiling: its space has no readable Space identity, so
+StripMuxX reports "Tiling paused: no active ordinary space". Space switching, Mission
 Control, multiple displays and sleep/wake need a real session. A second login's StripMuxX does
 not interfere with the installer, but quit the helper's copy when you finish (`atlas close`).
 
@@ -147,8 +147,8 @@ or all third-party app behavior. Record manual checks separately from automated 
 After installing a build, `script/smoke.sh` checks the running app with real windows.
 Using only its own TextEdit window, it checks permissions, adoption, put-back after
 the app moves the window, the three-try limit against an app that keeps moving it,
-`retile`, moves between desktops and displays and back, focus following, switching
-another display's desktop, return of focus, pan lag, survival of the app quitting and
+`retile`, moves between spaces and displays and back, focus following, switching
+another display's space, return of focus, pan lag, survival of the app quitting and
 new crash reports. It prints PASS, FAIL or SKIP per check and exits with the failure
 count. It skips the window checks when TextEdit is already open, and does not cover
 gestures or quitting StripMuxX. Changes confined

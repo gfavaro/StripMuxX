@@ -35,7 +35,7 @@ struct ShortcutBehaviorSettingsView: View {
                 SettingsSection("When one window is open") {
 
                 SettingsTextField("Lone window aspect ratio", id: "single-window-aspect-ratio", text: $singleWindowRatio,
-                                  help: "A window alone on a desktop is at most this many times as wide as it is tall, so it keeps the same shape on any display. 0 lets it fill the width; 1.6 is a 16:10 window.",
+                                  help: "A window alone on a space is at most this many times as wide as it is tall, so it keeps the same shape on any display. 0 lets it fill the width; 1.6 is a 16:10 window.",
                                   validate: singleWindowRatioError) {
                     if let value = parseSingleWindowRatio(singleWindowRatio) {
                         persistConfig(section: nil, key: "single-window-aspect-ratio", value: String(value))

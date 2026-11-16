@@ -189,7 +189,7 @@ final class WorkspaceScrollingMinimap: NSObject {
                 title: cachedWindowTitle(for: window) ?? window.app.name ?? "Window",
                 focused: focus.windowOrNil === window)
         }
-        view.update(workspaceName: nativeDesktopNumber(of: workspace).map(scrollingMinimapSpaceName) ?? "Space", models: models, pinned: pinned,
+        view.update(workspaceName: userFacingDesktopName(workspace), models: models, pinned: pinned,
                     floating: floating, desktops: desktops, icons: icons,
                     metrics: workspace.scrollingMetrics, offset: workspace.scrollingOffset,
                     focused: focus.windowOrNil.flatMap { $0.nodeWorkspace === workspace ? ObjectIdentifier($0.topLevelWorkspaceGroup) : nil })

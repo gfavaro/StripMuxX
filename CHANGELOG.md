@@ -15,6 +15,7 @@
 - `debug-windows --gesture-trace-start/--gesture-trace-stop` records a real gesture (inputs and every window position) and `script/analyze_gesture_trace.py` reports lag, border distance and smoothness from it.
 
 ### Changed
+- The app and its docs say Space (and Spaces) where they said desktop, as macOS does for the feature: the menu, the minimap, Settings, messages, `doctor` and the reference configs. Commands, config keys and file names are unchanged.
 - A lone window is limited by one `single-window-aspect-ratio` (width as a multiple of height; 0, the default, fills the width) on every display, instead of the `fullscreen-width` and `lone-window-width` percentages. The ratio, like the alignment, can be overridden per display in a `[display.<pattern>]` table, and is a Settings control. `fullscreen` always fills the display.
 - Windows always ease toward the fingers over 40 ms (off while Reduce Motion is on); `gesture-smoothing` and `gesture-sensitivity` no longer exist. `fullscreen-width`, `lone-window-width` and those two keys are ignored with a note in `doctor` when a config still sets them.
 - The minimap is compact: window cards sized to the strip at true scale (a 64 pt row; a window that keeps its own height or is free-size is drawn at its real height and position), an accent frame around the visible part, no scroller or position bar.

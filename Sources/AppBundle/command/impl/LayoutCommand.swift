@@ -31,7 +31,7 @@ struct LayoutCommand: Command {
                 let registration = runtime.native.layouts.registration(for: window.windowId)
                 let size = try await window.getAxSize()
                 guard let registration, runtime.native.layouts.accepts(registration) else {
-                    return io.err("The window's desktop changed while reading its size")
+                    return io.err("The window's space changed while reading its size")
                 }
                 window.lastFloatingSize = size ?? window.lastFloatingSize
                 let data = bindingDataForNewTilingWindow(target.workspace, window: window)

@@ -14,10 +14,10 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         setMonitorsForTests([monitor])
         var inventory = NativeWorkspaceInventory()
         _ = inventory.publish(NativeSpacesSnapshot(displays: [NativeSpaceDisplay(identifier: "display-a", activeSpaceID: "1",
-            spaces: [NativeSpace(id: "1", uuid: "desktop-a", type: 0)])], windows: [], readMilliseconds: 0, capturedAt: .now),
+            spaces: [NativeSpace(id: "1", uuid: "space-a", type: 0)])], windows: [], readMilliseconds: 0, capturedAt: .now),
             for: inventory.invalidate())
         runtime.native.layouts.reconcile(inventory, displays: [monitor])
-        return runtime.native.layouts.retainedByUUID["desktop-a"]!
+        return runtime.native.layouts.retainedByUUID["space-a"]!
     }
 
     private func fixture() -> (Workspace, [TestWindow]) {
@@ -174,7 +174,7 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
                 XCTAssertGreaterThan(column.width, 0, "step \(step)")
                 XCTAssertLessThanOrEqual(column.width, metrics.areaWidth + 0.5, "step \(step): width within the display")
             }
-            XCTAssertEqual(bystander.scrollingColumnWidth, 0.4, "step \(step): another desktop is never touched")
+            XCTAssertEqual(bystander.scrollingColumnWidth, 0.4, "step \(step): another space is never touched")
             if step % 250 == 249 { pan.cancel() }
         }
         pan.cancel()
@@ -196,7 +196,7 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertTrue(pan.handle(scroll(0, phase: 4, at: point)))
         XCTAssertTrue(workspace.scrollingGestureMotionActive, "Lifting the fingers waits for macOS's momentum")
         XCTAssertTrue(pan.handle(scroll(-60, option: false, phase: 0, momentum: 2, at: point)), "Momentum belongs to the pan")
-        XCTAssertGreaterThan(workspace.scrollingOffset, panned, "Momentum keeps moving the desktop")
+        XCTAssertGreaterThan(workspace.scrollingOffset, panned, "Momentum keeps moving the space")
         XCTAssertTrue(pan.handle(scroll(0, option: false, phase: 0, momentum: 3, at: point)))
         XCTAssertFalse(workspace.scrollingGestureMotionActive)
         XCTAssertEqual(pan.lastDecision, "panning")
@@ -305,7 +305,7 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertFalse(pan.isPanning)
         XCTAssertFalse(workspace.scrollingGestureMotionActive)
         XCTAssertTrue(focus.windowOrNil === windows[0])
-        XCTAssertEqual(pan.lastDecision, "gesture cancelled: desktop or session changed")
+        XCTAssertEqual(pan.lastDecision, "gesture cancelled: space or session changed")
     }
 
     func testEdgePreviewHasSafeBounds() {
@@ -385,7 +385,7 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         let desktop = nativeDesktop()
         var inventory = NativeWorkspaceInventory()
         _ = inventory.publish(NativeSpacesSnapshot(displays: [NativeSpaceDisplay(identifier: "display-a", activeSpaceID: "9",
-            spaces: [NativeSpace(id: "1", uuid: "desktop-a", type: 0), NativeSpace(id: "9", uuid: "full", type: 4)])],
+            spaces: [NativeSpace(id: "1", uuid: "space-a", type: 0), NativeSpace(id: "9", uuid: "full", type: 4)])],
             windows: [], readMilliseconds: 0, capturedAt: .now), for: inventory.invalidate())
         runtime.native.layouts.reconcile(inventory, displays: [desktop.workspaceMonitor])
         let before = Workspace.all.count

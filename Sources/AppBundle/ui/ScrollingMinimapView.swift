@@ -27,9 +27,6 @@ struct ScrollingMinimapApps: Equatable {
     static let none = ScrollingMinimapApps(pids: [], names: [])
 }
 
-/// The minimap's name for a desktop number: macOS calls them Spaces.
-func scrollingMinimapSpaceName(_ number: Int) -> String { "Space \(number)" }
-
 /// One desktop button: its number, and whether it is the desktop this minimap shows.
 struct ScrollingMinimapDesktop: Equatable {
     let number: Int
@@ -653,11 +650,11 @@ final class ScrollingMinimapDesktopChip: NSButton {
     }
 
     private func configureAccessibility() {
-        let name = scrollingMinimapSpaceName(model.number)
+        let name = nativeDesktopDisplayName(model.number)
         toolTip = model.apps.names.isEmpty ? name : "\(name) · \(model.apps.names.joined(separator: ", "))"
         setAccessibilityLabel(model.apps.names.isEmpty ? name : "\(name), \(model.apps.names.joined(separator: ", "))")
         setAccessibilityValue(model.isCurrent ? "Current" : "")
-        setAccessibilityHelp("Switch to this desktop")
+        setAccessibilityHelp("Switch to this space")
     }
 
     override func draw(_ dirtyRect: NSRect) {

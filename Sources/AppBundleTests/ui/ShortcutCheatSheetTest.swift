@@ -17,7 +17,7 @@ final class ShortcutCheatSheetTest: XCTestCase {
         """)
         XCTAssertEqual(parsed.errors.map(\.description), [])
         let sections = shortcutCheatSheetSections(parsed.config.modes[mainModeId])
-        XCTAssertEqual(sections.map(\.title), ["Focus", "Move", "Columns", "Desktops", "Other"])
+        XCTAssertEqual(sections.map(\.title), ["Focus", "Move", "Columns", "Spaces", "Other"])
         XCTAssertEqual(sections[0].rows, [.init(keys: "⌥⇧V", action: "focus floating"), .init(keys: "⌥H", action: "focus left")])
         XCTAssertEqual(sections[1].rows, [.init(keys: "⌃⌥⇧L", action: "move right")])
         XCTAssertEqual(sections[2].rows, [.init(keys: "⌥R", action: "scrolling-width next")])

@@ -139,7 +139,7 @@ final class NativeTilingCoordinator {
             if snapshot.displays.contains(where: { $0.identifier == "Main" }) {
                 stopTiling("Tiling unavailable: turn on Displays have separate Spaces (System Settings › Desktop & Dock)")
             } else {
-                status = "Tiling paused: no active ordinary desktop"
+                status = "Tiling paused: no active ordinary space"
             }
             return
         }
@@ -358,7 +358,7 @@ final class NativeTilingCoordinator {
         guard commands.allSatisfy(Self.supports) else { return io.err("Operation unsupported by the native tiling MVP") }
         guard let target = NativeCommandTargetFence(commands, env: env,
             defaultFocus: runtime.focus.requested.liveOrNil, layouts: runtime.native.layouts) else {
-            return io.err("Native command target is not an observed active desktop")
+            return io.err("Native command target is not an observed active space")
         }
         // Events already invalidate and reread. When tiling is ready and nothing is being
         // read, the model is current: a forced full read here cost 30–80 ms per command.

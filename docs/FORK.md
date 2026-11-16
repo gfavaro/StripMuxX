@@ -1,6 +1,6 @@
 # StripMuxX identity and maintenance
 
-StripMuxX keeps one scrolling strip per native macOS desktop. It builds on
+StripMuxX keeps one scrolling strip per native macOS space. It builds on
 [WinMux](https://github.com/ZimengXiong/WinMux) and AeroSpace's configuration and
 command model, keeping only the scrolling strip: virtual workspaces, projects, other
 layouts, the sidebar, tabs, borders and gesture handling are not part of it. It is
@@ -38,18 +38,18 @@ at once: distinct bundle IDs do not prevent competing window manipulation.
 
 ## Local build and installation
 
-### Desktops across displays
+### Spaces across displays
 
-macOS decides which desktop each display shows. Selecting a desktop showing on
+macOS decides which space each display shows. Selecting a space showing on
 another display focuses it there; nothing moves between displays except by an
 explicit `move-node-to-monitor` or `move-workspace-to-monitor`. Forced assignments
-only choose where `persistent-workspaces` creates missing desktops.
+only choose where `persistent-workspaces` creates missing spaces.
 
 ### Menu bar and Settings
 
 The tray is owned by `NativeActionMenu`; Settings is `ShortcutSettingsView`.
 Settings → Appearance → Menu bar chooses Icon or Workspace: the icon shows a strip
-of columns in color or monochrome, and Workspace shows the focused desktop's number.
+of columns in color or monochrome, and Workspace shows the focused space's number.
 `[menu-bar]` stores these preferences in TOML. Legacy preferences are imported once.
 See [configuration](CONFIGURATION.md).
 
@@ -82,7 +82,7 @@ python3 script/install_fork.py --app .release/StripMuxX.app --install
 ```
 
 `--install` backs up the installed app (outside `/Applications`), quits it, replaces it,
-relaunches it, and then compares the desktops, display layout, config checksum, window
+relaunches it, and then compares the spaces, display layout, config checksum, window
 assignments and focus with a snapshot taken before. It writes a JSON report to
 `.release/install-<id>.json`. Requirements and results:
 

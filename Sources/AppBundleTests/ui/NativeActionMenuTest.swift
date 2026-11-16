@@ -18,7 +18,7 @@ final class NativeActionMenuTest: XCTestCase {
         let menu = NSMenu()
         NativeActionMenu().menuNeedsUpdate(menu)
         let titles = menu.items.map(\.title)
-        XCTAssertEqual(titles.first, "StripMuxX · Desktop 1")
+        XCTAssertEqual(titles.first, "StripMuxX · Space 1")
         for title in ["Center Column", "Show Minimap", "Cycle Column Width", "Pin Column Left", "Retile", "Balance Sizes",
                       "Fullscreen", "Commands", "Settings…", "Enabled", "Quit StripMuxX"] {
             XCTAssertTrue(titles.contains(title), title)
@@ -27,14 +27,14 @@ final class NativeActionMenuTest: XCTestCase {
             XCTAssertFalse(titles.contains(title), title)
         }
         let commands = try XCTUnwrap(menu.items.first { $0.title == "Commands" }?.submenu)
-        for title in ["Desktops", "Focus", "Move Window", "Stack With Column", "Resize", "Toggle Floating",
-                      "Refresh Desktops", "Reload Config"] {
+        for title in ["Spaces", "Focus", "Move Window", "Stack With Column", "Resize", "Toggle Floating",
+                      "Refresh Spaces", "Reload Config"] {
             XCTAssertTrue(commands.items.contains { $0.title == title }, title)
         }
         XCTAssertFalse(commands.items.contains { $0.title == "Container Layout" })
-        let desktops = try XCTUnwrap(commands.items.first { $0.title == "Desktops" }?.submenu)
-        XCTAssertEqual(desktops.items.first { $0.title == "Desktop 1" }?.state, .on)
-        XCTAssertEqual(desktops.items.first { $0.title == "Desktop 2" }?.keyEquivalent, "2")
+        let desktops = try XCTUnwrap(commands.items.first { $0.title == "Spaces" }?.submenu)
+        XCTAssertEqual(desktops.items.first { $0.title == "Space 1" }?.state, .on)
+        XCTAssertEqual(desktops.items.first { $0.title == "Space 2" }?.keyEquivalent, "2")
         XCTAssertTrue(runtime.native.accepts(try XCTUnwrap(parseCommand("retile").cmdOrNil)))
     }
 }

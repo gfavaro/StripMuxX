@@ -7,7 +7,7 @@ struct UndoLayoutCommand: Command {
     func run(_ env: CmdEnv, _ io: CmdIo) async throws -> Bool {
         guard let target = args.resolveTargetOrReportError(env, io) else { return false }
         guard LayoutUndoHistory.shared.undo(target.workspace) else {
-            return io.err("Nothing to undo on this desktop")
+            return io.err("Nothing to undo on this space")
         }
         return true
     }

@@ -1,26 +1,26 @@
 # Native Spaces
 
-StripMuxX works on macOS desktops (Spaces) and keeps one scrolling strip on each.
-It observes which desktops exist and which one each display shows, switches desktops
-and moves windows between them on request, and lays out the showing desktops' strips.
-It never changes system settings and never removes a desktop. Physical validation so
+StripMuxX works on macOS spaces and keeps one scrolling strip on each.
+It observes which spaces exist and which one each display shows, switches spaces
+and moves windows between them on request, and lays out the showing spaces' strips.
+It never changes system settings and never removes a space. Physical validation so
 far covers one SIP-enabled macOS 27.2 host; see [validation](#validation).
 
 ## Observation
 
-Observation enumerates desktops and fullscreen Spaces per display, records window
+Observation enumerates spaces and fullscreen Spaces per display, records window
 memberships, and follows public Space/display/session/application events plus
-dynamically resolved WindowServer lifecycle notifications. Active desktops' windows
-are classified through Accessibility and placed on their desktop's strip. Missing AX
+dynamically resolved WindowServer lifecycle notifications. Active spaces' windows
+are classified through Accessibility and placed on their space's strip. Missing AX
 responses retain nodes; explicit WindowServer closure and confirmed process
 termination remove them. Leaving a Space or disappearing from AX does not imply
 closure.
 
-Each desktop's strip is keyed by the desktop's UUID, so it survives Mission Control
+Each space's strip is keyed by the space's UUID, so it survives Mission Control
 reordering and renumbering. Fullscreen Spaces, and windows macOS shows on every
-desktop or on unknown Spaces, are observed but not tiled. A window assigned to all
-desktops (Options › Assign To › All Desktops) is tiled on the desktop showing on its
-display, and follows to whichever desktop shows next there. With several displays it
+space or on unknown Spaces, are observed but not tiled. A window assigned to all
+spaces (Options › Assign To › All Spaces) is tiled on the space showing on its
+display, and follows to whichever space shows next there. With several displays it
 belongs to the one under its centre, never to two at once.
 
 `stripmuxx doctor` reports native IDs, UUIDs, per-display active Spaces, membership
@@ -31,13 +31,13 @@ cached model state, not actual AX measurements.
 
 Queries (`list-workspaces`, `list-windows`, `list-apps`, `list-modes`,
 `list-exec-env-vars`, `config`) answer from configuration and native snapshots.
-Workspaces are named by desktop number (`%{workspace}` prints `2`), and
-`--workspace 2` selects desktop 2; internal `__native_space_*` names never appear.
+Workspaces are named by space number (`%{workspace}` prints `2`), and
+`--workspace 2` selects space 2; internal `__native_space_*` names never appear.
 `list-monitors` answers from the real displays.
 
 ## Tiling
 
-`NativeTilingCoordinator` applies the strip's geometry to the showing desktops.
+`NativeTilingCoordinator` applies the strip's geometry to the showing spaces.
 Minimized and hidden windows are filtered from frame calculation without leaving the
 strip. Floating windows keep their physical frames unless an explicit command changes
 them. Layout is suspended below macOS 27, whose Mission Control overlay detection has
@@ -46,10 +46,10 @@ observation is invalid. Accessibility permission must already exist; startup nev
 prompts or changes system settings. `doctor` reports the actual status.
 
 Strip commands run inside a fence: they wait for a reconciled observation, and keep
-their original desktop, display and window across that wait. A changed owner, focus
+their original space, display and window across that wait. A changed owner, focus
 or reused ID cancels the command before it changes anything. Default command targets
 require verified native focus; an unmanaged or fullscreen frontmost window cannot
-redirect commands to a previously focused desktop. A binding made only of commands
+redirect commands to a previously focused space. A binding made only of commands
 StripMuxX does not support is not registered, so its keys keep reaching macOS and the
 focused app.
 
@@ -65,12 +65,12 @@ left alone. `retile` renews that budget.
 
 ## Navigation
 
-`workspace N` follows macOS's Control-N numbering: ordinary desktops counted across
+`workspace N` follows macOS's Control-N numbering: ordinary spaces counted across
 displays in Mission Control order, skipping fullscreen Spaces. `workspace next|prev`
-follows Control-arrow on the focused desktop's display (otherwise the display under
+follows Control-arrow on the focused space's display (otherwise the display under
 the pointer), fullscreen Spaces included; `--wrap-around` and `--monitor` are honored.
 `workspace-back-and-forth` and `--auto-back-and-forth` return to the display's
-previous desktop, skipping fullscreen Spaces. A navigation command cannot share a
+previous space, skipping fullscreen Spaces. A navigation command cannot share a
 binding with window commands.
 
 Navigation posts a synthetic Dock swipe, adapted from Dinky (MIT) and mimi. It needs
@@ -83,55 +83,55 @@ switch that still has not landed after about a second is reported. A newer reque
 supersedes an older one. Without Accessibility permission macOS drops the events
 silently, so the command fails up front instead.
 
-## Moving windows between desktops and displays
+## Moving windows between spaces and displays
 
-`move-node-to-workspace N|next|prev` moves a window to another desktop, with the
+`move-node-to-workspace N|next|prev` moves a window to another space, with the
 same numbering as `workspace`; next/prev step through the window's display's
-desktops, skipping fullscreen Spaces, and `--focus-follows-window` follows it.
+spaces, skipping fullscreen Spaces, and `--focus-follows-window` follows it.
 `--window-id` and `--fail-if-noop` are honored. The window joins the destination
-desktop's strip once the move is confirmed.
+space's strip once the move is confirmed.
 
-`move-node-to-monitor` moves a window to the desktop another display is showing,
+`move-node-to-monitor` moves a window to the space another display is showing,
 through the same confirmed move, and `focus-monitor` focuses the most recent window
-of the desktop the target display shows. `focus --boundaries all-monitors-outer-frame`
-continues onto the next display's desktop, and `move --boundaries
+of the space the target display shows. `focus --boundaries all-monitors-outer-frame`
+continues onto the next display's space, and `move --boundaries
 all-monitors-outer-frame` past the strip's end moves the window there once the command
 ends.
 
-macOS cannot move a desktop to another display without SIP changes (Mission Control
+macOS cannot move a space to another display without SIP changes (Mission Control
 can, by dragging its thumbnail). `move-workspace-to-monitor` therefore moves the
-desktop's windows: each joins the desktop the target display shows, and the strip
-follows. Into an empty desktop it arrives whole, with its columns, stacks and
-floating windows; into a desktop that has windows its columns are appended. The macOS
-desktop itself stays on its display, emptied, and the most recently used moved window
+space's windows: each joins the space the target display shows, and the strip
+follows. Into an empty space it arrives whole, with its columns, stacks and
+floating windows; into a space that has windows its columns are appended. The macOS
+space itself stays on its display, emptied, and the most recently used moved window
 is focused. Windows that do not arrive stay where they were and are reported. The
-source may be a desktop that is not showing; `--workspace N` names it.
+source may be a space that is not showing; `--workspace N` names it.
 
 The move uses SkyLight's `SLSBridgedMoveWindowsToManagedSpaceOperation` through a
 dispatcher SkyLight does not export, found by scanning its symbol table (adapted from
 Dinky, MIT). It works with SIP enabled and takes milliseconds, but a macOS update can
 remove either piece; `doctor` then reports moves unavailable and the command fails
 instead of guessing. Each move is confirmed by re-reading the window's Space. A window
-on every desktop cannot be moved, since macOS already shows it everywhere.
+on every space cannot be moved, since macOS already shows it everywhere.
 
 `on-window-detected` rules that run `move-node-to-workspace` move windows opened after
 StripMuxX starts; windows that existed at startup are never moved by a rule, including
-ones first seen later when their desktop is visited.
+ones first seen later when their space is visited.
 
-## Adding desktops
+## Adding spaces
 
-`persistent-workspaces` makes StripMuxX add desktops until the highest numeric entry
+`persistent-workspaces` makes StripMuxX add spaces until the highest numeric entry
 exists, one per confirmed topology read, after the displays have settled. Each new
-desktop goes to the display `workspace-to-monitor-force-assignment` names for its
+space goes to the display `workspace-to-monitor-force-assignment` names for its
 number, otherwise the main display. macOS appends on that display, so display-order
-numbering can shift existing desktops; creation does not guarantee lasting ordinal
+numbering can shift existing spaces; creation does not guarantee lasting ordinal
 ownership. A failure stops further attempts until a reload or a display change.
 
 ## The strip and the pan
 
 Columns scrolled out of view stay at the display edges as 25-point previews (or behind
 visible columns next to another display); they are never parked in a corner, so they
-stay on their desktop and reachable. Overlap order uses AX raises, which do not
+stay on their space and reachable. Overlap order uses AX raises, which do not
 activate the window's app.
 
 macOS keeps three- and four-finger swipes for switching Spaces, so StripMuxX pans with
@@ -146,27 +146,27 @@ shows while panning.
 There is no drag overlay. Layout pauses while a mouse button is down. On release, a
 tiled window whose size changed keeps it: its column's width, or its share of a
 stack's height (a lone window's width becomes its manual width). A tiled window
-dropped onto another tile of its desktop swaps with it. Anything else returns to its
+dropped onto another tile of its space swaps with it. Anything else returns to its
 place.
 
 ## Persistence
 
-Each desktop's strip is stored in
+Each space's strip is stored in
 `~/Library/Application Support/StripMuxX/native-space-layouts-v1.json`, keyed by Space
-UUID. Only desktops present in the current observation are saved. Restore binds only
-uniquely matched windows already on that desktop; it neither launches apps nor moves
-windows between desktops. A missing or ambiguous window keeps the complete saved
+UUID. Only spaces present in the current observation are saved. Restore binds only
+uniquely matched windows already on that space; it neither launches apps nor moves
+windows between spaces. A missing or ambiguous window keeps the complete saved
 strip pending and protected from autosave. After a Mac restart window identities and
 terminal titles often change, so when an app has exactly as many unmatched windows on
-the desktop as it saved, they are paired in creation order. A strip still incomplete
-after 90 seconds is restored without the windows that never returned, and the desktop
+the space as it saved, they are paired in creation order. A strip still incomplete
+after 90 seconds is restored without the windows that never returned, and the space
 is saved again as it is. A corrupt or newer-version file is preserved and reported.
 Set `[native-spaces] restore-layouts = false` to disable loading and saving; existing
 files are retained.
 
 Quitting StripMuxX or `enable off` puts each tiled window back where it was before
-tiling first moved it, if it is still on that desktop and the desktop is showing; a
-window on a hidden desktop stays where it is, since reaching it would take a desktop
+tiling first moved it, if it is still on that space and the space is showing; a
+window on a hidden space stays where it is, since reaching it would take a space
 switch. The original frames are kept in memory only. Set `restore-frames-on-quit =
 false` to leave windows where tiling put them.
 
@@ -175,7 +175,7 @@ false` to leave windows where tiling put them.
 `after-startup-command` runs once the first observation arrives.
 `exec-on-workspace-change`, `on-focus-changed` and `on-focused-monitor-changed` run
 when observation or focus synchronization sees that change, and `WINMUX_WORKSPACE`,
-`WINMUX_FOCUSED_WORKSPACE` and `WINMUX_PREV_WORKSPACE` carry desktop numbers (empty for
+`WINMUX_FOCUSED_WORKSPACE` and `WINMUX_PREV_WORKSPACE` carry space numbers (empty for
 a fullscreen Space).
 
 ## Failure handling and limits
@@ -218,7 +218,7 @@ swift test --no-parallel --filter NativeSpacesTests
 make check
 ```
 
-Interactive macOS checks require an unlocked desktop and an actual AppKit event loop.
+Interactive macOS checks require an unlocked space and an actual AppKit event loop.
 CI fixtures verify parsing, ownership, eligibility, cancellation, configuration and
 command rejection; they cannot verify private API compatibility or native UI.
 
@@ -226,7 +226,7 @@ command rejection; they cannot verify private API compatibility or native UI.
 two resizable windows, a Window menu, minimization and native fullscreen. Compile it
 with `xcrun swiftc` into a temporary `.app` whose Info.plist declares the binary as
 `CFBundleExecutable`, a unique `CFBundleIdentifier`, `CFBundlePackageType = APPL` and
-`NSPrincipalClass = NSApplication`. Use a separately selected test desktop and disable
+`NSPrincipalClass = NSApplication`. Use a separately selected test space and disable
 persistence in the test configuration. Never interpret fixture success as validation
 of restrictive third-party apps.
 
@@ -244,9 +244,9 @@ and relaunches the installed app. Grant Accessibility to "StripMuxX Native Dev" 
 - **`workspace N` reports Accessibility:** grant StripMuxX Accessibility in System
   Settings → Privacy & Security, then retry.
 - **`workspace N` reports it did not land:** check `doctor` for the active Space and
-  that desktop N exists in Mission Control. Report the macOS version; the Dock swipe
+  that space N exists in Mission Control. Report the macOS version; the Dock swipe
   payload is version-specific.
-- **Desktop numbers keep changing:** turn off System Settings › Desktop & Dock ›
+- **Space numbers keep changing:** turn off System Settings › Desktop & Dock ›
   Automatically rearrange Spaces based on most recent use. The setup check reports it.
 - **A key binding does nothing:** run `doctor`; commands StripMuxX does not support are
   listed under "Ignored, not supported by StripMuxX", and a binding made only of them is

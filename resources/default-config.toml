@@ -2,13 +2,13 @@
 # Use the menu's Open Config / Diagnostics actions to locate the loaded file.
 # Menu actions display only shortcuts configured for the active mode.
 
-# Each macOS desktop (Space) holds one horizontal strip of columns. A column is one
+# Each macOS space holds one horizontal strip of columns. A column is one
 # window or a vertical stack of windows; columns that do not fit scroll off the edges.
 
 config-version = 2
 
-# Desktop numbers StripMuxX keeps: it adds macOS desktops until the highest one exists.
-# It never removes desktops; manage them in Mission Control.
+# Space numbers StripMuxX keeps: it adds macOS spaces until the highest one exists.
+# It never removes spaces; manage them in Mission Control.
 persistent-workspaces = []
 
 # Limits a lone tiled window to this many times as wide as it is tall, so it keeps one shape on any
@@ -77,12 +77,12 @@ automatically-tile-new-windows = true
     keep-window-height = false
 
 [native-spaces]
-    # Remember each desktop's strip and restore it after StripMuxX or the Mac restarts.
+    # Remember each space's strip and restore it after StripMuxX or the Mac restarts.
     restore-layouts = true
     # Quitting or `enable off` puts tiled windows back where they were before tiling.
     restore-frames-on-quit = true
 
-# Optional placement for desktops added for persistent-workspaces.
+# Optional placement for spaces added for persistent-workspaces.
 # [workspace-to-monitor-force-assignment]
 #     "1" = 'main'
 #     "2" = 'secondary'
@@ -140,7 +140,7 @@ automatically-tile-new-windows = true
     alt-shift-slash = 'shortcuts'
     alt-shift-m = 'fullscreen'
     alt-ctrl-m = 'scrolling-minimap'
-    # Desktops, numbered as Control-N in Mission Control.
+    # Spaces, numbered as Control-N in Mission Control.
     ctrl-0 = 'workspace 10'
     ctrl-1 = 'workspace 1'
     ctrl-2 = 'workspace 2'
@@ -167,14 +167,14 @@ automatically-tile-new-windows = true
 
 # Menu bar appearance. Settings edits these same values.
 [menu-bar]
-    indicator = 'icon' # icon or workspace (the desktop number)
+    indicator = 'icon' # icon or workspace (the space number)
     icon-appearance = 'color' # color or monochrome
 
 # Optional leader layer (choose an entry binding in mode.main.binding).
 # [mode.leader]
 # timeout-ms = 1500          # 0 disables inactivity expiry; range 0–60000
 # exit-on-unbound-key = false # true exits to main and passes unassigned keys to the app
-# show-indicator = true     # Icon tint or desktop text suffix; default false
+# show-indicator = true     # Icon tint or space text suffix; default false
 # indicator-color = '#5E9EFF' # Optional; defaults to the system accent
 # [mode.leader.binding]
 # esc = 'mode main'

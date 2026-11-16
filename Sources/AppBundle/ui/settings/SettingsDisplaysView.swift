@@ -63,7 +63,7 @@ struct SettingsDisplaysView: View {
                             Spacer()
                             Text(row.resolution).foregroundStyle(.secondary)
                         }
-                        Text("Desktop: " + (row.workspaces.isEmpty ? "None" : row.workspaces.map { workspaceDisplayName($0) }.joined(separator: ", ")))
+                        Text("Space: " + (row.workspaces.isEmpty ? "None" : row.workspaces.map { workspaceDisplayName($0) }.joined(separator: ", ")))
                         if let uuid = row.uuid {
                             HStack {
                                 Text(uuid).font(.caption.monospaced()).textSelection(.enabled)
@@ -78,7 +78,7 @@ struct SettingsDisplaysView: View {
             }
             SettingsSection("Configured assignments") {
                 if config.workspaceToMonitorForceAssignment.isEmpty {
-                    SettingsDescription("No saved display assignments. Added desktops go to the main display.")
+                    SettingsDescription("No saved display assignments. Added spaces go to the main display.")
                 }
                 ForEach(config.workspaceToMonitorForceAssignment.keys.sorted(), id: \.self) { name in
                     HStack {
@@ -93,7 +93,7 @@ struct SettingsDisplaysView: View {
                     }
                 }
                 assignmentEditor
-                SettingsDescription("Advanced: these assignments affect only where StripMuxX creates new native desktops. They do not move or pin existing macOS Spaces.")
+                SettingsDescription("Advanced: these assignments affect only where StripMuxX creates new native spaces. They do not move or pin existing macOS Spaces.")
                 Button("Startup options…", action: onGeneral)
             }
             if let error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
@@ -131,7 +131,7 @@ struct SettingsDisplaysView: View {
             }
             DisclosureGroup("Advanced", isExpanded: $displays.assignment.advanced) {
                 if !displays.assignment.isEditing {
-                    SettingsEditorField("Desktop number", prompt: "Number for a native desktop to be created", text: $displays.assignment.workspace)
+                    SettingsEditorField("Space number", prompt: "Number for a native space to be created", text: $displays.assignment.workspace)
                 }
                 SettingsEditorField("Display selector", prompt: "uuid:…, hardware:… or an array", text: $displays.assignment.selector)
                 SettingsDescription("Use UUIDs for exact displays. Arrays retain ordered alternatives. Unavailable assignments are kept until you explicitly change them.")

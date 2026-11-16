@@ -38,17 +38,17 @@ final class NativeDesktopTopUp {
             if let index = desktops.firstIndex(where: { $0.id == pending.spaceID }) {
                 self.pending = nil
                 lastConfirmedCreation = index + 1
-                status = "created desktop \(index + 1)"
+                status = "created space \(index + 1)"
             } else if pending.since.duration(to: now()) < confirmTimeout {
                 scheduleRead(confirmTimeout - pending.since.duration(to: now()))
                 return false
             } else {
                 self.pending = nil
-                return stop("desktop \(pending.number) did not appear", key, target)
+                return stop("space \(pending.number) did not appear", key, target)
             }
         }
         guard let step = NativeDesktopTopUpPlan.next(displays, target: target, home: home) else {
-            if target > 0, stoppedAt == nil, lastConfirmedCreation == nil { status = "all \(target) configured desktops present" }
+            if target > 0, stoppedAt == nil, lastConfirmedCreation == nil { status = "all \(target) configured spaces present" }
             return false
         }
         guard stoppedAt != stopKey(key, target) else { return false }
@@ -56,14 +56,14 @@ final class NativeDesktopTopUp {
             scheduleRead(settleDelay - since.duration(to: now()))
             return false
         }
-        guard isAvailable() else { return stop("desktop creation is unavailable on this macOS", key, target) }
+        guard isAvailable() else { return stop("space creation is unavailable on this macOS", key, target) }
         guard let spaceID = create(step.display) else {
-            return stop("could not create desktop \(step.number)", key, target)
+            return stop("could not create space \(step.number)", key, target)
         }
         pending = (String(spaceID), step.number, now())
-        status = "creating desktop \(step.number)"
+        status = "creating space \(step.number)"
         scheduleRead(confirmTimeout)
-        print("StripMuxX: requested native desktop \(step.number) (Space \(spaceID)) on \(step.display)")
+        print("StripMuxX: requested native space \(step.number) (Space \(spaceID)) on \(step.display)")
         return true
     }
 
@@ -72,7 +72,7 @@ final class NativeDesktopTopUp {
     private func stop(_ reason: String, _ displays: [String], _ target: Int) -> Bool {
         stoppedAt = stopKey(displays, target)
         status = "stopped: \(reason)"
-        print("StripMuxX: native desktop top-up stopped: \(reason)")
+        print("StripMuxX: native space top-up stopped: \(reason)")
         return false
     }
 }

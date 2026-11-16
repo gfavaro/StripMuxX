@@ -75,6 +75,6 @@ final class NativeOriginalFrames {
         for write in writes { if let id = await write.value { restored.append(id) } }
         deadline.cancel()
         for id in restored { entries[id] = nil }
-        lastRestore = "\(restored.count) of \(candidates.count) on showing desktops put back (\(leased.count) granted), \(entries.count) kept"
+        lastRestore = "\(restored.count) of \(candidates.count) on showing spaces put back (\(leased.count) granted), \(entries.count) kept"
     }
 }

@@ -56,7 +56,7 @@ final class NativeDesktopTopUpTest: XCTestCase {
         spaces.append(("102", 0))
         XCTAssertFalse(observe([display("main", spaces)]))
         XCTAssertEqual(created.count, 2)
-        XCTAssertEqual(topUp.status, "created desktop 3")
+        XCTAssertEqual(topUp.status, "created space 3")
     }
 
     func testAFailureStopsUntilReloadOrDisplaysChange() {
@@ -78,7 +78,7 @@ final class NativeDesktopTopUpTest: XCTestCase {
         XCTAssertTrue(topUp.status.hasPrefix("stopped"))
 
         _ = observe(one + [display("external", [("5", 0)])])
-        XCTAssertEqual(attempts, 1, "two displays already have two desktops")
+        XCTAssertEqual(attempts, 1, "two displays already have two spaces")
         clock = clock.advanced(by: .seconds(1))
         _ = observe(one)
         XCTAssertEqual(attempts, 1, "the stopped display set is unchanged")
@@ -101,7 +101,7 @@ final class NativeDesktopTopUpTest: XCTestCase {
         clock = clock.advanced(by: .seconds(3))
         XCTAssertFalse(topUp.observed(one, target: 2, home: { _ in nil }) { _ in })
         XCTAssertEqual(attempts, 1)
-        XCTAssertEqual(topUp.status, "stopped: desktop 2 did not appear")
+        XCTAssertEqual(topUp.status, "stopped: space 2 did not appear")
     }
     func testPendingSchedulesAReadAtItsDeadlineWithoutAnotherEvent() {
         var clock = ContinuousClock.now
@@ -116,7 +116,7 @@ final class NativeDesktopTopUpTest: XCTestCase {
         XCTAssertEqual(scheduled.last, .seconds(2))
         clock = clock.advanced(by: .seconds(2))
         XCTAssertFalse(topUp.observed(one, target: 2, home: { _ in nil }) { scheduled.append($0) })
-        XCTAssertEqual(topUp.status, "stopped: desktop 2 did not appear")
+        XCTAssertEqual(topUp.status, "stopped: space 2 did not appear")
     }
 
     func testConfirmedOrdinalUsesObservedDisplayOrderAndIgnoresFullscreen() {
@@ -128,7 +128,7 @@ final class NativeDesktopTopUpTest: XCTestCase {
         XCTAssertTrue(topUp.observed(before, target: 3, home: { _ in "main" }) { _ in })
         let after = [display("main", [("1", 0), ("9", 4), ("77", 0)]), display("external", [("2", 0)])]
         XCTAssertFalse(topUp.observed(after, target: 3, home: { _ in "main" }) { _ in })
-        XCTAssertEqual(topUp.status, "created desktop 2")
+        XCTAssertEqual(topUp.status, "created space 2")
     }
 
     func testPendingSurvivesReloadAndDelayedConfirmation() {

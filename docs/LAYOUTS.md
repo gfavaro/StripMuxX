@@ -1,6 +1,6 @@
 # The strip
 
-StripMuxX has one layout: each desktop is a horizontal strip of columns, as in
+StripMuxX has one layout: each space is a horizontal strip of columns, as in
 [niri](https://github.com/YaLTeR/niri) or PaperWM. There are no splits, tabs or
 other layouts.
 
@@ -39,7 +39,7 @@ with its windows; joining to the right puts it on top. The stack keeps that colu
 width. `focus up|down` and `move up|down` work within the stack, `resize height ±N`
 shares its height differently, and `move left|right` takes a window out into a column
 of its own. A stack of one window is just a column again. `flatten-workspace-tree`
-turns every stack on the desktop into columns.
+turns every stack on the space into columns.
 
 ## Free-size columns
 
@@ -110,9 +110,9 @@ and the native-to-fallback transition before considering this release-ready.
 `layout floating` lifts the focused window off the strip and `layout tiling` puts it
 back; `layout floating tiling` toggles. `layout floating --for-next-detected-window`
 floats only the next window that opens. Window rules (`on-window-detected`) can float
-windows by app or title. Floating windows stay on their desktop: the minimap lists
+windows by app or title. Floating windows stay on their space: the minimap lists
 them under the strip (click one to focus it), and `focus floating` (Alt-Shift-V)
-focuses each in turn, then returns to the strip. `fullscreen` widens a window over the desktop without
+focuses each in turn, then returns to the strip. `fullscreen` widens a window over the space without
 leaving the strip; `macos-native-fullscreen` gives it a macOS fullscreen Space.
 
 ## Lone window
@@ -125,5 +125,5 @@ illustrates this behavior.
 
 ## Undo
 
-`undo-layout` puts the desktop's strip back as it was before its last layout command,
-one step at a time, up to 20 steps. It rearranges only windows still on that desktop.
+`undo-layout` puts the space's strip back as it was before its last layout command,
+one step at a time, up to 20 steps. It rearranges only windows still on that space.

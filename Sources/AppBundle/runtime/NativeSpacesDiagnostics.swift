@@ -28,10 +28,10 @@ func nativeSpacesDiagnosticReport() -> String {
     var lines = ["StripMuxX — scrolling strips on macOS Spaces",
         "Space switching: workspace N/next/prev via Dock swipe (macOS 27, Accessibility: \(NativeDockSwipe.canPostEvents ? "granted" : "missing")).",
         "Window moves: move-node-to-workspace N/next/prev via bridged SkyLight operation (\(NativeWindowSpaceMover.isAvailable ? "available" : "unavailable on this macOS")).",
-        "Moves to another display: move-node-to-monitor, and move-workspace-to-monitor moves a desktop's windows and strip (the macOS desktop stays).",
+        "Moves to another display: move-node-to-monitor, and move-workspace-to-monitor moves a space's windows and strip (the macOS space stays).",
         nativeSkippedWindowRuleCommands.isEmpty ? "Window rules: floating/tiling applied."
             : "Window rules: floating/tiling applied; skipped unsupported: \(nativeSkippedWindowRuleCommands.sorted().joined(separator: "; "))",
-        "No system settings are changed. Desktops are only added, up to persistent-workspaces."]
+        "No system settings are changed. Spaces are only added, up to persistent-workspaces."]
     lines.append("Configuration loaded: \(configUrl.path)")
     if !FileManager.default.fileExists(atPath: configUrl.path) {
         lines.append("Configuration file is missing; the running configuration is kept.")
@@ -41,8 +41,8 @@ func nativeSpacesDiagnosticReport() -> String {
     }
     lines += diagnosticsPermissionLines()
     lines.append("Tiling: \(runtime.native.tiling.status)")
-    if let number = runtime.native.desktopTopUp.lastConfirmedCreation { lines.append("Last confirmed desktop creation: \(number)") }
-    lines.append("Desktop top-up: \(runtime.native.desktopTopUp.status) (creation \(NativeSpaceCreator.isAvailable ? "available" : "unavailable on this macOS"))")
+    if let number = runtime.native.desktopTopUp.lastConfirmedCreation { lines.append("Last confirmed space creation: \(number)") }
+    lines.append("Space top-up: \(runtime.native.desktopTopUp.status) (creation \(NativeSpaceCreator.isAvailable ? "available" : "unavailable on this macOS"))")
     lines.append("Original frames: \(NativeOriginalFrames.shared.count) kept; last restore: \(NativeOriginalFrames.shared.lastRestore)")
     lines.append("Last mouse release: \(runtime.native.tiling.lastMouseRelease)")
     lines.append("Scrolling pan: last \(NativeScrollingPan.shared.lastDecision)")

@@ -1,25 +1,25 @@
 ---
 name: stripmuxx-workspaces
-description: Implement or review StripMuxX desktop navigation, moves between desktops and displays, and each desktop's scrolling strip. Use for changes to workspace commands, native Space observation, strip edits or layout persistence.
+description: Implement or review StripMuxX space navigation, moves between spaces and displays, and each space's scrolling strip. Use for changes to workspace commands, native Space observation, strip edits or layout persistence.
 ---
 
-# Desktop and strip changes
+# Space and strip changes
 
 Read [core principles](../../../docs/PRINCIPLES.md) and the architecture section in
 [HACKING](../../../HACKING.md). Resolve these paths from this skill directory.
 
-A workspace is a macOS desktop. macOS owns which desktops exist, their order and
+A workspace is a macOS space. macOS owns which spaces exist, their order and
 which one each display shows; StripMuxX observes that and keeps one strip per
-desktop, keyed by the desktop's UUID. Distinguish the three kinds of change:
+space, keyed by the space's UUID. Distinguish the three kinds of change:
 
 - **Navigation** (`workspace`, `workspace-back-and-forth`, `focus-monitor`) asks macOS
   to switch and waits for a fresh read to confirm it. It never edits a strip.
   Start in `Sources/AppBundle/runtime/NativeSpaceNavigator.swift`.
-- **Moves between desktops or displays** (`move-node-to-workspace`, `move-node-to-monitor`,
+- **Moves between spaces or displays** (`move-node-to-workspace`, `move-node-to-monitor`,
   `move-workspace-to-monitor`) move windows by ID and change a tree only after macOS
   confirms each arrival. Start in `Sources/AppBundle/runtime/NativeWindowSpaceMoves.swift`.
 - **Strip edits** (`move`, `join-with`, `resize`, `layout`, `scrolling-*`) change the
-  showing desktop's tree inside the tiling fence. Start in the command under
+  showing space's tree inside the tiling fence. Start in the command under
   `Sources/AppBundle/command/impl` and `Sources/AppBundle/tree/StripEdits.swift`.
 
 ## Current behavior and entry points
@@ -37,8 +37,8 @@ vertical stack of at least two windows, stacks never nest, and floating windows 
 children of the workspace itself. `Workspace.normalizeContainers()` restores that
 shape after an edit; call it rather than repairing the tree by hand.
 
-Strips belong to a desktop's UUID, not its number: Mission Control can renumber
-desktops at any time. Never guess a display or a desktop when an observation is
+Strips belong to a space's UUID, not its number: Mission Control can renumber
+spaces at any time. Never guess a display or a space when an observation is
 missing; a command whose target changed during reconciliation is refused.
 
 Use the existing tests as starting points:
@@ -49,8 +49,8 @@ Use the existing tests as starting points:
 - `Sources/AppBundleTests/runtime/NativeSpaceLayoutsTest.swift`
 - `Sources/AppBundleTests/runtime/NativeTilingTest.swift`
 
-`setUpWorkspacesForTests(desktops:)` in `Sources/AppBundleTests/testUtil.swift`
-publishes an observation of numbered desktops and marks tiling ready; `TestWindow.new`
+`setUpWorkspacesForTests(spaces:)` in `Sources/AppBundleTests/testUtil.swift`
+publishes an observation of numbered spaces and marks tiling ready; `TestWindow.new`
 registers each window's membership. Follow [Testing](../../../docs/TESTING.md) for
 serial suite execution.
 
@@ -67,11 +67,11 @@ with `pipefail`; a successful `tail` or `tee` does not establish test success.
 When checking preservation, inspect the live workspace root and its reachable
 children after the operation; captured references to an old tree can remain intact
 even if the workspace now uses another one. Assert column order, stack membership,
-column widths and floating parentage, on both desktops for a move. A failing test is
+column widths and floating parentage, on both spaces for a move. A failing test is
 a reason to compare expectations with the requested behavior before changing
 production code.
 
 Report manual checks separately from automated results. Real validation switches
-between populated desktops, moves windows between desktops and displays, reorders
-desktops in Mission Control and restarts StripMuxX. Do not imply installation from a
+between populated spaces, moves windows between spaces and displays, reorders
+spaces in Mission Control and restarts StripMuxX. Do not imply installation from a
 build.

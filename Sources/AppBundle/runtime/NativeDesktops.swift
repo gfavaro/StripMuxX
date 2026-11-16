@@ -45,7 +45,7 @@ func userWorkspace(named name: String) -> Workspace? {
 
 @MainActor
 func userFacingDesktopName(_ workspace: Workspace) -> String {
-    nativeDesktopNumber(of: workspace).map { nativeDesktopDisplayName($0) } ?? "The desktop"
+    nativeDesktopNumber(of: workspace).map { nativeDesktopDisplayName($0) } ?? "The space"
 }
 
 /// Native snapshots name the main display "Main" when it has no UUID of its own.
@@ -67,9 +67,9 @@ func nativeFocusMonitor(_ args: FocusMonitorCmdArgs, env: CmdEnv, io: CmdIo) -> 
     guard let target = args.resolveTargetOrReportError(env, io) else { return false }
     switch args.target.val.resolve(target.workspace.workspaceMonitor, wrapAround: args.wrapAround) {
         case .success(let monitor):
-            guard let desktop = nativeActiveDesktop(on: monitor) else { return io.err("\(monitor.name) shows no desktop") }
+            guard let desktop = nativeActiveDesktop(on: monitor) else { return io.err("\(monitor.name) shows no space") }
             guard let window = desktop.mostRecentWindowRecursive else {
-                return io.err("\(nativeDesktopNumber(of: desktop).map { nativeDesktopDisplayName($0) } ?? "The desktop") on \(monitor.name) has no window to focus")
+                return io.err("\(nativeDesktopNumber(of: desktop).map { nativeDesktopDisplayName($0) } ?? "The space") on \(monitor.name) has no window to focus")
             }
             guard window.focusWindow() else { return io.err("Window \(window.windowId) could not take focus") }
             window.nativeFocus()
@@ -79,7 +79,7 @@ func nativeFocusMonitor(_ args: FocusMonitorCmdArgs, env: CmdEnv, io: CmdIo) -> 
     }
 }
 
-func nativeDesktopDisplayName(_ number: Int) -> String { "Desktop \(number)" }
+func nativeDesktopDisplayName(_ number: Int) -> String { "Space \(number)" }
 
 /// Commands that bring a window forward: switch to its desktop when that desktop
 /// isn't showing, then focus it.
