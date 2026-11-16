@@ -511,37 +511,6 @@ final class MacApp: AbstractApp {
     /// must finish or time out before the thread can acknowledge cancellation.
     private static let singleAppRefreshDeadline: Duration = .milliseconds(1500)
 
-    @MainActor
-    private static func refreshAppAndGetAliveWindowIdsWithDeadline(
-        _ nsApp: NSRunningApplication,
-        pid: pid_t,
-        frontmostAppBundleId: String?,
-    ) async throws -> [UInt32] {
-        let work = Task { @MainActor () -> [UInt32] in
-            let registered = MacApp.allAppsMap[pid].flatMap { isSameRunningProcess($0.nsApp, nsApp) ? $0 : nil }
-            let app = if let registered { registered } else { try await MacApp.getOrRegister(nsApp) }
-            guard let app else { return [] }
-            return try await app.refreshAndGetAliveWindowIds(frontmostAppBundleId: frontmostAppBundleId)
-        }
-        let deadline = Task { @MainActor in
-            try? await Task.sleep(for: singleAppRefreshDeadline)
-            work.cancel()
-        }
-        defer { deadline.cancel() }
-        return try await withTaskCancellationHandler {
-            do {
-                return try await work.value
-            } catch is CancellationError {
-                // Propagate if the whole refresh session was cancelled; otherwise the deadline
-                // fired — report the model's current windows for this app as alive.
-                try checkCancellation()
-                return MacWindow.allWindows.filter { $0.macApp.pid == pid }.map(\.windowId)
-            }
-        } onCancel: {
-            work.cancel()
-        }
-    }
-
     func unregisterDestroyedWindow(_ windowId: UInt32) async throws {
         setFrameJobs.removeValue(forKey: windowId)?.cancel()
         try await thread?.runInLoop { [windows, destroyedWindows, animatedSizes] _ in
@@ -705,31 +674,3 @@ private let axDiagnosticTimeout: Float = 0.25
 
 /// Thrown by `doctor`'s probe at the first read the app does not answer, so a slow app costs one timeout.
 private struct DiagnosticReadUnanswered: Error {}
-
-/// Reads one attribute for `doctor`; a failure other than "no answer" is recorded under `source`.
-private func diagnosticRead(_ element: AXUIElement, _ attribute: String, into result: inout [AxWindowProbe], source: String) throws -> CFTypeRef? {
-    var value: CFTypeRef?
-    let status = AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
-    if status == .cannotComplete { throw DiagnosticReadUnanswered() }
-    if status != .success, status != .noValue { result.append(AxWindowProbe(source: source, failure: status.repr)) }
-    return status == .success ? value : nil
-}
-
-/// One window element for `doctor`. Every read stops the probe if the app does not answer.
-private func diagnosticProbe(_ element: AXUIElement, _ source: String) throws -> AxWindowProbe {
-    AXUIElementSetMessagingTimeout(element, axDiagnosticTimeout)
-    let (windowId, error) = element.containingWindowIdWithError(timeout: axDiagnosticTimeout)
-    if error == .cannotComplete { throw DiagnosticReadUnanswered() }
-    func attribute(_ name: String) throws -> CFTypeRef? {
-        var value: CFTypeRef?
-        let status = AXUIElementCopyAttributeValue(element, name as CFString, &value)
-        if status == .cannotComplete { throw DiagnosticReadUnanswered() }
-        return status == .success ? value : nil
-    }
-    var origin = CGPoint.zero, size = CGSize.zero
-    let hasOrigin = try attribute(kAXPositionAttribute).map { AXValueGetValue($0 as! AXValue, .cgPoint, &origin) } ?? false
-    let hasSize = try attribute(kAXSizeAttribute).map { AXValueGetValue($0 as! AXValue, .cgSize, &size) } ?? false
-    return AxWindowProbe(source: source, windowId: windowId, idError: windowId == nil ? error.repr : nil,
-        frame: hasOrigin && hasSize ? CGRect(origin: origin, size: size) : nil,
-        role: try attribute(kAXRoleAttribute) as? String, subrole: try attribute(kAXSubroleAttribute) as? String)
-}

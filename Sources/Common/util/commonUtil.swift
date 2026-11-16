@@ -115,21 +115,6 @@ public enum RefreshSessionEvent: Sendable, CustomStringConvertible {
         if case .startup = self { return true } else { return false }
     }
 
-    public var requiresWindowRefreshBarrier: Bool {
-        switch self {
-            case .ax(let notif):
-                notif != kAXFocusedWindowChangedNotification as String
-            case .globalObserver(let notif):
-                notif != NSWorkspace.didActivateApplicationNotification.rawValue && notif != "workspaceSwipe"
-            case .onDisplayChanged, .onTabSwitched, .onWindowParkingDrift:
-                false
-            case .configAutoReload, .globalObserverLeftMouseUp, .menuBarButton, .hotkeyBinding,
-                 .startup, .workspaceRestoration, .socketServer, .resetManipulatedWithMouse, .onFocusedMonitorChanged,
-                 .onFocusChanged, .onModeChanged:
-                true
-        }
-    }
-
     public var description: String {
         switch self {
             case .ax(let str): "ax(\(str))"

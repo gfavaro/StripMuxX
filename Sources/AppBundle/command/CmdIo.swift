@@ -5,11 +5,6 @@ struct CmdStdin: ~Copyable {
     }
     static var emptyStdin: CmdStdin { .init("") }
 
-    mutating func readAll() -> String {
-        let result = input
-        input = ""
-        return result
-    }
 }
 
 final class CmdIo {

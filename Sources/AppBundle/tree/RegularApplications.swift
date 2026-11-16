@@ -25,10 +25,6 @@ final class RegularApplications {
         return regular
     }
 
-    func isRegular(_ pid: pid_t) -> Bool {
-        running == nil ? NSRunningApplication(processIdentifier: pid)?.activationPolicy == .regular : regular[pid] != nil
-    }
-
     /// Whether this app is still running, from the observed running applications.
     func isRunning(_ app: NSRunningApplication, pid: pid_t) -> Bool {
         guard running != nil else { return !app.isTerminated }

@@ -17,8 +17,3 @@ private var focusedApp: (any AbstractApp)? {
         }
     }
 }
-
-@MainActor
-func getNativeFocusedWindow() async throws -> Window? {
-    try await focusedApp?.getFocusedWindow()
-}
