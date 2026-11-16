@@ -351,7 +351,11 @@ final class NativeTilingCoordinator {
             defaultFocus: runtime.focus.requested.liveOrNil, layouts: runtime.native.layouts) else {
             return io.err("Native command target is not an observed active desktop")
         }
-        runtime.native.observation?.requestRead(event: "nativeCommand")
+        // Events already invalidate and reread. When tiling is ready and nothing is being
+        // read, the model is current: a forced full read here cost 30–80 ms per command.
+        if !(ready && runtime.native.observation?.isIdle == true) {
+            runtime.native.observation?.requestRead(event: "nativeCommand")
+        }
         // Bounded readiness wait, with no additional native queries. Reconciliation
         // is owned by the event pipeline; newer events can supersede it safely.
         _ = await runtime.native.stateChanges.wait(timeout: .seconds(5)) {

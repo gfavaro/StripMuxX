@@ -148,6 +148,10 @@ public final class NativeSpacesObservation {
         onChange?(inventory, "stopped")
     }
 
+    /// No read is running, queued or waiting out the window-event debounce: the last
+    /// published inventory reflects every event received so far.
+    public var isIdle: Bool { running && task == nil && pending == nil && windowEventTask == nil }
+
     public func requestRead(event: String = "manual") {
         guard running else { return }
         revision &+= 1
