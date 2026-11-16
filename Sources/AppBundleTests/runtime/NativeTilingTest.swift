@@ -111,6 +111,26 @@ final class NativeTilingTest: WorkspaceTestCase {
         XCTAssertNil(window.lastAppliedLayoutPhysicalRect)
     }
 
+    func testNavigationFollowsFocusThatMovedWhileQueuedButEditsDoNot() throws {
+        let workspace = nativeWorkspace()
+        let first = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+        let second = TestWindow.new(id: 2, parent: workspace.rootTilingContainer)
+        _ = first.focusWindow()
+        let layouts = runtime.native.layouts
+        let move = try XCTUnwrap(parseCommand("focus right").unwrap().0)
+        let fence = try XCTUnwrap(NativeCommandTargetFence([move], env: .defaultEnv, defaultFocus: focus, layouts: layouts))
+        _ = second.focusWindow() // An earlier key repeat landed first.
+        XCTAssertFalse(fence.matches(layouts, defaultFocus: focus))
+        XCTAssertTrue(fence.matches(layouts, defaultFocus: focus, allowDefaultFocusChanges: true))
+        for script in ["focus right", "focus left", "focus dfs-next", "scrolling-focus last", "scrolling-center"] {
+            XCTAssertTrue(NativeTilingCoordinator.toleratesFocusDrift([try XCTUnwrap(parseCommand(script).unwrap().0)]), script)
+        }
+        for script in ["close", "move right", "resize width +20", "focus --window-id 1", "layout floating",
+                       "scrolling-width next", "scrolling-pin left", "join-with right"] {
+            XCTAssertFalse(NativeTilingCoordinator.toleratesFocusDrift([try XCTUnwrap(parseCommand(script).unwrap().0)]), script)
+        }
+    }
+
     func testCommandSequenceRejectsRevokedNativeTargetBeforeMutation() async throws {
         let workspace = nativeWorkspace()
         let window = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)

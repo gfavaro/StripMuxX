@@ -321,6 +321,17 @@ final class NativeTilingCoordinator {
         }
     }
 
+    /// Commands that only move focus or the viewport, so they apply to the current focus.
+    static func toleratesFocusDrift(_ commands: [any Command]) -> Bool {
+        !commands.isEmpty && commands.allSatisfy { command in
+            switch command {
+                case let focus as FocusCommand: focus.args.windowId == nil
+                case is ScrollingFocusCommand, is ScrollingCenterCommand: true
+                default: false
+            }
+        }
+    }
+
     static func supports(_ command: any Command) -> Bool {
         switch command {
             case is DoctorCommand, is ReloadConfigCommand, is ModeCommand,
@@ -364,7 +375,12 @@ final class NativeTilingCoordinator {
         }
         try Task.checkCancellation()
         guard ready else { return io.err("Native tiling is not ready: \(status)") }
-        guard target.matches(runtime.native.layouts, defaultFocus: runtime.focus.requested.liveOrNil) else {
+        // Pure navigation means "relative to wherever focus is when this runs", so a held
+        // key's presses queue behind each other instead of being refused when an earlier
+        // press has already moved focus. Anything that changes or closes a window keeps the
+        // strict check: it must act on the window it was aimed at.
+        guard target.matches(runtime.native.layouts, defaultFocus: runtime.focus.requested.liveOrNil,
+                             allowDefaultFocusChanges: Self.toleratesFocusDrift(commands)) else {
             return io.err("Native command cancelled because its target changed during reconciliation")
         }
         guard hasManagedNativeFocus || commands.allSatisfy({
