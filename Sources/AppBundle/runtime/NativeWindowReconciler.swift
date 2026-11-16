@@ -42,41 +42,7 @@ final class NativeWindowReconciler {
                     try Task.checkCancellation()
                     await app.destroy()
                 }
-                let groups = Dictionary(grouping: pids.keys, by: { pids[$0]! })
-                self.timedOutAppCount = 0
-                try await withThrowingTaskGroup(of: Void.self) { group in
-                    for (pid, ids) in groups {
-                        group.addTask { @Sendable @MainActor in
-                            let work = owner.throwingTask {
-                                guard let running = NSRunningApplication(processIdentifier: pid),
-                                      running.activationPolicy == .regular, !running.isTerminated,
-                                      let app = try await MacApp.getOrRegister(running) else { return }
-                                for id in ids.sorted() {
-                                    try Task.checkCancellation()
-                                    guard self.generation == version else { throw CancellationError() }
-                                    let window = try? await MacWindow.getOrRegister(windowId: id, macApp: app)
-                                    window?.nativeLayoutEligible = window != nil
-                                }
-                            }
-                            // Match the existing app refresh's cooperative budget.
-                            // An AX call already dispatched still has to answer or
-                            // hit its 1s messaging timeout; other apps keep running.
-                            let deadline = Task { @MainActor in
-                                do { try await Task.sleep(for: .milliseconds(1500)) } catch { return }
-                                work.cancel()
-                            }
-                            defer { deadline.cancel() }
-                            try await withTaskCancellationHandler {
-                                do { try await work.value }
-                                catch is CancellationError {
-                                    try Task.checkCancellation()
-                                    if self.generation == version { self.timedOutAppCount += 1 }
-                                }
-                            } onCancel: { work.cancel() }
-                        }
-                    }
-                    try await group.waitForAll()
-                }
+                try await self.registerWindows(Dictionary(grouping: pids.keys, by: { pids[$0]! }), version: version, owner: owner)
                 guard self.generation == version else { return }
                 // Absence from AX, membership inventory or a failed bounds query
                 // never proves closure. Individual closure comes from the native
@@ -85,32 +51,12 @@ final class NativeWindowReconciler {
                     window.garbageCollect()
                 }
                 self.pendingWindowCount = eligible.filter { MacWindow.allWindowsMap[$0] == nil }.count
-                let identities = MacWindow.allWindows.compactMap { window -> NativeWindowWriteIdentity? in
-                    guard window.nativeLayoutEligible, eligible.contains(window.windowId), let launched = window.macApp.nsApp.processLaunchDate,
-                          owner.native.layouts.registrationWorkspace(for: window.windowId) === window.nodeWorkspace else { return nil }
-                    guard let display = owner.native.layouts.registrationDisplay(for: window.windowId),
-                          case .desktop(let spaceID, let uuid?) = snapshot.eligibility(windowID: window.windowId, on: display) else { return nil }
-                    return NativeWindowWriteIdentity(windowID: window.windowId, pid: window.macApp.pid,
-                        processLaunchDate: launched, displayIdentifier: display, spaceID: spaceID, spaceUUID: uuid)
-                }
-                // A local, read-only probe. Never populate the runtime's write
-                // authority: observation mode remains physically read-only.
-                let preflight = Task.detached {
-                    let authority = NativeSpaceWriteAuthority()
-                    authority.replace(snapshot: snapshot, identities: identities)
-                    var passed: [UInt32] = []
-                    for identity in identities {
-                        if Task.isCancelled { break }
-                        if let permit = authority.permit(windowID: identity.windowID, pid: identity.pid,
-                            processLaunchDate: identity.processLaunchDate), (try? permit.check()) != nil { passed.append(identity.windowID) }
-                    }
-                    return (passed, identities.count - passed.count)
-                }
-                let result = await withTaskCancellationHandler { await preflight.value } onCancel: { preflight.cancel() }
+                let identities = Self.writeIdentities(snapshot: snapshot, eligible: eligible, layouts: owner.native.layouts)
+                let result = await Self.preflight(snapshot: snapshot, identities: identities)
                 guard self.generation == version else { return }
-                self.writePreflight = (result.0.count, result.1)
+                self.writePreflight = (result.passed.count, result.blocked)
                 owner.native.observation?.watchManagedWindows(Set(MacWindow.allWindowsMap.keys))
-                await owner.native.tiling.accept(snapshot, identities: identities.filter { result.0.contains($0.windowID) })
+                await owner.native.tiling.accept(snapshot, identities: identities.filter { result.passed.contains($0.windowID) })
                 self.lastError = nil
             } catch is CancellationError { return }
             catch { if self.generation == version { self.lastError = String(describing: error) } }
@@ -119,6 +65,77 @@ final class NativeWindowReconciler {
             self.lastDurationMilliseconds = Double(duration.seconds) * 1000 + Double(duration.attoseconds) / 1e15
             self.task = nil
         }
+    }
+
+    /// Registers each app's eligible windows concurrently. An app that does not answer within its
+    /// budget is counted, and the others carry on.
+    private func registerWindows(_ groups: [Int32: [UInt32]], version: UInt64, owner: WinMuxRuntime) async throws {
+        timedOutAppCount = 0
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for (pid, ids) in groups {
+                group.addTask { @Sendable @MainActor in
+                    let work = owner.throwingTask {
+                        guard let running = NSRunningApplication(processIdentifier: pid),
+                              running.activationPolicy == .regular, !running.isTerminated,
+                              let app = try await MacApp.getOrRegister(running) else { return }
+                        for id in ids.sorted() {
+                            try Task.checkCancellation()
+                            guard self.generation == version else { throw CancellationError() }
+                            let window = try? await MacWindow.getOrRegister(windowId: id, macApp: app)
+                            window?.nativeLayoutEligible = window != nil
+                        }
+                    }
+                    // Match the existing app refresh's cooperative budget.
+                    // An AX call already dispatched still has to answer or
+                    // hit its 1s messaging timeout; other apps keep running.
+                    let deadline = Task { @MainActor in
+                        do { try await Task.sleep(for: .milliseconds(1500)) } catch { return }
+                        work.cancel()
+                    }
+                    defer { deadline.cancel() }
+                    try await withTaskCancellationHandler {
+                        do { try await work.value }
+                        catch is CancellationError {
+                            try Task.checkCancellation()
+                            if self.generation == version { self.timedOutAppCount += 1 }
+                        }
+                    } onCancel: { work.cancel() }
+                }
+            }
+            try await group.waitForAll()
+        }
+    }
+
+    /// The windows tiling may write: registered, on a desktop of a known Space, owned by a process
+    /// that has not been replaced.
+    private static func writeIdentities(snapshot: NativeSpacesSnapshot, eligible: Set<UInt32>,
+                                        layouts: NativeSpaceLayouts) -> [NativeWindowWriteIdentity] {
+        MacWindow.allWindows.compactMap { window -> NativeWindowWriteIdentity? in
+            guard window.nativeLayoutEligible, eligible.contains(window.windowId), let launched = window.macApp.nsApp.processLaunchDate,
+                  layouts.registrationWorkspace(for: window.windowId) === window.nodeWorkspace else { return nil }
+            guard let display = layouts.registrationDisplay(for: window.windowId),
+                  case .desktop(let spaceID, let uuid?) = snapshot.eligibility(windowID: window.windowId, on: display) else { return nil }
+            return NativeWindowWriteIdentity(windowID: window.windowId, pid: window.macApp.pid,
+                processLaunchDate: launched, displayIdentifier: display, spaceID: spaceID, spaceUUID: uuid)
+        }
+    }
+
+    /// A local, read-only probe of which identities could be written to. Never populates the
+    /// runtime's write authority: observation mode remains physically read-only.
+    private static func preflight(snapshot: NativeSpacesSnapshot,
+                                  identities: [NativeWindowWriteIdentity]) async -> (passed: [UInt32], blocked: Int) {
+        let probe = Task.detached {
+            let authority = NativeSpaceWriteAuthority()
+            authority.replace(snapshot: snapshot, identities: identities)
+            var passed: [UInt32] = []
+            for identity in identities {
+                if Task.isCancelled { break }
+                if let permit = authority.permit(windowID: identity.windowID, pid: identity.pid,
+                    processLaunchDate: identity.processLaunchDate), (try? permit.check()) != nil { passed.append(identity.windowID) }
+            }
+            return (passed: passed, blocked: identities.count - passed.count)
+        }
+        return await withTaskCancellationHandler { await probe.value } onCancel: { probe.cancel() }
     }
 
     static func updateEligibility(_ snapshot: NativeSpacesSnapshot, windows: [Window],

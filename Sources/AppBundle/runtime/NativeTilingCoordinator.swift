@@ -74,6 +74,42 @@ final class NativeTilingCoordinator {
         dragPreview.hide()
     }
 
+    /// Watches clicks so a drag or its release is adopted instead of being laid back out.
+    private func installMouseMonitorIfNeeded() {
+        guard mouseMonitor == nil, !isUnitTest else { return }
+        let owner = runtime
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .leftMouseUp, .rightMouseUp]) { [weak owner] event in
+            let released = event.type == .leftMouseUp || event.type == .rightMouseUp
+            let leftButton = event.type == .leftMouseDown || event.type == .leftMouseUp
+            Task { @MainActor [weak owner] in
+                guard let owner else { return }
+                owner.withValue {
+                    MacApp.cancelPendingFocus()
+                    if !released { owner.native.focusHold.end() } // A click elsewhere is the user's.
+                    let tiling = owner.native.tiling
+                    if released {
+                        tiling.dragPreview.hide()
+                        NativeWindowBorder.shared.endDragging()
+                    } else if leftButton {
+                        tiling.dragPreview.begin(at: mouseLocation)
+                        NativeWindowBorder.shared.beginDragging()
+                    }
+                    guard released else {
+                        // A read queued by the drag's own move events must not lay the
+                        // window back out before its release is adopted.
+                        if leftButton { tiling.holdsForMouseRelease = true }
+                        return owner.native.writeAuthority.invalidate()
+                    }
+                    owner.task {
+                        if leftButton { await tiling.adoptMouseRelease() }
+                        tiling.holdsForMouseRelease = false
+                        owner.native.observation?.requestRead(event: "nativeMouseReleased")
+                    }
+                }
+            }
+        }
+    }
+
     func accept(_ snapshot: NativeSpacesSnapshot, identities: [NativeWindowWriteIdentity]) async {
         guard !serverArgs.isReadOnly else { stopTiling("Tiling suppressed by read-only startup"); return }
         guard TrayMenuModel.shared.isEnabled else { status = "Tiling disabled (enable on resumes it)"; return }
@@ -113,40 +149,8 @@ final class NativeTilingCoordinator {
         await synchronizeFocus()
         guard generation == version else { return }
         runtime.native.noteNativeActivity()
-        if mouseMonitor == nil && !isUnitTest {
-            let owner = runtime
-            mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .leftMouseUp, .rightMouseUp]) { [weak owner] event in
-                let released = event.type == .leftMouseUp || event.type == .rightMouseUp
-                let leftButton = event.type == .leftMouseDown || event.type == .leftMouseUp
-                Task { @MainActor [weak owner] in
-                    guard let owner else { return }
-                    owner.withValue {
-                        MacApp.cancelPendingFocus()
-                        if !released { owner.native.focusHold.end() } // A click elsewhere is the user's.
-                        let tiling = owner.native.tiling
-                        if released {
-                            tiling.dragPreview.hide()
-                            NativeWindowBorder.shared.endDragging()
-                        } else if leftButton {
-                            tiling.dragPreview.begin(at: mouseLocation)
-                            NativeWindowBorder.shared.beginDragging()
-                        }
-                        guard released else {
-                            // A read queued by the drag's own move events must not lay the
-                            // window back out before its release is adopted.
-                            if leftButton { tiling.holdsForMouseRelease = true }
-                            return owner.native.writeAuthority.invalidate()
-                        }
-                        owner.task {
-                            if leftButton { await tiling.adoptMouseRelease() }
-                            tiling.holdsForMouseRelease = false
-                            owner.native.observation?.requestRead(event: "nativeMouseReleased")
-                        }
-                    }
-                }
-            }
-        }
-         if !shortcutsInstalled {
+        installMouseMonitorIfNeeded()
+        if !shortcutsInstalled {
             shortcutsInstalled = true
             try? await activateMode(mainModeId, runCallbacks: false)
         }
