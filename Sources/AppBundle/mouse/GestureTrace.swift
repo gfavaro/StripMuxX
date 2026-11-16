@@ -13,10 +13,12 @@ final class GestureTrace {
     private var inputs: [[String: Any]] = []
     private var sampler: TraceSampler?
     private var autoStop: Task<Void, Never>?
+    /// What `--gesture-trace-stop` prints for a trace that stopped by itself, until it is collected.
+    private var finishedAlone: String?
 
     nonisolated static func now() -> UInt64 { DispatchTime.now().uptimeNanoseconds }
 
-    func start(io: CmdIo) -> Bool {
+    func start(io: CmdIo, stopsAfter limit: Duration = .seconds(120)) -> Bool {
         guard !running else { return io.err("A gesture trace is already running; use --gesture-trace-stop") }
         startedAt = Self.now()
         running = true
@@ -24,12 +26,13 @@ final class GestureTrace {
         let sampler = TraceSampler(startedAt: startedAt)
         self.sampler = sampler
         Thread.detachNewThread { sampler.run() }
+        finishedAlone = nil
         autoStop = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(120))
+            try? await Task.sleep(for: limit)
             guard let self, self.running else { return }
-            self.cancel()
+            if case .saved(let report) = self.finish() { self.finishedAlone = report }
         }
-        io.out("Gesture trace started. Do your gestures now, then run: stripmuxx debug-windows --gesture-trace-stop (stops by itself after 120 s).")
+        io.out("Gesture trace started. Do your gestures now, then run: stripmuxx debug-windows --gesture-trace-stop (it stops by itself after 120 s and keeps what it recorded).")
         return true
     }
 
@@ -42,10 +45,28 @@ final class GestureTrace {
     }
 
     func stop(io: CmdIo) -> Bool {
-        guard running, let sampler else { return io.err("No gesture trace is running") }
+        if !running, let report = finishedAlone {
+            finishedAlone = nil
+            return io.out(report)
+        }
+        switch finish() {
+            case .saved(let report): return io.out(report)
+            case .notRunning: return io.err("No gesture trace is running")
+            case .failed: return io.err("Could not write the trace")
+        }
+    }
+
+    private enum Outcome {
+        case saved(String), notRunning, failed
+    }
+
+    /// Ends the trace and writes it out; the report is the file's path and a one-line summary.
+    private func finish() -> Outcome {
+        guard running, let sampler else { return .notRunning }
         running = false
         autoStop?.cancel()
         sampler.stop()
+        self.sampler = nil
         let changes = sampler.changes
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("stripmuxx-gesture-trace-\(UUID().uuidString).json")
         let seconds = Double(Self.now() - startedAt) / 1e9
@@ -54,16 +75,8 @@ final class GestureTrace {
             "note": "t is milliseconds since the trace started. windowChanges rows: [t, windowId, owner, x, y, width, height].",
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: document),
-              (try? data.write(to: url)) != nil else { return io.err("Could not write the trace") }
-        self.sampler = nil
-        io.out("\(url.path)\n\(inputs.count) input steps, \(changes.count) window position changes over \(String(format: "%.1f", seconds)) s")
-        return true
-    }
-
-    private func cancel() {
-        running = false
-        sampler?.stop()
-        sampler = nil
+              (try? data.write(to: url)) != nil else { return .failed }
+        return .saved("\(url.path)\n\(inputs.count) input steps, \(changes.count) window position changes over \(String(format: "%.1f", seconds)) s")
     }
 }
 

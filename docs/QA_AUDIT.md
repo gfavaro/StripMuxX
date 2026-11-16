@@ -492,6 +492,18 @@ more than 50 ms apart (the app holds an event 0.5 ms at most, so this is the eve
 and the easing costs about 40 ms of lag and a 290 ms glide after release. `analyze_gesture_trace.py`
 now prints the smoothness figures (input and window-update gaps, scroll event lateness) itself.
 
+## Pan smoothness after the cleanups (build 100)
+
+Synthetic 60 Hz pan (steadypan, window sampler on), machine load about 2.3: window updates every
+16.9 ms at the median, 9-11% of gaps over 33 ms and 1-3% over 50 ms; input steps 2-6% over 33 ms.
+Build 96's reading was 0% and 0% (load unknown). At load 8 the same pan gave 14-39% over 33 ms.
+With the minimap off the numbers were the same, and the Reduce Motion check costs 0.24 microseconds
+per pan step, so neither is the cause. A real-trackpad trace (80 s, only 6 three-finger swipes, so
+a small sample) showed window update gaps 0% over 33 ms, lag median 25 ms (p90 40 ms) and the
+easing glide after release median 352 ms, in line with build 93 (lag median 55 ms, glide 290 ms).
+No regression on real input; the synthetic tail looks like load. The trace used to discard its
+recording when its 120 s limit fired; it now keeps it and `--gesture-trace-stop` hands it back.
+
 ## Simplification (builds 95 and 96)
 
 Build 95 removed the stutter hunt's diagnostic scaffolding (pipeline timing marks, the always-on
