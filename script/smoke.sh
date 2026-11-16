@@ -164,18 +164,6 @@ for _ in $(seq 1 30); do [ "$(wm list-workspaces --focused)" = "$start_focus" ] 
 [ "$(wm list-workspaces --focused)" = "$start_focus" ] && pass "focus returned to workspace $start_focus" ||
     fail "focus returned to workspace $start_focus: now $(wm list-workspaces --focused) (${restore_output:-no output})"
 
-probe=$(wm doctor --simulate-native-pan)
-if grep -q "No visible desktop" <<<"$probe"; then
-    skip "scrolling pan (no desktop showing)"
-else
-    lag=$(grep -o 'p90 [0-9]* ms' <<<"$probe" | head -1 | awk '{ print $2 }')
-    if grep -q "over 0 samples" <<<"$probe"; then
-        skip "scrolling pan (every column fits on screen; nothing to pan)"
-    else
-        [ -n "$lag" ] && [ "$lag" -le 100 ] && pass "scrolling pan p90 lag ${lag} ms" || fail "scrolling pan lag: $(grep 'lag' <<<"$probe" | head -1)"
-    fi
-fi
-
 [ "$(crash_count)" -eq "$crashes_before" ] && pass "no new crash reports" || fail "new crash report in ~/Library/Logs/DiagnosticReports"
 echo
 [ "$failures" -eq 0 ] && echo "Smoke: all checks passed" || echo "Smoke: $failures check(s) failed"

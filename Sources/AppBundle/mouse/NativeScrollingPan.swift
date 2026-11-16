@@ -71,7 +71,7 @@ final class NativeScrollingPan {
                     point: event.location)
                 let consumed = MainActor.assumeIsolated {
                     PublicGestureProbe.shared.observeCGScroll(scroll)
-                    return nativePanTiming.measure("scroll event") { NativeScrollingPan.shared.handle(scroll) }
+                    return NativeScrollingPan.shared.handle(scroll)
                 }
                 return consumed ? nil : Unmanaged.passUnretained(event)
             }, userInfo: nil) else { return }
@@ -206,7 +206,7 @@ final class NativeScrollingPan {
         // Not inside the event tap's callback: a first show creates the panel (50 to 80 ms) and
         // every show redraws it, and the tap holds the scroll events behind it.
         WorkspaceScrollingMinimap.shared.showSoon(workspace)
-        nativePanTiming.measure("relayout request") { runtime.native.tiling.relayoutVisibleScrolling(target: workspace) }
+        runtime.native.tiling.relayoutVisibleScrolling(target: workspace)
     }
 
     /// An explicit Option+Shift two-finger scroll resizes the focused column

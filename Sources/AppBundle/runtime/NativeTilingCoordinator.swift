@@ -51,7 +51,6 @@ final class NativeTilingCoordinator {
         // on a different Space after that transition.
         dragPreview.hide()
         if spacesMayChange { NativeWindowBorder.shared.hide(reason) }
-        nativePanTiming.count("invalidate: \(reason)")
         generation &+= 1
         ready = false
         hasManagedNativeFocus = false
@@ -76,8 +75,6 @@ final class NativeTilingCoordinator {
     }
 
     func accept(_ snapshot: NativeSpacesSnapshot, identities: [NativeWindowWriteIdentity]) async {
-        let acceptStart = ContinuousClock.now
-        defer { nativePanTiming.record("accept (after read)", acceptStart.duration(to: .now)) }
         guard !serverArgs.isReadOnly else { stopTiling("Tiling suppressed by read-only startup"); return }
         guard TrayMenuModel.shared.isEnabled else { status = "Tiling disabled (enable on resumes it)"; return }
         guard AXIsProcessTrusted(), runtime.native.observation?.windowEventsAvailable == true else {
@@ -194,9 +191,7 @@ final class NativeTilingCoordinator {
     /// No target requests every visible desktop (e.g. after a fresh observation).
     /// Requests made while a layout is running are coalesced, not discarded.
     func relayoutVisibleScrolling(target: Workspace? = nil) {
-        nativePanTiming.count("relayout requested")
         guard ready else {
-            nativePanTiming.count("relayout skipped: not ready")
             // Every read starts by invalidating, so a read per scroll step would keep
             // tiling unready for the whole pan. Ask once; accept() lays out after it.
             if let asked = scrollingReadRequestedAt, asked.duration(to: .now) < .milliseconds(250) { return }
@@ -217,12 +212,10 @@ final class NativeTilingCoordinator {
                 for workspace in runtime.native.layouts.currentBySpaceID.values
                     where workspace.isVisible && selection.includes(workspace) {
                     guard ready, generation == version, !holdsForMouseRelease else {
-                        nativePanTiming.count("relayout aborted: \(!ready ? "not ready" : generation != version ? "generation" : "mouse")")
                         break
                     }
                     let start = ContinuousClock.now
                     do { try await workspace.layoutWorkspace() } catch { break }
-                    nativePanTiming.record("scrolling layout", start.duration(to: .now))
                     noteScrollingLayout(start.duration(to: .now), during: workspace.scrollingGestureMotionActive)
                 }
             } while scrollingLayoutPending

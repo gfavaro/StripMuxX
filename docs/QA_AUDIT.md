@@ -502,6 +502,11 @@ had never been released, was off in the only config that used it, and did the sa
 `scrolling.gesture-smoothing`. Steady-pan smoothness after both (window sampler on): window
 updates every 16.8 ms, none over 33 ms.
 
+Later removals: the `doctor --simulate-native-pan` probe and its `nativePanTiming` hooks (the
+probe's self-posted events were already ignored, so it measured nothing, and `smoke.sh`'s pan
+step could only skip), code only its own tests used, the unused screenshots and the Sparkle
+target. The gesture trace measures real input instead.
+
 ## Minimap proportions (build 92)
 
 Reported: a full-width window looked like it was on a wide screen. Cause (measured from a

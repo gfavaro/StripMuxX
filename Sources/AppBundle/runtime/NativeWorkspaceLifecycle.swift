@@ -68,8 +68,6 @@ final class NativeWorkspaceLifecycle {
         }
         observer.onChange = { [weak self, weak owner] inventory, event in
             guard let self, let owner else { return }
-            let start = ContinuousClock.now
-            defer { nativePanTiming.record("observation change", start.duration(to: .now)) }
             owner.withValue {
                 self.writeAuthority.invalidate()
                 // A read without a snapshot says nothing about the desktops; only a
