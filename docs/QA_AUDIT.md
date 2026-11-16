@@ -475,6 +475,18 @@ At the end every window was identical to the baseline and focus was back where i
 Not tested: unplugging or plugging a display, display arrangement changes, desktop switching,
 Mission Control, sleep/wake, fullscreen on the second display.
 
+## Minimap proportions (build 92)
+
+Reported: a full-width window looked like it was on a wide screen. Cause (measured from a
+screenshot of the real minimap against the real window widths, 861 / 1698 / 565 pt): the 565 pt
+column would be 25 pt on the map, under the 32 pt click minimum, so the rule raised the
+horizontal scale 1.27 times for every tile while heights stayed fixed. Now one scale serves
+both axes (tile width / height equals the window's width / the display's height; the viewport
+frame has the display's proportions), the minimum is 16 pt, and clicks already select the
+nearest tile. Covered by `testOneNarrowColumnDoesNotStretchTheOthers` and by the tile and
+viewport proportion assertions in `testTilesKeepTheirWindowsProportionsAndTheViewportTheDisplays`
+and `OverlayRenderingTest`.
+
 ## Scroll stutter, found and fixed (builds 86-90)
 
 Found by measuring the real trackpad trace (windows updated every 18 to 23 ms at the median but

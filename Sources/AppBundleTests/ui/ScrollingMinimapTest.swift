@@ -37,29 +37,52 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertTrue(bounds.insetBy(dx: -0.01, dy: -0.01).contains(last.viewport))
     }
 
-    func testSingleWindowIsCentredAndNeverStretchedAcrossThePanel() throws {
+    func testOneNarrowColumnDoesNotStretchTheOthers() {
+        // A 565 pt column beside two wider ones: it used to force every tile 1.27 times wider so
+        // that it reached 32 pt, which made a full-width window look like a wide screen.
+        let (workspace, windows) = fixture(count: 3)
+        for (window, share) in zip(windows, [0.5, 1.0, 0.33]) { window.scrollingColumnWidth = share }
+        let metrics = workspace.scrollingMetrics
+        let height = scrollingMinimapRowHeight(metrics: metrics)
+        let map = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
+            bounds: CGRect(x: 0, y: 0, width: scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608), height: height))
+        let areaHeight = metrics.geometry.area.height
+        for (tile, column) in zip(map.tiles, metrics.columns) {
+            XCTAssertEqual(tile.width / tile.height, column.width / areaHeight, accuracy: 0.001)
+        }
+        XCTAssertEqual(map.viewport.width / map.viewport.height, metrics.areaWidth / areaHeight, accuracy: 0.001,
+                       "The viewport has the display's proportions")
+    }
+
+    func testSingleWindowIsCentredAndKeepsTheDisplaysShape() throws {
         let (workspace, _) = fixture(count: 1)
         let metrics = workspace.scrollingMetrics
         let map = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
             bounds: CGRect(x: 0, y: 0, width: 648, height: 72))
         let tile = try XCTUnwrap(map.tiles.first)
-        XCTAssertLessThanOrEqual(tile.width, 648 * scrollingMinimapMaximumViewportShare + 0.01,
-                                 "A lone window must not be stretched to the entire panel width")
+        XCTAssertEqual(tile.width / tile.height, metrics.areaWidth / metrics.geometry.area.height, accuracy: 0.001,
+                       "A window filling the display is drawn with the display's proportions")
+        XCTAssertLessThan(tile.width, 648 / 2, "Not stretched across the panel")
         XCTAssertEqual(tile.midX, 324, accuracy: 0.01)
         XCTAssertEqual(map.viewport, tile)
     }
 
     func testDenseTilesAndGapsRemainSelectable() throws {
         let (workspace, _) = fixture(count: 40)
-        let map = ScrollingMinimapGeometry(metrics: workspace.scrollingMetrics, offset: 0,
-            bounds: CGRect(x: 0, y: 0, width: 608, height: 58))
+        let metrics = workspace.scrollingMetrics
+        // Forty columns at true scale are wider than the panel, so the canvas scrolls.
+        let canvas = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
+        XCTAssertGreaterThan(canvas, 608)
+        let height = scrollingMinimapRowHeight(metrics: metrics)
+        let map = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
+            bounds: CGRect(x: 0, y: 0, width: canvas, height: height))
         for (index, frame) in map.tiles.enumerated() {
             XCTAssertEqual(map.column(at: CGPoint(x: frame.midX, y: frame.midY)), index)
         }
-        for x in stride(from: CGFloat(0), to: 608, by: 2) {
-            XCTAssertNotNil(map.column(at: CGPoint(x: x, y: 29)))
+        for x in stride(from: CGFloat(0), to: canvas, by: 2) {
+            XCTAssertNotNil(map.column(at: CGPoint(x: x, y: height / 2)))
         }
-        XCTAssertNil(map.column(at: CGPoint(x: -1, y: 29)))
+        XCTAssertNil(map.column(at: CGPoint(x: -1, y: height / 2)))
     }
 
     func testExtremelyNarrowColumnCapsPanelHeightWhileKeepingTilesClickable() {
@@ -73,7 +96,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
         let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
             bounds: CGRect(x: 0, y: 0, width: contentWidth, height: rowHeight))
-        XCTAssertGreaterThanOrEqual(geometry.tiles[0].width, 31.99)
+        XCTAssertGreaterThanOrEqual(geometry.tiles[0].width, scrollingMinimapMinimumTileWidth - 0.01)
         XCTAssertEqual(geometry.tiles.count, 8)
         XCTAssertEqual(geometry.viewport.height, 48)
         for (index, tile) in geometry.tiles.enumerated() {
@@ -84,27 +107,37 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
     func testPanelHugsACompactStripButKeepsRoomForItsHeader() {
         let (workspace, windows) = fixture(count: 4)
         windows.forEach { $0.scrollingColumnWidth = 0.5 }
-        let width = scrollingMinimapPanelWidth(metrics: workspace.scrollingMetrics, maximum: 680)
-        XCTAssertEqual(width, 320, "Four compact tiles need less than the header's minimum")
-        let (many, _) = (workspace, (0..<20).map { TestWindow.new(id: UInt32(95600 + $0), parent: workspace.rootTilingContainer) })
-        XCTAssertEqual(scrollingMinimapPanelWidth(metrics: many.scrollingMetrics, maximum: 680), 680, "Capped; the map scrolls")
-        let geometry = ScrollingMinimapGeometry(metrics: workspace.scrollingMetrics, offset: 0,
-            bounds: CGRect(x: 0, y: 0, width: 288, height: 48))
+        let metrics = workspace.scrollingMetrics
+        let width = scrollingMinimapPanelWidth(metrics: metrics, maximum: 680)
+        XCTAssertEqual(width, 320, "Four tiles at true scale need less than the header's minimum")
+        let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
+            bounds: CGRect(x: 0, y: 0, width: width - 32, height: scrollingMinimapRowHeight(metrics: metrics)))
         XCTAssertGreaterThanOrEqual(geometry.tiles.first?.minX ?? -1, -0.5, "The strip fits its hugging panel")
+        XCTAssertLessThanOrEqual(geometry.tiles.last?.maxX ?? 1e9, width - 32 + 0.5)
+        _ = (0..<20).map { TestWindow.new(id: UInt32(95600 + $0), parent: workspace.rootTilingContainer) }
+        XCTAssertEqual(scrollingMinimapPanelWidth(metrics: workspace.scrollingMetrics, maximum: 680), 680, "Capped; the map scrolls")
     }
 
-    func testTilesAreCompactAndCentred() {
+    func testTilesKeepTheirWindowsProportionsAndTheViewportTheDisplays() {
         let (workspace, windows) = fixture(count: 4)
-        windows.forEach { $0.scrollingColumnWidth = 0.5 }
+        for (window, share) in zip(windows, [0.5, 1.0, 0.5, 0.75]) { window.scrollingColumnWidth = share }
         let metrics = workspace.scrollingMetrics
+        let height = scrollingMinimapRowHeight(metrics: metrics)
         let width = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
-        XCTAssertEqual(width, 608, accuracy: 0.01, "Four columns fit without scrolling")
+        XCTAssertEqual(width, 608, accuracy: 0.01, "The strip fits without scrolling")
         let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
-            bounds: CGRect(x: 0, y: 0, width: width, height: 60))
-        for tile in geometry.tiles {
-            XCTAssertGreaterThanOrEqual(tile.width, 32)
-            XCTAssertLessThanOrEqual(tile.width, scrollingMinimapMaximumTypicalTileWidth + 0.5)
+            bounds: CGRect(x: 0, y: 0, width: width, height: height))
+        let areaHeight = metrics.geometry.area.height
+        for (tile, column) in zip(geometry.tiles, metrics.columns) {
+            XCTAssertEqual(tile.width / tile.height, column.width / areaHeight, accuracy: 0.001,
+                           "A window is drawn in its own proportions, so a full-width one is not a wide screen")
+            XCTAssertGreaterThanOrEqual(tile.width, scrollingMinimapMinimumTileWidth - 0.01)
         }
+        XCTAssertEqual(geometry.viewport.width / geometry.viewport.height, metrics.areaWidth / areaHeight, accuracy: 0.001,
+                       "The visible part has the display's proportions")
+        // Twice as wide a column is twice as wide a tile.
+        XCTAssertEqual(geometry.tiles[1].width / geometry.tiles[0].width, metrics.columns[1].width / metrics.columns[0].width,
+                       accuracy: 0.001)
         let left = geometry.tiles.first?.minX ?? 0, right = 608 - (geometry.tiles.last?.maxX ?? 0)
         XCTAssertEqual(left, right, accuracy: 1, "Centred")
     }
@@ -119,7 +152,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         let map = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
             bounds: CGRect(x: 0, y: 0, width: contentWidth, height: scrollingMinimapRowHeight(metrics: metrics)))
         XCTAssertGreaterThan(contentWidth, 608)
-        for tile in map.tiles { XCTAssertGreaterThanOrEqual(tile.width, 32) }
+        for tile in map.tiles { XCTAssertGreaterThanOrEqual(tile.width, scrollingMinimapMinimumTileWidth - 0.01) }
         for pair in zip(map.tiles, map.tiles.dropFirst()) {
             XCTAssertLessThanOrEqual(pair.0.maxX, pair.1.minX + 0.01)
         }
@@ -193,7 +226,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
             XCTAssertTrue(map.viewport.minX.isFinite && map.viewport.maxX.isFinite)
             for (index, tile) in map.tiles.enumerated() {
                 XCTAssertTrue(tile.minX.isFinite && tile.width.isFinite && tile.height.isFinite)
-                XCTAssertGreaterThanOrEqual(tile.width, 31.99)
+                XCTAssertGreaterThanOrEqual(tile.width, scrollingMinimapMinimumTileWidth - 0.01)
                 XCTAssertEqual(map.column(at: CGPoint(x: tile.midX, y: tile.midY)), index)
             }
             for pair in zip(map.tiles, map.tiles.dropFirst()) {
@@ -458,7 +491,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
             let buttons = minimapDescendants(of: view).compactMap { $0 as? NSButton }
             XCTAssertEqual(buttons.count, 3)
             for (index, button) in buttons.enumerated() {
-                XCTAssertGreaterThanOrEqual(button.frame.width, 32)
+                XCTAssertGreaterThanOrEqual(button.frame.width, scrollingMinimapMinimumTileWidth - 0.01)
                 XCTAssertTrue(button.superview?.bounds.contains(button.frame) == true)
                 XCTAssertTrue(button.accessibilityLabel()?.contains(titles[index]) == true)
             }

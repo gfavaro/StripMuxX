@@ -58,8 +58,11 @@ final class OverlayRenderingTest: WorkspaceTestCase {
         XCTAssertGreaterThan((focused.blueComponent - focused.redComponent) - (other.blueComponent - other.redComponent), 0.15,
                              "The focused tile's edge is clearly more accent than an unfocused one")
         XCTAssertLessThanOrEqual(view.bounds.width, 680)
-        XCTAssertLessThanOrEqual(buttons.map { view.convert($0.bounds, from: $0).width }.max() ?? 0,
-                                 scrollingMinimapMaximumTypicalTileWidth + 1, "Compact tiles")
+        for (button, column) in zip(buttons, metrics.columns) {
+            let frame = view.convert(button.bounds, from: button)
+            XCTAssertEqual(frame.width / frame.height, column.width / metrics.geometry.area.height, accuracy: 0.05,
+                           "Tiles are drawn in their windows' proportions")
+        }
     }
 
     func testFloatingChipsAndHeaderAreDrawn() throws {

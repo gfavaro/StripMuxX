@@ -18,6 +18,7 @@
 - The commit hash is linked into the binaries; builds no longer rewrite a source file.
 
 ### Fixed
+- The minimap drew every window at a different shape from the real one: tiles were all the same height with only their widths scaled, and one narrow column widened every tile by 1.27 times, so a full-width Safari window looked like a wide screen. Tiles now keep their windows' proportions and the viewport frame the display's; only an extreme column (under 16 pt on the map) raises the scale.
 - Scrolling stutter: window motion during a gesture was uneven (47% of a window's position updates came more than 33 ms after the last, 28% more than 50 ms) because unfocused borders, transparent by default, were still positioned and redrawn on every display frame on the thread that receives scroll events, so events reached StripMuxX up to 128 ms late in bursts. Borders in a fully transparent colour are skipped, and the gesture's minimap is drawn after the event instead of inside it. Windows now update every 16.6 ms (no gap over 33 ms) and events reach the app in 0.08 ms at the median.
 - Held-key navigation no longer drops about half its repeats (25 of 25 accepted at 33 ms).
 - Borders no longer trail a scrolling window by 100 pt, stay off-position at the strip end, or blink after every read.
