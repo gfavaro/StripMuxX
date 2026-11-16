@@ -73,20 +73,20 @@ struct ShortcutAppearanceSettingsView: View {
                 SettingsTextField("Focused color", id: "borders.active-color", text: $activeBorderColor,
                                   help: "accent, #RRGGBB or #RRGGBBAA.", validate: borderColorError) {
                     if let color = normalizedWindowBorderColor(activeBorderColor) {
-                        persist("borders", "active-color", "'\\(color)'")
+                        persist("borders", "active-color", "'\(color)'")
                     }
                 }
                 SettingsTextField("Unfocused color", id: "borders.inactive-color", text: $inactiveBorderColor,
                                   help: "Transparent by default: #00000000.", validate: borderColorError) {
                     if let color = normalizedWindowBorderColor(inactiveBorderColor) {
-                        persist("borders", "inactive-color", "'\\(color)'")
+                        persist("borders", "inactive-color", "'\(color)'")
                     }
                 }
                 SettingsPicker("Drawing order", id: "borders.order", selection: $borderOrder,
                                help: "Below follows WinMuxX's default; above draws over the app.") {
                     Text("Below window").tag(WindowBorderOrder.below)
                     Text("Above window").tag(WindowBorderOrder.above)
-                } onChange: { persist("borders", "order", "'\\(borderOrder.rawValue)'") }
+                } onChange: { persist("borders", "order", "'\(borderOrder.rawValue)'") }
                 SettingsTextField("Exclude apps (bundle IDs)", id: "borders.exclude-apps",
                                   text: $excludedBorderApps, help: "Comma-separated bundle identifiers.") {
                     persist("borders", "exclude-apps", tomlCommaSeparatedStringArray(excludedBorderApps))
