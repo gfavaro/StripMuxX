@@ -11,7 +11,7 @@
 - `doctor` reports why borders were hidden, how long apps take to apply gesture writes, and unchanged gesture steps that were skipped.
 
 ### Changed
-- The minimap is compact: icon cards sized to the strip, an accent frame around the visible part, no scroller or position bar.
+- The minimap is compact: window cards sized to the strip at true scale (a 64 pt row; a window that keeps its own height or is free-size is drawn at its real height and position), an accent frame around the visible part, no scroller or position bar.
 - Commands no longer force a full window reread when the model is current: `focus left/right` p50 81 → 48 ms.
 - Window writes during a scroll gesture skip frames that did not change: 1008 → 107 writes for one pan with 48 columns.
 - The cheat sheet and minimap free their window memory when closed.

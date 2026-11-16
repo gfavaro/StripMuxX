@@ -65,6 +65,32 @@ final class OverlayRenderingTest: WorkspaceTestCase {
         }
     }
 
+    func testAWindowThatDoesNotFillTheColumnIsDrawnWhereItReallySits() throws {
+        let workspace = focus.workspace
+        let full = TestWindow.new(id: 96120, parent: workspace.rootTilingContainer)
+        let short = TestWindow.new(id: 96121, parent: workspace.rootTilingContainer)
+        let metrics = workspace.scrollingMetrics
+        let models = [
+            ScrollingMinimapTile(id: ObjectIdentifier(full), title: "Full", applications: [], count: 1),
+            ScrollingMinimapTile(id: ObjectIdentifier(short), title: "Short", applications: [], count: 1, vertical: 0.4...0.9),
+        ]
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 320,
+                                                      height: scrollingMinimapRowHeight(metrics: metrics) + 68))
+        view.update(workspaceName: "Desktop", models: models, icons: [:], metrics: metrics,
+                    offset: metrics.offsetRange.lowerBound, focused: nil)
+        let rep = try render(view)
+        let buttons = minimapDescendants(of: view).compactMap { $0 as? ScrollingMinimapButton }
+        let frame = view.convert(buttons[1].bounds, from: buttons[1])
+        let scale = CGFloat(rep.pixelsHigh) / view.bounds.height
+        func alpha(atY y: CGFloat) -> CGFloat {
+            rep.colorAt(x: Int(frame.midX * scale), y: Int(y * scale))?.alphaComponent ?? 0
+        }
+        // The window's card is a faint fill, so compare it with what is behind it.
+        let inside = alpha(atY: frame.minY + frame.height * 0.65)
+        XCTAssertGreaterThan(inside, alpha(atY: frame.minY + frame.height * 0.2) + 0.03, "Nothing above the window's top")
+        XCTAssertGreaterThan(inside, alpha(atY: frame.minY + frame.height * 0.97) + 0.03, "Nothing below its bottom")
+    }
+
     func testFloatingChipsAndHeaderAreDrawn() throws {
         let workspace = focus.workspace
         let window = TestWindow.new(id: 96110, parent: workspace.rootTilingContainer)

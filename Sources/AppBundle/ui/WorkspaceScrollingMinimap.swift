@@ -215,9 +215,17 @@ final class WorkspaceScrollingMinimap: NSObject {
             let title = window.flatMap { member -> String? in
                 cachedWindowTitle(for: member) ?? member.app.name
             } ?? "Empty column"
+            // Where a lone window really sits, if it is not the column's full height.
+            var vertical: ClosedRange<CGFloat> = 0...1
+            let area = workspace.scrollingMetrics.geometry.area
+            if windows.count == 1, let rect = windows[0].lastAppliedLayoutPhysicalRect, area.height > 1 {
+                let top = min(max((rect.minY - area.minY) / area.height, 0), 0.85)
+                let height = min(max(rect.height / area.height, 0.15), 1 - top)
+                if top > 0.02 || height < 0.98 { vertical = top...(top + height) }
+            }
             return ScrollingMinimapTile(id: ObjectIdentifier(group),
                 title: title, applications: pids, count: windows.count,
-                freeSize: windows.count == 1 && windows[0].freeSizeRect != nil)
+                freeSize: windows.count == 1 && windows[0].freeSizeRect != nil, vertical: vertical)
         }
         let models = groups.map(tile)
         var pinned = pinnedColumn.map(tile)

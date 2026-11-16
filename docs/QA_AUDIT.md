@@ -487,6 +487,10 @@ nearest tile. Covered by `testOneNarrowColumnDoesNotStretchTheOthers` and by the
 viewport proportion assertions in `testTilesKeepTheirWindowsProportionsAndTheViewportTheDisplays`
 and `OverlayRenderingTest`.
 
+Build 93 then raised the row from 48 to 64 pt (wide tiles now have room for their title) and
+draws a lone window at its real height and vertical position when it does not fill the column
+(`ScrollingMinimapTile.vertical`, covered by `OverlayRenderingTest`; blanking the placement fails it).
+
 ## Scroll stutter, found and fixed (builds 86-90)
 
 Found by measuring the real trackpad trace (windows updated every 18 to 23 ms at the median but

@@ -92,13 +92,13 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         }
         let metrics = workspace.scrollingMetrics
         let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
-        XCTAssertEqual(rowHeight, 48, "A narrow column never changes the panel's height")
+        XCTAssertEqual(rowHeight, 64, "A narrow column never changes the panel's height")
         let contentWidth = scrollingMinimapContentWidth(metrics: metrics, visibleWidth: 608)
         let geometry = ScrollingMinimapGeometry(metrics: metrics, offset: 0,
             bounds: CGRect(x: 0, y: 0, width: contentWidth, height: rowHeight))
         XCTAssertGreaterThanOrEqual(geometry.tiles[0].width, scrollingMinimapMinimumTileWidth - 0.01)
         XCTAssertEqual(geometry.tiles.count, 8)
-        XCTAssertEqual(geometry.viewport.height, 48)
+        XCTAssertEqual(geometry.viewport.height, 64)
         for (index, tile) in geometry.tiles.enumerated() {
             XCTAssertEqual(geometry.column(at: CGPoint(x: tile.midX, y: tile.midY)), index)
         }

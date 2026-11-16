@@ -10,6 +10,9 @@ struct ScrollingMinimapTile: Equatable {
     var pinned: ScrollingPinCmdArgs.Side? = nil
     /// A free-size column keeps its own window size; drawn with a dashed edge.
     var freeSize = false
+    /// Where the window sits vertically in the strip, as fractions of its height: a window that
+    /// keeps its own height or is free-size is not drawn filling the column.
+    var vertical: ClosedRange<CGFloat> = 0...1
 }
 
 /// Height the floating row adds to the minimap when the desktop has floating windows.
@@ -459,7 +462,9 @@ final class ScrollingMinimapButton: NSButton {
 
     override func draw(_ dirtyRect: NSRect) {
         // A miniature window: a card with a title bar, the app's icon and its title.
-        let tile = bounds.insetBy(dx: 2, dy: 2)
+        let full = bounds.insetBy(dx: 2, dy: 2)
+        let tile = CGRect(x: full.minX, y: full.minY + full.height * model.vertical.lowerBound, width: full.width,
+                          height: full.height * (model.vertical.upperBound - model.vertical.lowerBound))
         let path = NSBezierPath(roundedRect: tile, xRadius: 8, yRadius: 8)
         let accent = winMuxEmphasisColor
         (focused ? accent.withAlphaComponent(0.22)
@@ -489,13 +494,13 @@ final class ScrollingMinimapButton: NSButton {
         if model.freeSize { path.setLineDash([4, 3], count: 2, phase: 0) }
         path.stroke()
         if keyboardSelected {
-            let ring = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
+            let ring = NSBezierPath(roundedRect: tile.insetBy(dx: -1.5, dy: -1.5), xRadius: 9, yRadius: 9)
             accent.setStroke()
             ring.lineWidth = 2
             ring.stroke()
         }
         guard bounds.width >= 18 else { return }
-        let showsTitle = bounds.width >= 56 && bounds.height >= 56
+        let showsTitle = bounds.width >= 56 && tile.height >= 44
         let side: CGFloat = bounds.width >= 56 ? 20 : 16
         let count = bounds.width >= 80 ? icons.count : min(icons.count, 1)
         let iconsWidth = CGFloat(count) * side + CGFloat(max(count - 1, 0)) * 3
@@ -521,7 +526,7 @@ final class ScrollingMinimapButton: NSButton {
                 rect.fill(using: .sourceIn)
                 return true
             }
-            badge.draw(in: CGRect(x: bounds.width - 15, y: 11, width: 10, height: 10), from: .zero, operation: .sourceOver,
+            badge.draw(in: CGRect(x: bounds.width - 15, y: tile.minY + 9, width: 10, height: 10), from: .zero, operation: .sourceOver,
                        fraction: 1, respectFlipped: true, hints: nil)
         }
         if model.count > 1, bounds.width >= 40 {

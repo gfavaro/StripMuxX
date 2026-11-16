@@ -52,7 +52,7 @@ func scrollingMinimapHorizontalScale(metrics: ScrollingWorkspaceMetrics, rowHeig
 }
 
 /// One fixed row height: room for an icon and a title, whatever the windows' shapes.
-func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 48 }
+func scrollingMinimapRowHeight(metrics: ScrollingWorkspaceMetrics) -> CGFloat { 64 }
 
 /// The panel hugs the strip at true scale: never narrower than its header and footer need,
 /// never wider than `maximum` (a longer strip scrolls).
