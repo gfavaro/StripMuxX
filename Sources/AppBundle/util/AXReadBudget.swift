@@ -33,9 +33,3 @@ final class AXReadBudget: @unchecked Sendable {
 }
 
 struct NativeFocusUnknown: Error {}
-
-@MainActor
-func observeNativeFocusForSession() async throws -> (window: Window?, known: Bool) {
-    do { return (try await getNativeFocusedWindow(), true) }
-    catch is NativeFocusUnknown { return (nil, false) }
-}

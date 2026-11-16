@@ -17,21 +17,6 @@ func startUnixSocketServer() {
     listener.start(queue: .global())
 }
 
-func toggleReleaseServerIfDebug(_ state: EnableCmdArgs.State) async {
-    if serverArgs.isReadOnly { return }
-    if !isDebug { return }
-    let socketFile = "/tmp/\(stableWinMuxAppId)-\(unixUserName).sock"
-    let connection = NWConnection(to: NWEndpoint.unix(path: socketFile), using: .tcp)
-    defer { connection.cancel() }
-    if await connection.startBlocking().error != nil { // Can't connect, StripMuxX.app is not running
-        return
-    }
-
-    let req = ClientRequest(args: ["enable", state.rawValue], stdin: "", windowId: nil, workspace: nil)
-    _ = await connection.writeAtomic(req)
-    _ = await connection.readNonAtomic()
-}
-
 private let serverVersionAndHash = "\(winMuxAppVersion) \(gitHash)"
 
 private func newConnection(_ connection: NWConnection) async { // todo add exit codes

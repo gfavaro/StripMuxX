@@ -14,12 +14,3 @@ extension DynamicConfigValue where Value == Double {
     }
 
 }
-
-func renderedAspectRatio(_ value: DynamicConfigValue<Double>) -> String {
-    let rules = value.aspectRatioRules.map { rule in
-        let pattern = rule.description.selector
-        let escaped = pattern.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        return "{ monitor.\"\(escaped)\" = \(rule.value) }"
-    }
-    return rules.isEmpty ? String(value.defaultAspectRatio) : "[" + (rules + [String(value.defaultAspectRatio)]).joined(separator: ", ") + "]"
-}

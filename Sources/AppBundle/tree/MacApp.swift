@@ -148,80 +148,6 @@ final class MacApp: AbstractApp {
         }
     }
 
-    func pressCloseButton(_ windowId: UInt32) async throws -> Bool {
-        if serverArgs.isReadOnly { return false }
-        setFrameJobs.removeValue(forKey: windowId)?.cancel()
-        return try await withWindow(windowId) { window, job in
-            guard let closeButton = window.get(Ax.closeButtonAttr) else { return false }
-            return measuredAXOperation(.axAction, { AXUIElementPerformAction(closeButton.cast, kAXPressAction as CFString) }) == .success
-        } ?? false
-    }
-
-    func containsAxWindow(_ windowId: UInt32) async throws -> Bool {
-        try await thread?.runInLoop { [axApp] job in
-            axApp.threadGuarded.findAxWindow(windowId: windowId) != nil
-        } ?? false
-    }
-
-    /// Whether a frame write could reach the window now, for `doctor`. A cached element counts only
-    /// if it still answers for this window. Unreachable means the app answered every lookup and none
-    /// was this window; the first lookup it does not answer ends the check as unknown, so a slow app
-    /// costs one timeout. The registered element keeps its operational timeout; only the fresh
-    /// copies read here use the shorter diagnostic one, because the timeout stays on an element.
-    func axWindowReachability(_ windowId: UInt32) async -> AxWindowReachability {
-        guard let thread else { return .appRetired }
-        let timeout = axDiagnosticTimeout
-        do {
-            return try await thread.runInLoop { [windows, axApp] job -> AxWindowReachability in
-                if let cached = windows.threadGuarded[windowId]?.ax {
-                    let (resolved, error) = cached.containingWindowIdWithError()
-                    if resolved == windowId { return .reachable }
-                    if error == .cannotComplete { return .unknown("the app did not answer") }
-                }
-                let unanswered = AxWindowReachability.unknown("the app did not answer")
-                for source in [kAXWindowsAttribute, kAXMainWindowAttribute, kAXFocusedWindowAttribute] {
-                    try job.checkCancellation()
-                    var raw: CFTypeRef?
-                    if AXUIElementCopyAttributeValue(axApp.threadGuarded, source as CFString, &raw) == .cannotComplete { return unanswered }
-                    let elements = (raw as? [AnyObject]) ?? raw.map { [$0 as AnyObject] } ?? []
-                    for element in elements where CFGetTypeID(element) == AXUIElementGetTypeID() {
-                        let (resolved, error) = (element as! AXUIElement).containingWindowIdWithError(timeout: timeout)
-                        if resolved == windowId { return .reachable }
-                        if error == .cannotComplete { return unanswered }
-                    }
-                }
-                return .unreachable
-            }
-        } catch {
-            return .unknown("the check was interrupted")
-        }
-    }
-
-
-    /// The app's raw AX window sources for `doctor`, before the window-id filter that
-    /// discovery applies, so an element that maps to no or another window id is visible.
-    func probeAxWindows(limit: Int = 12) async throws -> [AxWindowProbe] {
-        try await thread?.runInLoop { [axApp] job in
-            var result: [AxWindowProbe] = []
-            do {
-                // The app element keeps its operational timeout; window copies read here are fresh.
-                let listed = try diagnosticRead(axApp.threadGuarded, kAXWindowsAttribute, into: &result, source: "AXWindows")
-                let elements = (listed as? [AnyObject]) ?? []
-                if elements.count > limit { result.append(AxWindowProbe(source: "AXWindows", failure: "\(elements.count) windows, first \(limit) shown")) }
-                for (index, element) in elements.prefix(limit).enumerated() where CFGetTypeID(element) == AXUIElementGetTypeID() {
-                    try job.checkCancellation()
-                    result.append(try diagnosticProbe(element as! AXUIElement, "AXWindows[\(index)]"))
-                }
-                for (attribute, source) in [(kAXMainWindowAttribute, "AXMainWindow"), (kAXFocusedWindowAttribute, "AXFocusedWindow")] {
-                    let value = try diagnosticRead(axApp.threadGuarded, attribute, into: &result, source: source)
-                    if let value, CFGetTypeID(value) == AXUIElementGetTypeID() { result.append(try diagnosticProbe(value as! AXUIElement, source)) }
-                }
-            } catch {
-                result.append(AxWindowProbe(source: "probe", failure: "stopped: the app stopped answering"))
-            }
-            return result
-        } ?? []
-    }
 
     func getAxSize(_ windowId: UInt32) async throws -> CGSize? {
         try await withWindow(windowId) { window, job in
@@ -326,10 +252,6 @@ final class MacApp: AbstractApp {
             let error = measuredAXOperation(.axAction) { AXUIElementPerformAction(window, kAXRaiseAction as CFString) }
             AXWindowOperation.current?.record(error, from: ObjectIdentifier(window))
         }
-    }
-
-    @MainActor func cancelFrameWrite(_ windowId: UInt32) {
-        setFrameJobs.removeValue(forKey: windowId)?.cancel()
     }
 
     @MainActor static func cancelPendingFocus() {
@@ -465,21 +387,6 @@ final class MacApp: AbstractApp {
     func getAxWindowsCount() async throws -> Int? {
         try await thread?.runInLoop { [axApp] job in
             axApp.threadGuarded.discoverAxWindows()?.count
-        }
-    }
-
-    func restartWindowIdentities() async throws -> [(UInt32, RestartWindowIdentity)] {
-        guard let bundleId = rawAppBundleId else { return [] }
-        let launchDate = nsApp.launchDate
-        let pid = pid
-        guard let thread else { return [] }
-        return try await thread.runInLoop { [axApp] job -> [(UInt32, RestartWindowIdentity)] in
-            (axApp.threadGuarded.discoverAxWindows() ?? []).map { id, window in
-                (id, RestartWindowIdentity(bundleId: bundleId, pid: pid,
-                    launchDate: launchDate, title: window.get(Ax.titleAttr) ?? "",
-                    documentURL: window.get(Ax.documentAttr),
-                    accessibilityIdentifier: window.get(Ax.identifierAttr)))
-            }
         }
     }
 
@@ -635,49 +542,6 @@ final class MacApp: AbstractApp {
         }
     }
 
-    @MainActor
-    static func refreshAllAndGetAliveWindowIds(frontmostAppBundleId: String?) async throws -> [MacApp: [UInt32]] {
-        // Unit tests use TestApp/TestWindow. Enumerating the runner's real desktop
-        // can feed native AX elements into the mock-only attribute decoder.
-        guard !isUnitTest else { return [:] }
-        for (pid, app) in MacApp.allAppsMap { // gc dead apps
-            try checkCancellation()
-            // The cache answers without LaunchServices; confirm before destroying a running app's
-            // object, which would leave its windows unable to move or park.
-            if !RegularApplications.shared.isRunning(app.nsApp, pid: pid), app.nsApp.isTerminated {
-                await app.destroy()
-            }
-        }
-        return try await withThrowingTaskGroup(of: (pid_t, [UInt32]).self, returning: [MacApp: [UInt32]].self) { group in
-            func refreshTheApp(_ nsApp: NSRunningApplication, pid: pid_t) {
-                group.addTask { @Sendable @MainActor in
-                    (pid, try await refreshAppAndGetAliveWindowIdsWithDeadline(nsApp, pid: pid, frontmostAppBundleId: frontmostAppBundleId))
-                }
-            }
-            // Register new apps
-            for (pid, nsApp) in RegularApplications.shared.byPid {
-                try checkCancellation()
-                refreshTheApp(nsApp, pid: pid)
-            }
-            for (pid, app) in MacApp.allAppsMap {
-                try checkCancellation()
-                // "About this Mac" window, TouchID, and a lot of other utility windows
-                // We don't monitor them actively as we do for regular apps, but if a window of one of those utility
-                // apps got focused it will end up in allAppsMap
-                if !RegularApplications.shared.isRegular(pid) {
-                    refreshTheApp(app.nsApp, pid: pid)
-                }
-            }
-            var result: [MacApp: [UInt32]] = [:]
-            for try await (pid, windowIds) in group {
-                if let app = MacApp.allAppsMap[pid] {
-                    result[app] = windowIds
-                }
-            }
-            return result
-        }
-    }
-
     func unregisterDestroyedWindow(_ windowId: UInt32) async throws {
         setFrameJobs.removeValue(forKey: windowId)?.cancel()
         try await thread?.runInLoop { [windows, destroyedWindows, animatedSizes] _ in
@@ -767,9 +631,6 @@ final class MacApp: AbstractApp {
             CFRunLoopStop(CFRunLoopGetCurrent())
         }
     }
-
-    /// A destroyed app object has no AX thread; windows still holding it cannot be read or moved.
-    var isRetired: Bool { thread == nil }
 
     private func withWindow<T>(_ windowId: UInt32, _ body: @Sendable @escaping (AXUIElement, RunLoopJob) throws -> T?) async throws -> T? {
         try await thread?.runInLoop { [windows, axApp, nsApp, animatedSizes] job in

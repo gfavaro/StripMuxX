@@ -31,11 +31,6 @@ func cachedWindowTitle(for window: Window) -> String? {
 }
 
 @MainActor
-func pruneCachedWindowTitles() {
-    cachedWindowTitles = cachedWindowTitles.filter { Window.get(byId: $0.key) != nil }
-}
-
-@MainActor
 func getCachedWindowTitle(
     _ window: Window,
     maxAge: TimeInterval = cachedWindowTitleMaxAge,

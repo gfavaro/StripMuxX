@@ -115,33 +115,6 @@ public enum RefreshSessionEvent: Sendable, CustomStringConvertible {
         if case .startup = self { return true } else { return false }
     }
 
-    /// A short code for event recording: the case and, for observers, the system notification
-    /// name. Command arguments are left out because they can carry user text.
-    public var eventCode: String {
-        switch self {
-            case .globalObserver(let name): "global:\(name)"
-            case .ax(let name): "ax:\(name)"
-            case .socketServer: "socketServer"
-            default: String(describing: self).components(separatedBy: "(").first ?? "event"
-        }
-    }
-
-    public var canReuseLastAppliedWindowFrames: Bool {
-        switch self {
-            case .ax(let notif):
-                notif == kAXFocusedWindowChangedNotification as String
-            case .globalObserver(let notif):
-                notif == NSWorkspace.didActivateApplicationNotification.rawValue || notif == "workspaceSwipe"
-            case .hotkeyBinding, .menuBarButton, .socketServer, .onModeChanged:
-                true
-            case .onDisplayChanged, .onFocusedMonitorChanged, .onFocusChanged, .onTabSwitched, .onWindowParkingDrift:
-                true
-            case .configAutoReload, .globalObserverLeftMouseUp, .startup, .workspaceRestoration,
-                 .resetManipulatedWithMouse:
-                false
-        }
-    }
-
     public var requiresWindowRefreshBarrier: Bool {
         switch self {
             case .ax(let notif):
@@ -154,25 +127,6 @@ public enum RefreshSessionEvent: Sendable, CustomStringConvertible {
                  .startup, .workspaceRestoration, .socketServer, .resetManipulatedWithMouse, .onFocusedMonitorChanged,
                  .onFocusChanged, .onModeChanged:
                 true
-        }
-    }
-
-    public var requiresLayoutReasonNormalization: Bool {
-        requiresWindowRefreshBarrier
-    }
-
-    /// Wake and startup force an AX parking write. Other events can skip that write
-    /// only after native geometry confirms the window is still at its parking point;
-    /// a cached hidden flag alone does not establish that the app stayed there.
-    public var requiresHiddenWindowsReassertion: Bool {
-        switch self {
-            case .startup:
-                true
-            case .globalObserver(let notif):
-                notif == NSWorkspace.didWakeNotification.rawValue ||
-                    notif == NSWorkspace.screensDidWakeNotification.rawValue
-            default:
-                false
         }
     }
 

@@ -225,12 +225,6 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
         addCommand("Reload Config", script: "reload-config", to: menu, requiresWindow: false, allowDisabled: true)
     }
 
-    private func configToggleItem(_ title: String, isOn: Bool, _ action: Selector) -> NSMenuItem {
-        let item = callbackItem(title, action)
-        item.state = isOn ? .on : .off
-        return item
-    }
-
     private func addSubmenu(_ title: String, to menu: NSMenu, build: (NSMenu) -> Void) {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         let submenu = NSMenu(title: title)
@@ -413,15 +407,11 @@ final class NativeActionMenu: NSObject, NSMenuDelegate {
         alert.informativeText = details
         alert.runModal()
     }
-    @objc private func copyVersion() { "\(winMuxAppName) v\(winMuxAppVersion) \(gitHash)".copyToClipboard() }
     @objc private func openConfig() {
         NSWorkspace.shared.open(findCustomConfigUrl().urlOrNil ?? ((try? ensureBootstrapConfigExistsIfNeeded()) ?? preferredEditableConfigUrl()))
     }
     @objc private func openDiagnostics() { DiagnosticsWindowController.shared.show() }
     @objc private func refreshNativeSpaces() { runtime.native.observation?.requestRead() }
-    @objc private func checkUpdates() { checkForUpdates?() }
-    @objc private func openRepository() { NSWorkspace.shared.open(URL(string: forkRepositoryURL)!) }
-    @objc private func openIssue() { NSWorkspace.shared.open(URL(string: forkRepositoryURL + "/issues/new")!) }
     @objc private func quit() { terminateApp() }
 
 }

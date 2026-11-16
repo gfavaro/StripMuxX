@@ -39,11 +39,6 @@ struct FrozenFocus: WinMuxAny, Equatable, Sendable {
 /// What focus resolves to before the first observation names a desktop. It holds no windows.
 @MainActor private var unobservedWorkspace: Workspace { Workspace.get(byName: "__unobserved") }
 
-func debugDescribe(_ focus: LiveFocus?) -> String {
-    guard let focus else { return "nil" }
-    return "w:\(focus.windowOrNil?.windowId.description ?? "nil") ws:\(focus.workspace.name)"
-}
-
 @MainActor
 final class WorkspaceFocusState {
     lazy var requested: FrozenFocus = unobservedWorkspace.toLiveFocus().frozen

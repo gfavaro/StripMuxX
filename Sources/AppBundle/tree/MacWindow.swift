@@ -37,9 +37,6 @@ final class MacWindow: Window {
     }
 
     @MainActor
-    func forgetProvisionalMinimumEvidence() { learnedMinimum.forgetProvisionalEvidence() }
-
-    @MainActor
     func restoreLearnedMinimum(_ size: CGSize?, savedBundleId: String?, generation: MinimumEvidenceGeneration) {
         guard let size, size.width.isFinite, size.height.isFinite,
               size.width >= 0, size.height >= 0, size != .zero,

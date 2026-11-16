@@ -48,19 +48,6 @@ extension NWConnection {
         }
     }
 
-    public func readTillError() async {
-        await withTaskCancellationHandler {
-            while !Task.isCancelled {
-                let isError = await withCheckedContinuation { continuation in
-                    receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, complete, error in
-                        continuation.resume(returning: error != nil || complete || data == nil || data?.isEmpty == true)
-                    }
-                }
-                if isError { return }
-            }
-        } onCancel: { self.cancel() }
-    }
-
     public func readNonAtomic(timeout: Duration? = nil) async -> Result<Data, NWError> {
         let deadline = timeout.map { timeout in
             Task {

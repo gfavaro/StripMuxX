@@ -29,7 +29,4 @@ enum WinMuxPanelLayer: CaseIterable {
 }
 
 extension NSPanelHud {
-    func applyWinMuxLayer(_ layer: WinMuxPanelLayer) {
-        level = layer.level
-    }
 }

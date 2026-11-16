@@ -173,10 +173,6 @@ final class ConfigReloadScheduler {
     if state.watcher == nil { configWatcherLog.error("Could not observe the configuration directory") }
 }
 
-@MainActor func reloadConfigIfSavedDuringStartup() {
-    if config.autoReloadConfig { configReloadScheduler().startupFinished() }
-}
-
 @MainActor func reloadConfigAfterFileChange() async {
     guard config.autoReloadConfig else { return }
     guard isWinMuxRuntimeReady else { configReloadScheduler().fileChanged(runtimeReady: false); return }

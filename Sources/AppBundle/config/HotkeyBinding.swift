@@ -294,10 +294,6 @@ private func tapModifiersPressed(in modifierFlags: NSEvent.ModifierFlags) -> Set
     hotkeyState.tapTriggerCount
 }
 
-@MainActor func hasPendingTapBindingForTests() -> Bool {
-    !hotkeyState.pendingTapBindings.isEmpty
-}
-
 @MainActor func sideFilteredBinding(keyCode: Int64, flags: NSEvent.ModifierFlags) -> HotkeyBinding? {
     guard !hotkeyState.hotkeysSuspended, !hotkeyState.pendingUnboundModeExit, hotkeyState.unboundPassthroughKeyCode == nil, TrayMenuModel.shared.isEnabled, activeMode != nil else { return nil }
     return hotkeyState.sideFilteredBindings[keyCode]?.first { config.modifierSides.matches($0.modifiers, flags: flags) }

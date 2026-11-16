@@ -17,14 +17,3 @@ func comparePrivateWindowFrame(_ privateFrame: CGRect?, publicFrame: CGRect?) ->
         && abs(privateFrame.height - publicFrame.height) <= 1
     return agrees ? .verified : .failed("private frame disagrees with public bounds")
 }
-
-@MainActor
-func privateWindowFrameDiagnostic(_ windowId: UInt32) -> PrivateFrameVerdict {
-    let windows = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
-    let publicFrame = windows.first { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value == windowId }
-        .flatMap { ($0[kCGWindowBounds as String] as? NSDictionary).flatMap(CGRect.init(dictionaryRepresentation:)) }
-    var privateFrame: CGRect?
-    var frame = CGRect.zero
-    if winmux_window_frame(windowId, &frame) { privateFrame = frame }
-    return comparePrivateWindowFrame(privateFrame, publicFrame: publicFrame)
-}

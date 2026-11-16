@@ -12,5 +12,4 @@ public enum CardinalDirection: String, CaseIterable, Equatable, Sendable {
         }
     }
     public var focusOffset: Int { isPositive ? 1 : -1 }
-    public var insertionOffset: Int { isPositive ? 1 : 0 }
 }

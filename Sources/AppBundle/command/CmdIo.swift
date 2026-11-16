@@ -25,7 +25,6 @@ final class CmdIo {
     // periphery:ignore
     @discardableResult func err(_ msg: [String]) -> Bool { stderr += msg; return false }
 
-    func readStdin() -> String { stdin.readAll() }
 }
 
 struct CmdResult {

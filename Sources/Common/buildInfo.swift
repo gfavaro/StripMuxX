@@ -5,7 +5,6 @@ import MachO
 /// `__TEXT,__smx_build` section (`script/fork-build.sh`), so no source file changes per
 /// build; debug and test builds have no section and report SNAPSHOT.
 public let gitHash: String = buildInfoLines.first ?? "SNAPSHOT"
-public let gitShortHash: String = buildInfoLines.dropFirst().first ?? "SNAPSHOT"
 
 private let buildInfoLines: [String] = {
     var size: UInt = 0

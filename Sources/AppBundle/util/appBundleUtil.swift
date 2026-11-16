@@ -92,18 +92,6 @@ func terminateApp() {
     NSApplication.shared.terminate(nil)
 }
 
-/// Quits, then opens the same bundle with the same arguments once this process has
-/// exited, so termination cleanup finishes before the new instance starts.
-@MainActor
-func relaunchApp() {
-    let relaunch = Process()
-    relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
-    relaunch.arguments = ["-c", "pid=$0; app=$1; shift; while kill -0 \"$pid\" 2>/dev/null; do sleep 0.2; done; exec /usr/bin/open -n \"$app\" --args \"$@\"",
-                          String(ProcessInfo.processInfo.processIdentifier), Bundle.main.bundlePath] + CommandLine.arguments.dropFirst()
-    do { try relaunch.run() } catch { NSLog("WinMux relaunch: %@", String(describing: error)); return }
-    terminateApp()
-}
-
 extension String {
     func copyToClipboard() {
         let pasteboard = NSPasteboard.general
@@ -145,8 +133,6 @@ extension CGPoint {
         return CGPoint(x: x.coerce(in: xRange), y: y.coerce(in: yRange))
     }
 
-    func getProjection(_ orientation: Orientation) -> Double { orientation == .h ? x : y }
-
     var vectorLength: CGFloat { sqrt(x * x + y * y) }
 
     func distance(to point: CGPoint) -> Double { (self - point).vectorLength }
@@ -186,26 +172,6 @@ extension CGPoint: @retroactive Hashable { // todo migrate to self written Point
 func debugFocusLog(_ message: @autoclosure () -> String) {
     guard isDebug else { return }
     fputs("[focus-debug] \(Date()) \(message())\n", stderr)
-}
-
-func debugWorkspaceSidebarRenameLog(_ message: @autoclosure () -> String) {
-    guard isDebug else { return }
-    fputs("[sidebar-rename-debug] \(Date()) \(message())\n", stderr)
-}
-
-func debugWorkspaceSidebarHoverLog(_ message: @autoclosure () -> String) {
-    guard isDebug, ProcessInfo.processInfo.environment["WINMUX_DEBUG_SIDEBAR_HOVER"] == "1" else { return }
-    fputs("[sidebar-hover-debug] \(Date()) \(message())\n", stderr)
-}
-
-func debugWorkspaceSidebarEdgeTrapLog(_ message: @autoclosure () -> String) {
-    guard isDebug, ProcessInfo.processInfo.environment["WINMUX_DEBUG_SIDEBAR_EDGE_TRAP"] == "1" else { return }
-    fputs("[sidebar-edge-trap-debug] \(Date()) \(message())\n", stderr)
-}
-
-func debugWorkspaceSidebarProjectLog(_ message: @autoclosure () -> String) {
-    guard isDebug, ProcessInfo.processInfo.environment["WINMUX_DEBUG_SIDEBAR_PROJECT"] == "1" else { return }
-    fputs("[sidebar-project-debug] \(Date()) \(message())\n", stderr)
 }
 
 @inlinable

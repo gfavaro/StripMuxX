@@ -10,27 +10,16 @@ enum GlassToken {
     static let scrimOpacity: Double = 0.58
     static let highlightPeak: Double = 0.08
     static let borderOpacity: Double = 0.10
-    static let separatorOpacity: Double = 0.07
     // Width of the refractive Liquid Glass edge band (macOS 26). Wider = more visible
     // refraction; the main knob for how pronounced the glassy border reads.
     static let refractiveBorderWidth: CGFloat = 3
 
     // Interactive fills layered on glass
-    static let fillActive: Double = 0.14
-    static let fillHover: Double = 0.085
-    static let fillResting: Double = 0.06
-    static let fillFaint: Double = 0.04
 
     // Strokes around interactive elements
-    static let strokeActive: Double = 0.18
-    static let strokeHover: Double = 0.10
-    static let strokeResting: Double = 0.06
-    static let cardStroke: Double = 0.08
 
     // Text emphasis on glass
     static let textPrimary: Double = 0.92
-    static let textSecondary: Double = 0.74
-    static let textTertiary: Double = 0.58
 }
 
 enum RadiusToken {
@@ -56,17 +45,7 @@ struct ShadowToken {
     static let hover = ShadowToken(opacity: 0.35, radius: 12, y: 6)
 }
 
-enum MotionToken {
-    static let hover = Animation.interactiveSpring(response: 0.34, dampingFraction: 0.86, blendDuration: 0.06)
-    static let pill = Animation.spring(response: 0.28, dampingFraction: 0.72, blendDuration: 0.08)
-    static let appear = Animation.spring(response: 0.30, dampingFraction: 0.85)
-    static let quick = Animation.easeOut(duration: 0.12)
-}
-
 extension View {
-    func glassShadow(_ token: ShadowToken) -> some View {
-        shadow(color: Color.black.opacity(token.opacity), radius: token.radius, x: 0, y: token.y)
-    }
 }
 
 /// The shared glass surface: glass/blur base, dark scrim, neutral tint, top highlight,
