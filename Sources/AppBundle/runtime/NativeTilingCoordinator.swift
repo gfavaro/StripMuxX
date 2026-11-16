@@ -124,8 +124,13 @@ final class NativeTilingCoordinator {
                         MacApp.cancelPendingFocus()
                         if !released { owner.native.focusHold.end() } // A click elsewhere is the user's.
                         let tiling = owner.native.tiling
-                        if released { tiling.dragPreview.hide() }
-                        else if leftButton { tiling.dragPreview.begin(at: mouseLocation) }
+                        if released {
+                            tiling.dragPreview.hide()
+                            NativeWindowBorder.shared.endDragging()
+                        } else if leftButton {
+                            tiling.dragPreview.begin(at: mouseLocation)
+                            NativeWindowBorder.shared.beginDragging()
+                        }
                         guard released else {
                             // A read queued by the drag's own move events must not lay the
                             // window back out before its release is adopted.
@@ -156,9 +161,9 @@ final class NativeTilingCoordinator {
         }
         await runtime.native.persistence.save(runtime.native.layouts)
         guard generation == version else { return }
-        NativeWindowBorder.shared.refresh()
         ready = true
         hasCompletedInitialLayout = true
+        NativeWindowBorder.shared.resume()
         if scrollingReadRequestedAt != nil { scrollingReadRequestedAt = nil; relayoutVisibleScrolling() }
         status = "Native tiling active"
     }
