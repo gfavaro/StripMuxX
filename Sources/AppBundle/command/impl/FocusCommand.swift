@@ -1,6 +1,9 @@
 import AppKit
 import Common
 
+/// The strip window `focus floating` left from, per desktop.
+@MainActor private var floatingReturnWindows: [ObjectIdentifier: UInt32] = [:]
+
 /// Left and right step through the strip's columns; up and down step through a stack.
 struct FocusCommand: Command {
     let args: FocusCmdArgs
@@ -85,10 +88,15 @@ struct FocusCommand: Command {
         let floating = workspace.floatingWindows.sorted { $0.windowId < $1.windowId }
         guard !floating.isEmpty else { return io.err("No floating windows on this desktop") }
         guard let current, let index = floating.firstIndex(where: { $0 === current }) else {
+            // Remember the strip window being left, to come back to it exactly.
+            if let current { floatingReturnWindows[ObjectIdentifier(workspace)] = current.windowId }
             return floating[0].focusWindow()
         }
         if let next = floating.getOrNil(atIndex: index + 1) { return next.focusWindow() }
-        return workspace.rootTilingContainer.mostRecentWorkspaceFocusableWindowRecursive?.focusWindow() ?? true
+        let saved = floatingReturnWindows.removeValue(forKey: ObjectIdentifier(workspace)).flatMap(Window.get(byId:))
+        let back = saved.flatMap { $0.nodeWorkspace === workspace && !$0.isFloating ? $0 : nil }
+            ?? workspace.rootTilingContainer.mostRecentWorkspaceFocusableWindowRecursive
+        return back?.focusWindow() ?? true
     }
 
     /// Past the strip's first or last column: stop, wrap, or continue onto the next display.
