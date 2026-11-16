@@ -54,6 +54,19 @@ Free-size geometry is included in the native Space restoration snapshot.
 The implementation has **not been compiled or physically validated** in this
 series of commits. See [implementation status](SCROLL_FEEL_IMPLEMENTATION_STATUS.md).
 
+## Window borders
+
+StripMuxX restores the default WinMuxX-style **focused window outline**:
+a click-through, 4-point macOS accent border around the focused managed window.
+The border tracks focus, follows window and strip movement, and disappears
+when tiling is suspended, the window is hidden, or its Space is no longer
+active. It does not move, resize or activate any window.
+
+This initial port uses an AppKit panel, not WinMuxX's private WindowServer
+renderer. The original inactive-color, width, order, exclude-apps settings
+and per-window corner radii have **not yet been ported**. No compile or
+physical validation has been run for this commit series.
+
 ## Floating and fullscreen
 
 `layout floating` lifts the focused window off the strip and `layout tiling` puts it
