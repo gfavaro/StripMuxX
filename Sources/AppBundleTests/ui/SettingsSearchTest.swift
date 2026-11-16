@@ -15,6 +15,17 @@ final class SettingsSearchTest: XCTestCase {
         XCTAssertEqual(settingsControlSearchResults("left screen spacing"), [.gapOuterLeft])
     }
 
+    func testEveryBorderSettingIsSearchableAndOpensItsControl() {
+        XCTAssertEqual(Set(settingsControlSearchResults("border")), Set([
+            .bordersEnabled, .borderWidth, .borderActiveColor, .borderInactiveColor, .borderOrder,
+            .borderExcludeApps, .borderHideWhileScrolling,
+        ]))
+        XCTAssertEqual(settingsControlSearchResults("hide borders while scrolling"), [.borderHideWhileScrolling])
+        XCTAssertEqual(settingsControlSearchResults("colour"), [.borderActiveColor, .borderInactiveColor], "Either spelling")
+        XCTAssertEqual(settingsControlSearchResults("trail"), [.borderHideWhileScrolling])
+        XCTAssertTrue(SettingsControl.allCases.filter { $0.id.hasPrefix("borders.") }.allSatisfy { $0.page == .appearance })
+    }
+
     func testSubmitPrefersControlOverPageAndFallsBackToPage() {
         XCTAssertEqual(settingsSearchSubmitSelection(controls: [.gestures], pages: [.windows]),
                        .control(.gestures))

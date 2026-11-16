@@ -34,6 +34,13 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
     case minimapHold = "scrolling.minimap-hold-modifiers"
     case appearance = "appearance"
     case menuBar = "menu-bar.indicator"
+    case bordersEnabled = "borders.enabled"
+    case borderWidth = "borders.width"
+    case borderActiveColor = "borders.active-color"
+    case borderInactiveColor = "borders.inactive-color"
+    case borderOrder = "borders.order"
+    case borderExcludeApps = "borders.exclude-apps"
+    case borderHideWhileScrolling = "borders.hide-while-scrolling"
 
     var id: String { rawValue }
     var title: String {
@@ -60,6 +67,13 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .minimapHold: "Hold to keep the minimap up"
             case .appearance: "Theme"
             case .menuBar: "Menu bar indicator"
+            case .bordersEnabled: "Draw window borders"
+            case .borderWidth: "Border width"
+            case .borderActiveColor: "Focused border color"
+            case .borderInactiveColor: "Unfocused border color"
+            case .borderOrder: "Border drawing order"
+            case .borderExcludeApps: "Exclude apps from borders"
+            case .borderHideWhileScrolling: "Hide borders while the strip scrolls"
         }
     }
     var page: SettingsSidebarItem {
@@ -67,7 +81,8 @@ enum SettingsControl: String, CaseIterable, Hashable, Identifiable {
             case .startAtLogin, .autoReload, .restoreLayouts, .restoreFrames: .general
             case .autoTile, .gestures, .threeFingers, .minimap, .sensitivity, .width, .widthPresets, .fullscreenWidth, .loneWidth, .loneAlignment, .centerFocused, .keepHeight, .edgePreview, .minimapHold: .windows
             case .gapHorizontal, .gapOuterLeft: .appearance
-            case .appearance, .menuBar: .appearance
+            case .appearance, .menuBar, .bordersEnabled, .borderWidth, .borderActiveColor, .borderInactiveColor,
+                 .borderOrder, .borderExcludeApps, .borderHideWhileScrolling: .appearance
         }
     }
 }
@@ -78,6 +93,9 @@ extension SettingsControl {
         switch self {
             case .loneWidth: "single-window single window"
             case .loneAlignment: "position centered left right"
+            case .bordersEnabled: "outline highlight frame"
+            case .borderActiveColor, .borderInactiveColor: "colour accent highlight"
+            case .borderHideWhileScrolling: "lag trail scroll gesture"
             default: ""
         }
     }

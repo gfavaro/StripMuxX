@@ -21,7 +21,7 @@ to unpin). `scrolling-minimap` opens or closes the clickable map of the strip; i
 supports Left/Right, Return and Escape. `balance-sizes` resets column widths and
 stack heights; `flatten-workspace-tree` turns stacks into columns. See
 [the strip](LAYOUTS.md). `focus floating` steps through the desktop's floating windows,
-then back to the strip.
+then back to the strip. `focus-back-and-forth` returns to the previously focused window.
 
 **Cheat sheet:** `shortcuts` (Alt-Shift-/) shows the current mode's shortcuts grouped
 by what they do; any key or click closes it.
