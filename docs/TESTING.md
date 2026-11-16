@@ -103,6 +103,25 @@ assertions. Render animations at chosen timestamps. Keep optional latency benchm
 separate from correctness requirements, and report environment-sensitive timings
 as measurements rather than universal pass/fail limits.
 
+## Measuring a real gesture
+
+Synthetic events can stand in for an Option two-finger pan but not for a three-finger
+swipe, which macOS only accepts from a trackpad. To measure one, record it:
+
+```sh
+stripmuxx debug-windows --gesture-trace-start
+# ...swipe or pan as usual, a handful of times...
+stripmuxx debug-windows --gesture-trace-stop        # prints the JSON path
+python3 script/analyze_gesture_trace.py <that path>
+```
+
+The trace records every input step and every on-screen window and border piece on one
+clock (it stops by itself after 120 s). The analysis reports, per gesture, the input rate
+and travel, how often and how late the busiest window follows the fingers, when the last
+move lands, and how far border pieces sit from a window edge. Use it before and after a
+change that claims to improve gesture feel or border tracking, and keep the numbers in the
+commit or in `docs/QA_AUDIT.md`.
+
 ## Review and verification
 
 For code changes, run focused tests while editing, then the complete `make check`. Investigate failures

@@ -194,6 +194,7 @@ final class NativeScrollingPan {
         // Content follows the fingers: moving them left reveals columns to the right.
         guard deltaX.isFinite else { return }
         let next = metrics.clampedOffset(current - deltaX * CGFloat(config.scrolling.gestureSensitivity))
+        GestureTrace.shared.note(isDockSwipeActive ? "dock" : "pan", delta: Double(deltaX), offset: next)
         // At the strip boundary or on an empty momentum event there is nothing
         // to reposition. Avoid queuing duplicate AX frames for a stationary camera.
         // Compared with the stored offset, so a pan still clamps one a resize left out of range.
@@ -302,6 +303,7 @@ final class NativeScrollingPan {
         idleTask?.cancel()
         idleTask = nil
         guard let workspace else { return }
+        GestureTrace.shared.note("end", offset: workspace.scrollingOffset)
         let wasResizing = resizingColumn
         resizingColumn = false
         resizeWindow = nil
