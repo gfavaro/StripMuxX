@@ -400,6 +400,21 @@ hidden SwiftUI Settings window accounts for about 12 MB of the 24 MB baseline; r
 it needs macOS 15 as the minimum, so it stays. The CLI's local socket logs harmless
 `nw_path_evaluator` errors from Network.framework on every command.
 
+## Plan items done alone (builds 80–82)
+
+| Item | Evidence |
+| --- | --- |
+| Gesture writes no longer grow with the number of windows | One 30-step pan with 3 / 13 / 28 / 48 columns: 72 / 390 / 616 / 1008 writes before, 42 / 87 / 102 / 107 after. Apps apply a gesture write in 3.4 ms on average (`doctor`). All 27–29 layout passes per 31 input events still run |
+| Overlays are tested by what they draw | `OverlayRenderingTest`: tiles drawn, focused edge clearly more accent, compact tiles, header/footer/chips, cheat-sheet columns. Blanking the tile drawing fails 5 assertions |
+| Settings search reaches every border option | 7 controls added; "border", "colour", "trail" all find them |
+| CHANGELOG, command docs and install/rollback/uninstall docs | `focus-back-and-forth` documented; installer statuses explained in `docs/FORK.md` |
+| Real gestures can be measured | `debug-windows --gesture-trace-start/stop` + `script/analyze_gesture_trace.py` (see `docs/TESTING.md`) |
+
+Not conclusive: pan latency in milliseconds. The live desktop moved under the test (the
+terminal running it was itself parked off-screen by the strip), so timings were
+unreliable; the built-in `doctor --simulate-native-pan` probe no longer pans (its
+self-posted events are ignored) and was left alone.
+
 The earlier P2 "lift after an idle-settled resize" is closed. Three-finger swipes with
 `borders.hide-while-scrolling`: by code path they share the Option pan's `pan` call and
 hide the same way; still not exercisable by synthetic events (user trackpad test with the
