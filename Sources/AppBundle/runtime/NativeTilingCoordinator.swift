@@ -94,6 +94,7 @@ final class NativeTilingCoordinator {
         }.value
         guard generation == version else { return }
         guard !missionControl, NSEvent.pressedMouseButtons == 0, !holdsForMouseRelease else {
+            if missionControl { NativeWindowBorder.shared.hide() }
             status = missionControl ? "Tiling paused for Mission Control" : "Tiling paused for mouse interaction"
             return
         }
