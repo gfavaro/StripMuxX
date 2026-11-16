@@ -38,6 +38,8 @@ var defaultConfigUrl: URL {
         runtime.configuration.value = newValue
         if previousBorders != newValue.windowBorders || previousAccent != newValue.accentColor {
             NativeWindowBorder.shared.refresh()
+            WorkspaceScrollingMinimap.shared.modelDidChange()
+            ShortcutCheatSheet.shared.refreshColors()
         }
     }
 }
