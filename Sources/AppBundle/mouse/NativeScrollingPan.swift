@@ -25,6 +25,7 @@ final class NativeScrollingPan {
     private(set) var lastDockSwipeReport = "none"
     private(set) var isDockSwipeActive = false
     var isPanning: Bool { workspace != nil }
+    func isPanning(_ other: Workspace) -> Bool { workspace === other }
     private var lastDirection: CGFloat = 0
     private var resizingColumn = false
     /// After a resize ends with the fingers, macOS still streams that gesture's momentum.
@@ -199,6 +200,7 @@ final class NativeScrollingPan {
         // to reposition. Avoid queuing duplicate AX frames for a stationary camera.
         // Compared with the stored offset, so a pan still clamps one a resize left out of range.
         guard abs(next - workspace.scrollingOffset) > 0.0001 else { return }
+        ScrollingViewportEaser.shared.begin(workspace, from: workspace.scrollingOffset)
         lastDirection = next > current ? 1 : -1
         workspace.scrollingOffset = next
         nativePanTiming.measure("minimap show") { _ = WorkspaceScrollingMinimap.shared.show(workspace, duringGesture: true) }
@@ -335,8 +337,12 @@ final class NativeScrollingPan {
         gestureMonitor = nil
         dockSwipeProgress = 0
         isDockSwipeActive = false
-        workspace.scrollingGestureMotionActive = false
-        workspace.scrollingGestureSessionID = nil
+        // Windows still easing toward the release position keep the gesture's fast writes until
+        // they arrive; the easer then clears these.
+        if !ScrollingViewportEaser.shared.gestureEnded(workspace) {
+            workspace.scrollingGestureMotionActive = false
+            workspace.scrollingGestureSessionID = nil
+        }
         WorkspaceScrollingMinimap.shared.endGesture()
         // One fresh native read after the gesture is complete. Never retain
         // stale write authority from a previous Space while finishing.

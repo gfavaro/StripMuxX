@@ -15,8 +15,9 @@ extension Workspace {
     @MainActor
     func columnFrames(in rect: Rect, gaps: ResolvedGaps) -> [ColumnFrame] {
         guard !workspaceLayoutUnits.isEmpty else { return [] }
-        let geometry = scrollingGeometry(in: rect, gaps: gaps)
-        scrollingOffset = geometry.clampedOffset
+        let geometry = scrollingGeometry(in: rect, gaps: gaps, rendered: true)
+        if scrollingRenderedOffset != nil { scrollingRenderedOffset = geometry.clampedOffset }
+        else { scrollingOffset = geometry.clampedOffset }
         // A pinned column sits at its edge, above the strip.
         let pinned = scrollingPinSplit(in: rect, gaps: gaps).flatMap { split in
             pinnedScrollingColumn.map { ColumnFrame(node: $0, physical: split.pinned, virtual: split.pinned,

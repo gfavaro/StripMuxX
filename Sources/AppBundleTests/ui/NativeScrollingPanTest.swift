@@ -109,6 +109,34 @@ final class NativeScrollingPanTest: WorkspaceTestCase {
         XCTAssertFalse(pan.handle(scroll(30, option: false, phase: 2, at: point)))
     }
 
+    func testEasingNeverOvershootsAndDoesNotDependOnTheFrameRate() {
+        let target: CGFloat = 800
+        var previous: CGFloat = 0
+        var value: CGFloat = 0
+        for _ in 0..<200 {
+            value = easedViewportOffset(rendered: value, target: target, elapsed: 1.0 / 60, smoothingMilliseconds: 40)
+            XCTAssertGreaterThan(value, previous - 0.0001, "Monotonic")
+            XCTAssertLessThanOrEqual(value, target, "Never overshoots")
+            previous = value
+        }
+        XCTAssertEqual(value, target, accuracy: 0.5)
+        // Two half frames land where one whole frame does.
+        let whole = easedViewportOffset(rendered: 0, target: target, elapsed: 1.0 / 60, smoothingMilliseconds: 40)
+        let half = easedViewportOffset(rendered: 0, target: target, elapsed: 1.0 / 120, smoothingMilliseconds: 40)
+        let twoHalves = easedViewportOffset(rendered: half, target: target, elapsed: 1.0 / 120, smoothingMilliseconds: 40)
+        XCTAssertEqual(whole, twoHalves, accuracy: 0.001)
+        // A flick of 250 pt moves the windows by 250 * (1 - exp(-1/60/0.04)) ~ 85 pt in the first frame.
+        XCTAssertEqual(easedViewportOffset(rendered: 0, target: 250, elapsed: 1.0 / 60, smoothingMilliseconds: 40), 85, accuracy: 1)
+        XCTAssertEqual(easedViewportOffset(rendered: 10, target: 250, elapsed: 0.016, smoothingMilliseconds: 0), 250, "Off follows the input")
+    }
+
+    func testSmoothingIsParsedAndBounded() {
+        XCTAssertEqual(parseConfig("[scrolling]\n    gesture-smoothing = 40").config.scrolling.gestureSmoothing, 40)
+        XCTAssertEqual(parseConfig("").config.scrolling.gestureSmoothing, 0, "Off by default")
+        XCTAssertFalse(parseConfig("[scrolling]\n    gesture-smoothing = 300").errors.isEmpty)
+        XCTAssertFalse(parseConfig("[scrolling]\n    gesture-smoothing = -1").errors.isEmpty)
+    }
+
     func testFiveThousandRandomScrollEventsKeepEveryInvariant() {
         let (workspace, windows) = fixture()
         windows[2].scrollingColumnWidth = 0.2

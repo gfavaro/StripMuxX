@@ -161,6 +161,7 @@ column-width = 0.49
 width-presets = [0.25, 0.3333, 0.5, 0.6667, 0.75, 1.0]
 gesture-enabled = true
 gesture-sensitivity = 1.0
+gesture-smoothing = 0       # experimental: ms to ease windows toward the fingers; 0 = off
 minimap-enabled = true
 center-focused-column = 'never'   # never, on-overflow or always
 minimap-hold-modifiers = []       # e.g. ['ctrl', 'alt']

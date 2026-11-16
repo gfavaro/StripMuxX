@@ -457,6 +457,23 @@ give a real first run on an account that has never seen the app.
 Everything opened in the helper was closed and its install moved aside (`atlas cleanup
 --apply`); its two earlier windows were not touched.
 
+## Gesture smoothing experiment (build 85; `scrolling.gesture-smoothing`, default 0 = off)
+
+Ten flick-shaped gestures (7 steps of about 140 pt, like a fast three-finger swipe), traced with
+the easing at 0, 40 and 80 ms:
+
+| Smoothing | Border more than 6 pt from a window edge (p90) | Window step per update (p90 / max) | Window behind the fingers (median / p90) | Windows settle after release |
+| --- | --- | --- | --- | --- |
+| off | 139 pt | 280 / 560 pt (46 updates) | 25 / 45 ms | already there |
+| 40 ms | 22 pt | 136 / 305 pt (172 updates) | 69 / 140 ms | about 190 ms |
+| 80 ms | 1 pt | 122 / 282 pt (239 updates) | 85 / 150 ms | about 456 ms |
+
+Correctness with 40 ms: a flick out and back returned every window to its exact starting
+position, `focus right` worked afterwards and tiling stayed active. Only the offset the layout
+places windows by is eased; the real offset (focus, minimap, saving, commands) still follows the
+input. Not measured: how it feels, which only a trackpad can tell. Enable it with
+`scrolling.gesture-smoothing = 40` in `stripmuxx.toml`.
+
 The earlier P2 "lift after an idle-settled resize" is closed. Three-finger swipes with
 `borders.hide-while-scrolling`: by code path they share the Option pan's `pan` call and
 hide the same way; still not exercisable by synthetic events (user trackpad test with the

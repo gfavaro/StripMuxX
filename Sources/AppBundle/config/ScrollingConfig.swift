@@ -27,6 +27,9 @@ struct ScrollingConfig: ConvenienceCopyable, Equatable {
     var minimapHoldModifiers: NSEvent.ModifierFlags = []
     /// A lone window in a column keeps the height it opened with, aligned to the top.
     var keepWindowHeight = false
+    /// Experimental: milliseconds over which windows ease toward the fingers during a scroll
+    /// gesture, so a fast flick moves them in many small steps. 0 follows the input directly.
+    var gestureSmoothing = 0
 }
 
 func parseScrolling(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace, _ errors: inout [TomlParseError]) -> ScrollingConfig {
@@ -46,6 +49,9 @@ func parseScrolling(_ raw: TOMLValueConvertible, _ trace: TomlBacktrace, _ error
         "three-finger-swipe": Parser(\.threeFingerSwipe, parseBool),
         "gesture-sensitivity": Parser(\.gestureSensitivity) { raw, trace in
             parseDouble(raw, trace).filter(.semantic(trace, "Must be finite and greater than zero")) { $0.isFinite && $0 > 0 }
+        },
+        "gesture-smoothing": Parser(\.gestureSmoothing) { raw, trace in
+            parseInt(raw, trace).filter(.semantic(trace, "Must be between 0 and 200 milliseconds")) { (0...200).contains($0) }
         },
         "minimap-enabled": Parser(\.minimapEnabled, parseBool),
         "keep-window-height": Parser(\.keepWindowHeight, parseBool),

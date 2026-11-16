@@ -75,6 +75,9 @@ automatically-tile-new-windows = true
     # Keep disabled until tested on this version of macOS.
     three-finger-swipe = false
     gesture-sensitivity = 1.0
+    # Experimental: milliseconds (0 to 200) over which windows ease toward the fingers during a
+    # gesture, so a fast flick moves them in many small steps. 0 follows the input directly.
+    gesture-smoothing = 0
     minimap-enabled = true
     # Holding exactly these keeps the minimap up (ctrl, alt, cmd, shift); empty turns it off.
     minimap-hold-modifiers = []

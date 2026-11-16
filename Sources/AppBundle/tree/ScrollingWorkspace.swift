@@ -281,7 +281,7 @@ extension Workspace {
     }
 
     @MainActor
-    func scrollingGeometry(in rect: Rect? = nil, gaps: ResolvedGaps? = nil) -> ScrollingWorkspaceGeometry {
+    func scrollingGeometry(in rect: Rect? = nil, gaps: ResolvedGaps? = nil, rendered: Bool = false) -> ScrollingWorkspaceGeometry {
         let fullRect = rect ?? workspaceTilingRect(self)
         let gaps = gaps ?? ResolvedGaps(gaps: config.gaps, monitor: workspaceMonitor)
         let pin = scrollingPinSplit(in: fullRect, gaps: gaps)
@@ -301,7 +301,7 @@ extension Workspace {
             ?? (focus.workspace === self ? focus.windowOrNil : nil)
         let focusedIndex = focused.flatMap { focused in units.firstIndex(where: { $0 === focused.topLevelWorkspaceGroup }) }
         return calculateScrollingWorkspaceGeometry(.init(
-            bounds: bounds, parkingBounds: parking, offset: scrollingOffset,
+            bounds: bounds, parkingBounds: parking, offset: rendered ? scrollingRenderedOffset ?? scrollingOffset : scrollingOffset,
             columns: units.map { node in
                 let saved = node.scrollingColumnWidth ?? config.scrolling.columnWidth
                 return .init(preferredWidth: saved,
