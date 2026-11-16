@@ -15,6 +15,8 @@ final class NativeWindowBorder {
     private var nativeBordersUnavailable = false
     private var colorObservers: [Any] = []
     private var isSuspended = false
+    private var documentWindowCache: [UInt32: Bool] = [:]
+    private var lastDragLocation: CGPoint?
 
     var backendDiagnosticSummary: String {
         let native = borders.values.filter(\.usesNativeBackend).count
@@ -60,6 +62,14 @@ final class NativeWindowBorder {
                       !window.isFullscreen, window.lastKnownNativeFullscreen != true,
                       window.lastKnownNativeMinimized != true, !window.isConcealedByScrolling else { continue }
                 if let bundle = window.app.rawAppBundleId, settings.excludeApps.contains(bundle) { continue }
+                // Same SkyLight top-level document filter as WinMuxX. Unsupported
+                // systems report -1 and retain the documented AX fallback.
+                let eligible = documentWindowCache[window.windowId] ?? {
+                    let result = winmux_window_document_kind(window.windowId)
+                    return result != 0
+                }()
+                documentWindowCache[window.windowId] = eligible
+                guard eligible else { continue }
 
                 // Prefer the WindowServer frame, as WinMuxX does. AX writes on a
                 // moving strip can still be pending when the layout completes.
@@ -96,6 +106,7 @@ final class NativeWindowBorder {
 
         // Never leave an overlay on a closed, parked, excluded or removed window.
         for id in Array(borders.keys) where !visible.contains(id) {
+            documentWindowCache[id] = nil
             guard let old = borders.removeValue(forKey: id) else { continue }
             old.hide()
             if spareBorders.count < spareBorderLimit { spareBorders.append(old) }
@@ -114,22 +125,29 @@ final class NativeWindowBorder {
     /// window with the same WindowServer geometry and renderer used by WinMuxX.
     func beginDragging() {
         guard !isUnitTest, !isSuspended, config.windowBorders.enabled else { return }
+        lastDragLocation = mouseLocation
         DisplayRefreshDriver.shared.add(owner: self) { [weak self] _ in
             guard let self else { return }
             guard NSEvent.pressedMouseButtons & 1 != 0 else {
                 self.endDragging()
                 return
             }
+            let location = mouseLocation
+            guard self.lastDragLocation != location else { return }
+            self.lastDragLocation = location
             self.refresh()
         }
     }
 
     func endDragging() {
+        lastDragLocation = nil
         DisplayRefreshDriver.shared.remove(owner: self)
         refresh()
     }
 
     func clear() {
+        lastDragLocation = nil
+        documentWindowCache.removeAll()
         DisplayRefreshDriver.shared.remove(owner: self)
         for border in borders.values { border.destroy() }
         for border in spareBorders { border.destroy() }
