@@ -477,7 +477,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
 }
 
 @MainActor
-private func minimapDescendants(of view: NSView) -> [NSView] {
+func minimapDescendants(of view: NSView) -> [NSView] {
     view.subviews.flatMap { [$0] + minimapDescendants(of: $0) }
 }
 
