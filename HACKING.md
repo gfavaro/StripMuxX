@@ -10,7 +10,8 @@ them: observation, the strip of each desktop (`NativeSpaceLayouts`, keyed by des
 UUID), the tiling fence (`NativeTilingCoordinator`), desktop navigation, window moves
 between desktops, layout persistence and the desktops `persistent-workspaces` adds.
 The `NativeSpaces` target isolates dynamic SkyLight access and generation-checked
-event reconciliation. See [native Spaces](docs/NATIVE_SPACES.md).
+event reconciliation. See [native Spaces](docs/NATIVE_SPACES.md) and
+[state and events](docs/STATE_AND_EVENTS.md) (who owns the state, how events are ordered).
 
 StripMuxX has no virtual workspaces, projects, other layouts, sidebar, palette,
 overview, borders, tabs or gesture handling. Configuration keys and commands that
