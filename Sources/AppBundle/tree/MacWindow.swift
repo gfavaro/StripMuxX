@@ -10,6 +10,9 @@ final class MacWindow: Window {
     @MainActor private var minimumObservation: Task<Void, Never>?
     @MainActor private var frameRequestGeneration: UInt64 = 0
     @MainActor private var minimumRequest: (point: CGPoint?, size: CGSize?)?
+    /// The last frame asked for during the current scrolling gesture. A window the strip
+    /// is not moving (parked off-screen) would otherwise be written on every step.
+    @MainActor private var lastGestureFrame: (session: UUID, frame: CGRect)?
     @MainActor private var scrollingSheetCache: (generation: UInt64, offsets: [CGRect])?
 
     @MainActor func invalidateScrollingSheetCache() { scrollingSheetCache = nil }
@@ -178,8 +181,14 @@ final class MacWindow: Window {
         NativeFrameWriteMetrics.shared.requests &+= 1
         if nodeWorkspace?.scrollingGestureMotionActive == true, let session = nodeWorkspace?.scrollingGestureSessionID,
            let topLeft, let size {
+            let frame = CGRect(origin: topLeft, size: size)
+            if let last = lastGestureFrame, last.session == session, last.frame == frame {
+                NativeFrameWriteMetrics.shared.gestureSkipped &+= 1
+                return
+            }
+            lastGestureFrame = (session, frame)
             NativeFrameWriteMetrics.shared.gestureRequests &+= 1
-            setScrollingGestureFrame(CGRect(origin: topLeft, size: size), session: session)
+            setScrollingGestureFrame(frame, session: session)
             return
         }
         NativeFrameWriteMetrics.shared.normalRequests &+= 1
