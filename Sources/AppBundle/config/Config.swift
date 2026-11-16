@@ -42,6 +42,9 @@ var defaultConfigUrl: URL {
 struct Config: ConvenienceCopyable {
     var nativeSpaces = NativeSpacesConfig()
     var appearance: AppAppearance = .system
+    /// Shared WinMuxX border settings; unchanged rendering defaults.
+    var windowBorders = WindowBordersConfig()
+    var accentColor: String?
     var configVersion: Int = 1
     var afterStartupCommand: [any Command] = []
     var startAtLogin: Bool = false
