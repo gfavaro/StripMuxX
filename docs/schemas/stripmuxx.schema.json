@@ -5,41 +5,395 @@
   "description": "Editor assistance for StripMuxX TOML. The app's Swift parser remains authoritative; command strings and monitor selectors need runtime validation.",
   "type": "object",
   "properties": {
-    "native-spaces": {"type": "object", "properties": {"restore-layouts": {"type": "boolean", "default": true, "description": "Remember each desktop's strip and restore it after StripMuxX or the Mac restarts."}, "restore-frames-on-quit": {"type": "boolean", "default": true, "description": "Quitting or `enable off` puts tiled windows back where they were before tiling."}}, "additionalProperties": false},
-    "config-version": {"type": "integer", "minimum": 1, "maximum": 2},
-    "appearance": {"enum": ["system", "light", "dark"]},
-    "after-startup-command": {"$ref": "#/$defs/commands"},
-    "on-focus-changed": {"$ref": "#/$defs/commands"},
-    "on-mode-changed": {"$ref": "#/$defs/commands"},
-    "on-focused-monitor-changed": {"$ref": "#/$defs/commands"},
-    "start-at-login": {"type": "boolean"},
-    "auto-reload-config": {"type": "boolean"},
-    "automatically-tile-new-windows": {"type": "boolean"},
-    "scrolling": {"$ref": "#/$defs/scrolling"},
-    "persistent-workspaces": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-    "exec-on-workspace-change": {"type": "array", "items": {"type": "string"}, "deprecated": true},
-    "exec": {"type": "object", "description": "Command environment configuration."},
-    "single-window-alignment": {"enum": ["center", "left", "right"]},
-    "single-window-aspect-ratio": {"$ref": "#/$defs/dynamicNumber", "deprecated": true},
-    "fullscreen-width": {"$ref": "#/$defs/fullscreenWidth"},
-    "lone-window-width": {"$ref": "#/$defs/fullscreenWidth"},
-    "display": {"type": "object", "patternProperties": {"^.+$": {"$ref": "#/$defs/windowWidthSettings"}}, "additionalProperties": false},
-    "gaps": {"$ref": "#/$defs/gaps"},
-    "menu-bar": {"type": "object", "properties": {"indicator": {"enum": ["icon", "workspace"]}, "icon-appearance": {"enum": ["color", "monochrome"]}}, "additionalProperties": false},
-    "modifiers": {"type": "object", "patternProperties": {"^(alt|ctrl|cmd|shift)$": {"enum": ["both", "left", "right"]}}, "additionalProperties": false},
-    "workspace-to-monitor-force-assignment": {"type": "object", "patternProperties": {"^.+$": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
-    "on-window-detected": {"type": "array", "items": {"type": "object", "properties": {"if": {"type": "object"}, "run": {"$ref": "#/$defs/commands"}}, "required": ["run"], "additionalProperties": true}},
-    "mode": {"type": "object", "description": "Dynamic mode names and binding tables; command strings are validated by StripMuxX.", "patternProperties": {"^.+$": {"type": "object"}}, "additionalProperties": false},
-    "key-mapping": {"type": "object", "description": "Dynamic key names and keyboard mapping values."}
+    "native-spaces": {
+      "type": "object",
+      "properties": {
+        "restore-layouts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remember each desktop's strip and restore it after StripMuxX or the Mac restarts."
+        },
+        "restore-frames-on-quit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Quitting or `enable off` puts tiled windows back where they were before tiling."
+        }
+      },
+      "additionalProperties": false
+    },
+    "config-version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2
+    },
+    "appearance": {
+      "enum": [
+        "system",
+        "light",
+        "dark"
+      ]
+    },
+    "after-startup-command": {
+      "$ref": "#/$defs/commands"
+    },
+    "on-focus-changed": {
+      "$ref": "#/$defs/commands"
+    },
+    "on-mode-changed": {
+      "$ref": "#/$defs/commands"
+    },
+    "on-focused-monitor-changed": {
+      "$ref": "#/$defs/commands"
+    },
+    "start-at-login": {
+      "type": "boolean"
+    },
+    "auto-reload-config": {
+      "type": "boolean"
+    },
+    "automatically-tile-new-windows": {
+      "type": "boolean"
+    },
+    "scrolling": {
+      "$ref": "#/$defs/scrolling"
+    },
+    "persistent-workspaces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "exec-on-workspace-change": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "deprecated": true
+    },
+    "exec": {
+      "type": "object",
+      "description": "Command environment configuration."
+    },
+    "single-window-alignment": {
+      "enum": [
+        "center",
+        "left",
+        "right"
+      ]
+    },
+    "single-window-aspect-ratio": {
+      "$ref": "#/$defs/dynamicNumber",
+      "deprecated": true
+    },
+    "fullscreen-width": {
+      "$ref": "#/$defs/fullscreenWidth"
+    },
+    "lone-window-width": {
+      "$ref": "#/$defs/fullscreenWidth"
+    },
+    "display": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/$defs/windowWidthSettings"
+        }
+      },
+      "additionalProperties": false
+    },
+    "gaps": {
+      "$ref": "#/$defs/gaps"
+    },
+    "menu-bar": {
+      "type": "object",
+      "properties": {
+        "indicator": {
+          "enum": [
+            "icon",
+            "workspace"
+          ]
+        },
+        "icon-appearance": {
+          "enum": [
+            "color",
+            "monochrome"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "modifiers": {
+      "type": "object",
+      "patternProperties": {
+        "^(alt|ctrl|cmd|shift)$": {
+          "enum": [
+            "both",
+            "left",
+            "right"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "workspace-to-monitor-force-assignment": {
+      "type": "object",
+      "patternProperties": {
+        "^.+$": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "on-window-detected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "if": {
+            "type": "object"
+          },
+          "run": {
+            "$ref": "#/$defs/commands"
+          }
+        },
+        "required": [
+          "run"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "mode": {
+      "type": "object",
+      "description": "Dynamic mode names and binding tables; command strings are validated by StripMuxX.",
+      "patternProperties": {
+        "^.+$": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "key-mapping": {
+      "type": "object",
+      "description": "Dynamic key names and keyboard mapping values."
+    },
+    "accent-color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$",
+      "description": "WinMuxX accent color; default follows macOS accent"
+    },
+    "borders": {
+      "type": "object",
+      "description": "WinMuxX native WindowServer borders with AppKit fallback",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0,
+          "default": 4
+        },
+        "active-color": {
+          "type": "string",
+          "pattern": "^(accent|#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?)$",
+          "default": "accent"
+        },
+        "inactive-color": {
+          "type": "string",
+          "pattern": "^(accent|#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?)$",
+          "default": "#00000000"
+        },
+        "order": {
+          "enum": [
+            "below",
+            "above"
+          ],
+          "default": "below"
+        },
+        "exclude-apps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false,
   "$defs": {
-    "commands": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
-    "dynamicNumber": {"oneOf": [{"type": "number", "minimum": 0}, {"type": "array", "items": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0}}}]},
-    "scrolling": {"type": "object", "properties": {"column-width": {"type": "number", "minimum": 0.1, "maximum": 1.0}, "edge-preview": {"type": "integer", "minimum": 0, "maximum": 40, "default": 14}, "width-presets": {"type": "array", "minItems": 1, "items": {"type": "number", "minimum": 0.1, "maximum": 1.0}}, "gesture-enabled": {"type": "boolean"}, "three-finger-swipe": {"type": "boolean", "default": false, "description": "Experimental: use macOS three-finger horizontal swipe to pan the strip, with Option-scroll as fallback."}, "gesture-sensitivity": {"type": "number", "exclusiveMinimum": 0}, "minimap-enabled": {"type": "boolean"}, "center-focused-column": {"enum": ["never", "on-overflow", "always"]}, "minimap-hold-modifiers": {"type": "array", "items": {"enum": ["ctrl", "alt", "cmd", "shift"]}}, "keep-window-height": {"type": "boolean"}}, "additionalProperties": false},
-    "dynamicInt": {"oneOf": [{"type": "integer"}, {"type": "array", "items": {"type": "object", "additionalProperties": {"type": "integer"}}}]},
-    "gaps": {"type": "object", "properties": {"inner": {"type": "object", "properties": {"horizontal": {"$ref": "#/$defs/dynamicInt"}, "vertical": {"$ref": "#/$defs/dynamicInt"}}, "additionalProperties": false}, "outer": {"type": "object", "properties": {"left": {"$ref": "#/$defs/dynamicInt"}, "right": {"$ref": "#/$defs/dynamicInt"}, "top": {"$ref": "#/$defs/dynamicInt"}, "bottom": {"$ref": "#/$defs/dynamicInt"}}, "additionalProperties": false}}, "additionalProperties": false},
-    "fullscreenWidth": {"type": "number", "minimum": 0.1, "maximum": 1.0},
-    "windowWidthSettings": {"type": "object", "properties": {"fullscreen-width": {"$ref": "#/$defs/fullscreenWidth"}, "lone-window-width": {"$ref": "#/$defs/fullscreenWidth"}, "single-window-alignment": {"enum": ["center", "left", "right"]}}, "additionalProperties": false}
+    "commands": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "dynamicNumber": {
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "scrolling": {
+      "type": "object",
+      "properties": {
+        "column-width": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1
+        },
+        "edge-preview": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40,
+          "default": 14
+        },
+        "width-presets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 1
+          }
+        },
+        "gesture-enabled": {
+          "type": "boolean"
+        },
+        "three-finger-swipe": {
+          "type": "boolean",
+          "default": false,
+          "description": "Experimental: use macOS three-finger horizontal swipe to pan the strip, with Option-scroll as fallback."
+        },
+        "gesture-sensitivity": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "minimap-enabled": {
+          "type": "boolean"
+        },
+        "center-focused-column": {
+          "enum": [
+            "never",
+            "on-overflow",
+            "always"
+          ]
+        },
+        "minimap-hold-modifiers": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "ctrl",
+              "alt",
+              "cmd",
+              "shift"
+            ]
+          }
+        },
+        "keep-window-height": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "dynamicInt": {
+      "oneOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "gaps": {
+      "type": "object",
+      "properties": {
+        "inner": {
+          "type": "object",
+          "properties": {
+            "horizontal": {
+              "$ref": "#/$defs/dynamicInt"
+            },
+            "vertical": {
+              "$ref": "#/$defs/dynamicInt"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outer": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "$ref": "#/$defs/dynamicInt"
+            },
+            "right": {
+              "$ref": "#/$defs/dynamicInt"
+            },
+            "top": {
+              "$ref": "#/$defs/dynamicInt"
+            },
+            "bottom": {
+              "$ref": "#/$defs/dynamicInt"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "fullscreenWidth": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 1
+    },
+    "windowWidthSettings": {
+      "type": "object",
+      "properties": {
+        "fullscreen-width": {
+          "$ref": "#/$defs/fullscreenWidth"
+        },
+        "lone-window-width": {
+          "$ref": "#/$defs/fullscreenWidth"
+        },
+        "single-window-alignment": {
+          "enum": [
+            "center",
+            "left",
+            "right"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
   }
 }
