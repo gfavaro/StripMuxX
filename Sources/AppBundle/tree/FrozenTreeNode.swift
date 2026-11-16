@@ -58,6 +58,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
     let freeSizePreviousFixedWidth: CGFloat?
     let scrollingColumnWidth: CGFloat?
     let scrollingColumnFixedWidth: CGFloat?
+    let floatedByDetection: Bool?
 
     @MainActor init(_ window: Window) {
         id = window.windowId
@@ -73,6 +74,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         freeSizePreviousFixedWidth = window.freeSizePreviousFixedWidth
         scrollingColumnWidth = window.scrollingColumnWidth
         scrollingColumnFixedWidth = window.scrollingColumnFixedWidth
+        floatedByDetection = window.floatedByDetection ? true : nil
         minimumEvidenceVersion = 3
         let minimum = window as? MacWindow
         learnedMinimumSize = minimum?.learnedMinimum.size == .zero ? nil : minimum?.learnedMinimum.size
@@ -100,6 +102,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         case freeSizePreviousFixedWidth
         case scrollingColumnWidth
         case scrollingColumnFixedWidth
+        case floatedByDetection
     }
 
     init(from decoder: any Decoder) throws {
@@ -123,6 +126,7 @@ struct FrozenWindow: Codable, Equatable, Sendable {
         freeSizePreviousFixedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .freeSizePreviousFixedWidth)
         scrollingColumnWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnWidth)
         scrollingColumnFixedWidth = try container.decodeIfPresent(CGFloat.self, forKey: .scrollingColumnFixedWidth)
+        floatedByDetection = try container.decodeIfPresent(Bool.self, forKey: .floatedByDetection)
     }
 }
 
@@ -259,4 +263,5 @@ func applyFrozenWindowState(_ window: Window, _ frozenWindow: FrozenWindow) {
     if let width = frozenWindow.singleWindowManualWidth, width.isFinite, width > 0 {
         window.singleWindowManualWidth = width
     }
+    window.floatedByDetection = frozenWindow.floatedByDetection == true
 }

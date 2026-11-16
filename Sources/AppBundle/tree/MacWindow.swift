@@ -90,6 +90,8 @@ final class MacWindow: Window {
                 existing.garbageCollect()
             } else {
                 let floated = existing.parent is Workspace
+                    && floatedWindowStaysFloating(floatedByDetection: existing.floatedByDetection, type: type)
+                if existing.parent is Workspace, !floated { existing.floatedByDetection = false }
                 let binding = floated ? BindingData(parent: workspace, adaptiveWeight: WEIGHT_AUTO, index: INDEX_BIND_LAST)
                     : bindingDataForNewWindow(type: type, workspace: workspace, window: existing)
                 existing.bind(to: binding.parent, adaptiveWeight: binding.adaptiveWeight, index: binding.index)
@@ -103,6 +105,11 @@ final class MacWindow: Window {
         window.recordAuthoritativeActualRect(rect)
         allWindowsMap[windowId] = window
         window.restartIdentity = try? await macApp.getRestartWindowIdentity(windowId)
+        if type == .dialog {
+            // First impressions can be wrong: a browser window reports a non-standard role while it opens.
+            window.floatedByDetection = true
+            recheckFloatedWindowsSoon()
+        }
         applyLayoutForNextDetectedWindow(window, on: workspace)
         try await applyNativeWindowDetectedRules(window) { layouts.accepts(registration) }
         runtime.native.stateChanges.notify() // Wakes a palette pick awaiting adoption.
@@ -271,5 +278,26 @@ final class MacWindow: Window {
             Window.get(byId: windowId)?.recordObservedActualRect(rect, token: observationToken)
         }
         return rect
+    }
+}
+
+/// Whether a window that is floating stays floating when it is registered again. One that floats because
+/// someone chose it does. One that floated only because it looked like a dialog when first seen goes back
+/// into the strip once it looks like an ordinary window.
+func floatedWindowStaysFloating(floatedByDetection: Bool, type: AxUiElementWindowType) -> Bool {
+    !(floatedByDetection && type == .window)
+}
+
+/// Windows float on a first look at their accessibility role, which can be wrong for a moment. Reading the
+/// windows again shortly after, and once more later, registers them again with a settled role.
+@MainActor
+private func recheckFloatedWindowsSoon() {
+    guard !isUnitTest else { return }
+    let owner = runtime
+    owner.task {
+        for delay in [Duration.milliseconds(400), .seconds(2)] {
+            try? await Task.sleep(for: delay)
+            owner.native.observation?.requestRead(event: "recheckFloatedWindow")
+        }
     }
 }

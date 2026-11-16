@@ -60,7 +60,10 @@ func applyNativeWindowDetectedRules(_ window: Window, stillOwned: () -> Bool) as
                 nativeSkippedWindowRuleCommands.insert("\(command.args)")
                 continue
             }
-            if target == .floating, let workspace = window.nodeWorkspace { window.bindAsFloatingWindow(to: workspace) }
+            if target == .floating, let workspace = window.nodeWorkspace {
+                window.floatedByDetection = false // A rule chose it.
+                window.bindAsFloatingWindow(to: workspace)
+            }
         }
         if !callback.checkFurtherCallbacks { return }
     }

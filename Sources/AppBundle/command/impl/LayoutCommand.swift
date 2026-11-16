@@ -17,6 +17,7 @@ struct LayoutCommand: Command {
         let current: LayoutCmdArgs.LayoutDescription = window.isFloating ? .floating : (window.freeSizeRect == nil ? .tiling : .freeSize)
         let wanted = nextLayout(in: args.toggleBetween.val, matching: { $0 == current })
         if wanted == current { return false }
+        window.floatedByDetection = false // Choosing a layout is a choice, whatever the first look said.
         switch wanted {
             case .tiling:
                 if window.freeSizeRect != nil {
@@ -79,6 +80,7 @@ struct LayoutCommand: Command {
 func applyLayoutForNextDetectedWindow(_ window: Window, on workspace: Workspace) {
     guard let layout = layoutForNextDetectedWindow else { return }
     layoutForNextDetectedWindow = nil
+    window.floatedByDetection = false
     switch layout {
         case .floating: window.bindAsFloatingWindow(to: workspace)
         case .freeSize:

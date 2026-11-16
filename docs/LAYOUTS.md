@@ -108,7 +108,10 @@ and the native-to-fallback transition before considering this release-ready.
 ## Floating and fullscreen
 
 `layout floating` lifts the focused window off the strip and `layout tiling` puts it
-back; `layout floating tiling` toggles. `layout floating --for-next-detected-window`
+back; `layout floating tiling` toggles (Alt-Shift-T in the default config). A new window
+that looks like a dialog when it first appears floats, but a browser window can look like
+one for a moment while it opens, so such a window returns to the strip as soon as it looks
+like an ordinary window. A window you float yourself, by command or rule, stays floating. `layout floating --for-next-detected-window`
 floats only the next window that opens. Window rules (`on-window-detected`) can float
 windows by app or title. Floating windows stay on their space: the minimap lists
 them under the strip (click one to focus it), and `focus floating` (Alt-Shift-V)

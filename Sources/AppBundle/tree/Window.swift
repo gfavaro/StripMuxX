@@ -20,6 +20,10 @@ open class Window: TreeNode, Hashable {
     @MainActor var freeSizePreviousFixedWidth: CGFloat?
     // Width chosen by the user for a lone tile on ultrawide, persisted with its layout.
     var singleWindowManualWidth: CGFloat?
+    /// Floating only because the window looked like a dialog when first seen, not because anyone chose it.
+    /// Such a window goes back into the strip once it looks like an ordinary window; choosing floating
+    /// (a `layout` command or a rule) clears this. Saved with the layout.
+    var floatedByDetection = false
     var isFullscreen: Bool = false
     var noOuterGapsInFullscreen: Bool = false
     /// Event-invalidated caches of the native window state (frame, fullscreen, minimized),
