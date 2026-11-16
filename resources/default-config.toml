@@ -22,6 +22,19 @@ single-window-alignment = 'center'
 
 # Theme for StripMuxX UI: system follows macOS, or choose light / dark.
 appearance = 'system'
+# Set a shared UI accent colour, or omit to follow the system accent.
+# accent-color = '#5E9EFF'
+
+# Original WinMuxX native window borders: 8-patch WindowServer renderer,
+# with a click-through AppKit fallback when the native API is unavailable.
+[borders]
+    enabled = true
+    width = 4
+    active-color = 'accent'
+    inactive-color = '#00000000'
+    order = 'below'
+    exclude-apps = []
+
 start-at-login = false
 after-startup-command = []
 auto-reload-config = true
