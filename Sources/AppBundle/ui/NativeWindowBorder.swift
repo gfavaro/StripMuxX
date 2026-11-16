@@ -164,7 +164,8 @@ final class NativeWindowBorder {
     /// for `settle` seconds.
     func followStripMotion() {
         guard !isUnitTest, !isSuspended, config.windowBorders.enabled else { return }
-        let hide = config.windowBorders.hideWhileScrolling
+        // Only a gesture in progress hides them; the settling layout after it only follows.
+        let hide = config.windowBorders.hideWhileScrolling && NativeScrollingPan.shared.isPanning
         let alreadyFollowing = motionDeadline > CACurrentMediaTime()
         motionDeadline = CACurrentMediaTime() + (hide ? 0.15 : 0.35)
         if hide, !hiddenForMotion {
