@@ -71,9 +71,34 @@ across local builds, the script reads a signing identity name from
 `${XDG_CONFIG_HOME:-~/.config}/stripmuxx/signing-identity` (or `CODESIGN_IDENTITY`);
 the same certificate and bundle ID must be retained. CI builds use ad hoc signing;
 release builds import the persistent identity from Actions secrets.
-Quit the original window manager, then copy the app to `/Applications/StripMuxX.app`
-and open it. The build command does not install, launch, or replace any app.
-The old upstream `make install` target is intentionally disabled.
+The build command does not install, launch, or replace any app, and the old upstream
+`make install` target is intentionally disabled. Install with the script:
+
+### Installing a build
+
+```sh
+python3 script/install_fork.py --app .release/StripMuxX.app --dry-run   # checks only
+python3 script/install_fork.py --app .release/StripMuxX.app --install
+```
+
+`--install` backs up the installed app (outside `/Applications`), quits it, replaces it,
+relaunches it, and then compares the desktops, display layout, config checksum, window
+assignments and focus with a snapshot taken before. It writes a JSON report to
+`.release/install-<id>.json`. Requirements and results:
+
+- The build number must be higher than the installed one (`make fork-build BUILD_NUMBER=N`),
+  and the signing identity must match, or the script refuses before touching anything.
+- `validated`: installed and nothing changed. `needs_review` says why in `reason`
+  (for example `focus_changed_during_validation`, which only means you used the Mac while
+  it checked; the new build is installed and running). `blocked_locked` or
+  `installed_pending_validation` with `session_locked`: the screen was locked, which hides
+  every window from StripMuxX; unlock and run `--resume <report>`.
+- If the new app fails to start, the script restores the backup (`rolled_back`).
+- To go back to the previous build on purpose: `--rollback <report>` with the report of the
+  install you want to undo.
+- To uninstall, quit StripMuxX and delete `/Applications/StripMuxX.app`. Its config
+  (`~/.config/stripmuxx/`) and saved layouts (`~/Library/Application Support/StripMuxX/`)
+  are not touched; remove them too for a clean slate.
 
 ## CI and releases
 
