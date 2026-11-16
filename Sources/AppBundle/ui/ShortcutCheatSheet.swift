@@ -65,7 +65,8 @@ final class ShortcutCheatSheet {
         let size = view.frame.size
         let visible = screen.visibleFrame
         let frame = CGRect(x: visible.midX - size.width / 2, y: visible.midY - size.height / 2, width: size.width, height: size.height)
-        let panel = self.panel ?? ShortcutCheatSheetPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
+        dismiss() // Never two at once.
+        let panel = ShortcutCheatSheetPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
                                                           backing: .buffered, defer: false)
         self.panel = panel
         panel.isReleasedWhenClosed = false
@@ -91,8 +92,14 @@ final class ShortcutCheatSheet {
         panel.makeFirstResponder(view)
     }
 
+    /// Closes and frees the panel: its window memory is about 13 MB, for a sheet that
+    /// is rarely open.
     func dismiss() {
-        panel?.orderOut(nil)
+        guard let panel else { return }
+        self.panel = nil
+        panel.orderOut(nil)
+        panel.contentView = nil
+        panel.close()
     }
 
     func refreshColors() {
@@ -107,7 +114,7 @@ private final class ShortcutCheatSheetPanel: NSPanel {
     override var canBecomeMain: Bool { false }
     override func resignKey() {
         super.resignKey()
-        orderOut(nil) // Clicking elsewhere closes it.
+        ShortcutCheatSheet.shared.dismiss() // Clicking elsewhere closes it.
     }
 }
 

@@ -12,6 +12,9 @@ final class WorkspaceScrollingMinimap: NSObject {
     static let shared = WorkspaceScrollingMinimap()
     private var panel: NSPanel?
     private var view: ScrollingMinimapView?
+    /// The hidden panel keeps about 4 MB of window memory; it is freed once the minimap
+    /// has stayed closed a while, so a pan that reopens it right away stays instant.
+    private var releaseTask: Task<Void, Never>?
     private weak var workspace: Workspace?
     private var dismissTask: Task<Void, Never>?
     private var titleTask: Task<Void, Never>?
@@ -92,11 +95,23 @@ final class WorkspaceScrollingMinimap: NSObject {
         panel?.orderOut(nil)
         panel?.alphaValue = 1
         workspace = nil
+        releaseTask?.cancel()
+        releaseTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .seconds(6)) } catch { return }
+            guard let self, self.workspace == nil, !Task.isCancelled else { return }
+            self.panel?.contentView = nil
+            self.panel?.close()
+            self.panel = nil
+            self.view = nil
+            self.releaseTask = nil
+        }
     }
 
     var isExplicitlyOpen: Bool { lifetime.isExplicitlyOpen }
 
     private func render(_ workspace: Workspace) {
+        releaseTask?.cancel()
+        releaseTask = nil
         let screens = NSScreen.screens
         let index = workspace.workspaceMonitor.monitorAppKitNsScreenScreensId
         guard screens.indices.contains(index - 1) else { dismiss(); return }
