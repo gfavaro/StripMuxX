@@ -10,7 +10,7 @@ class ForkIdentityTests(unittest.TestCase):
     def test_plist_has_no_upstream_update_feed_or_key(self):
         with (ROOT / "resources/WinMux-Info.plist").open("rb") as stream:
             info = plistlib.load(stream)
-        self.assertFalse(info["SUEnableAutomaticChecks"])
+        self.assertNotIn("SUEnableAutomaticChecks", info)
         self.assertNotIn("SUFeedURL", info)
         self.assertNotIn("SUPublicEDKey", info)
 

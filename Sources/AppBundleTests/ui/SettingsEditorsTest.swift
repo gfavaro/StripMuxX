@@ -232,15 +232,6 @@ final class SettingsEditorsTest: WorkspaceTestCase {
         XCTAssertEqual(focus.workspace.id, focusBefore)
     }
 
-    func testDisconnectedDisplayMoveDoesNotMutateState() async {
-        let before = focus.workspace.id
-        do {
-            try await SettingsDisplaysModel().bringHere(workspace: focus.workspace.name, selector: "uuid:11111111-1111-1111-1111-111111111111")
-            XCTFail("Expected missing display error")
-        } catch {}
-        XCTAssertEqual(focus.workspace.id, before)
-    }
-
     func testInvalidRuleDraftSurvivesReloadAndSelectionChange() throws {
         let model = SettingsWindowRulesModel(readText: {
             "config-version = 2\n[[on-window-detected]]\nrun = 'layout tiling'\n[[on-window-detected]]\nrun = 'layout floating'\n"

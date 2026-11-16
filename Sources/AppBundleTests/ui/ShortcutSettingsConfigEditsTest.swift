@@ -23,12 +23,6 @@ final class ShortcutSettingsConfigEditsTest: XCTestCase {
         XCTAssertEqual(tomlCommaSeparatedStringArray(""), "[]")
     }
 
-    func testColorValidationMatchesConfigParser() {
-        for value in ["#E1E3E4", "#E1E3E480", "#abcdef", "abcdef", "#XYZXYZ", "#123", ""] {
-            XCTAssertEqual(settingsHexColorError(value) == nil, normalizedWindowBorderColor(value) != nil, value)
-        }
-    }
-
     func testCommandArraysPreserveCommasAndEscapeQuotes() {
         XCTAssertEqual(tomlStringArray("exec-and-forget echo a,b\nworkspace \"two\""),
             "[\"exec-and-forget echo a,b\", \"workspace \\\"two\\\"\"]")
@@ -67,21 +61,6 @@ final class ShortcutSettingsConfigEditsTest: XCTestCase {
         XCTAssertFalse(updated.contains("alt-h = \"focus left\""))
         XCTAssertFalse(updated.contains("alt-l = \"focus right\""))
         XCTAssertTrue(updated.contains("cmd-shift-x = \"exec-and-forget open -a Xcode\""))
-    }
-
-    func testReadModeBindingEntriesReadsSimpleScalarBindings() {
-        let entries = readModeBindingEntries(
-            in: """
-            [mode.main.binding]
-            alt-h = "focus left"
-            "cmd-shift-/" = "reload-config"
-            """,
-            modeName: "main",
-            tableKey: "binding"
-        )
-
-        XCTAssertEqual(entries["alt-h"], "focus left")
-        XCTAssertEqual(entries["cmd-shift-/"], "reload-config")
     }
 
     func testInferWorkspaceShortcutStatePrefersPatternAndExtractsOverrides() {

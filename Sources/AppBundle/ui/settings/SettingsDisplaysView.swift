@@ -41,18 +41,6 @@ final class SettingsDisplaysModel: ObservableObject {
         setIfChanged(\.rows, next)
     }
 
-    func bringHere(workspace: String, selector: String, expectedVisibleWorkspace: String? = nil) async throws {
-        guard let description = parseMonitorDescription(selector).getOrNil(),
-              let currentMonitor = description.resolveMonitor(sortedMonitors: sortedMonitors),
-              let command = parseCommand(["move-workspace-to-monitor", selector]).cmdOrNil
-        else { throw SettingsDisplayError("The workspace or display is no longer available.") }
-        if let expectedVisibleWorkspace,
-           nativeActiveDesktop(on: currentMonitor).map(userFacingWorkspaceName) != expectedVisibleWorkspace {
-            throw SettingsDisplayError("The destination workspace changed. Review the move and try again.")
-        }
-        let result = try await command.run(CmdEnv(workspaceName: workspace), .emptyStdin)
-        guard result.exitCode == 0 else { throw SettingsDisplayError(result.stderr.joined(separator: "\n")) }
-    }
 }
 
 struct SettingsDisplaysView: View {

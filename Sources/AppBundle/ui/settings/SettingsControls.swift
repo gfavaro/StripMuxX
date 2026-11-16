@@ -183,13 +183,6 @@ struct SettingsTextField: View {
     }
 }
 
-func settingsHexColorError(_ text: String) -> String? {
-    guard normalizedWindowBorderColor(text) != nil else {
-        return "Use # followed by six or eight hexadecimal digits, for example #E1E3E4."
-    }
-    return nil
-}
-
 struct SettingsMultilineField: View {
     @State private var savedText: String?
     @State private var isSaving = false
