@@ -24,11 +24,27 @@ public func getShortcutSettingsWindow(model: ShortcutSettingsModel) -> some Scen
                     DispatchQueue.main.async {
                         shortcutSettingsWindow()?.close()
                     }
+                } else if !model.isWindowShown {
+                    // An open was requested (first run's setup check asks at startup) before this
+                    // scene observed it, so its pages were never switched on and the window
+                    // would stay an empty placeholder.
+                    showRequestedSettingsWindow()
                 }
             }
     }
     .defaultSize(width: settingsWindowWidth, height: 700)
     .windowResizability(.contentSize)
+}
+
+/// The window exists because an open was requested; turn its pages on and bring it forward.
+@MainActor
+func showRequestedSettingsWindow() {
+    ShortcutSettingsModel.shared.reload()
+    ShortcutSettingsModel.shared.isWindowShown = true
+    _ = releaseSettingsPagesOnClose
+    DispatchQueue.main.async {
+        if let window = shortcutSettingsWindow() { presentShortcutSettingsWindow(window) }
+    }
 }
 
 @MainActor

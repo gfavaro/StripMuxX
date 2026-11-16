@@ -104,7 +104,9 @@ class NativeOperations:
                 raise RuntimeError('Invalid rollback archive')
 
     def stop(self):
-        result = subprocess.run(['pgrep', '-x', 'StripMuxX'], capture_output=True, text=True)
+        # Only this user's copy: another login (the Atlas helper, fast user switching) may run
+        # its own StripMuxX, which is not ours to signal.
+        result = subprocess.run(['pgrep', '-x', '-u', str(os.getuid()), 'StripMuxX'], capture_output=True, text=True)
         pids = [int(pid) for pid in result.stdout.split()]
         for pid in pids:
             os.kill(pid, signal.SIGTERM)
@@ -121,6 +123,8 @@ class NativeOperations:
             return True
         except ProcessLookupError:
             return False
+        except PermissionError:
+            return True  # Exists, and belongs to someone else.
 
     def replace(self, source):
         with tempfile.TemporaryDirectory(dir=APP.parent, prefix='.stripmuxx-install-') as directory:
@@ -206,7 +210,16 @@ class Installer:
         fresh = self.ops.snapshot()
         if fresh != self.report['before'] or self.ops.config() != self.report['config'] or self.ops.topology() != self.report['topology']:
             return self.status('needs_review', reason='state_changed_before_shutdown')
-        self.ops.stop()  # Failure here must never replace or roll back the running app.
+        try:
+            self.ops.stop()  # Failure here must never replace or roll back the running app.
+        except Exception:
+            # Stopping may already have ended the app: the old one is still installed, so bring it
+            # back rather than leave the person without a window manager, then report.
+            try:
+                self.ops.launch()
+            except Exception:
+                pass
+            raise
         try:
             self.ops.replace(source)
             self.ops.launch()

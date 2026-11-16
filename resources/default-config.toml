@@ -45,6 +45,8 @@ automatically-tile-new-windows = true
     inactive-color = '#00000000'
     order = 'below'
     exclude-apps = []
+    # A border follows its window one display frame late; true hides borders while the strip scrolls.
+    hide-while-scrolling = false
 
 [key-mapping]
     preset = 'qwerty'

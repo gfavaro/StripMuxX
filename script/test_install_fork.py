@@ -88,6 +88,11 @@ class InstallerTest(unittest.TestCase):
         self.assertNotIn('replace', self.ops.calls)
         self.assertNotIn('rollback', self.ops.calls)
 
+    def testStopFailureRelaunchesTheInstalledApp(self):
+        self.ops.fail = 'stop'
+        with self.assertRaises(RuntimeError): self.install()
+        self.assertEqual(self.ops.calls[-2:], ['stop', 'launch'], 'The old app is brought back')
+
     def testLaunchFailureRollsBack(self):
         self.ops.fail = 'launch'
         self.assertEqual(self.install()['status'], 'rolled_back')
@@ -219,6 +224,26 @@ class NativeOperationsTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Accessibility'):
             ops.config()
 
+
+    def testStopOnlyTouchesThisUsersProcesses(self):
+        from unittest import mock
+        ops = NativeOperations()
+        with mock.patch('script.install_fork.subprocess.run') as run, \
+             mock.patch('script.install_fork.os.kill') as kill, \
+             mock.patch.object(NativeOperations, 'alive', return_value=False):
+            run.return_value = mock.Mock(stdout='4242\n')
+            ops.stop()
+        command = run.call_args.args[0]
+        self.assertEqual(command[:3], ['pgrep', '-x', '-u'])
+        self.assertEqual(command[3], str(__import__('os').getuid()))
+        kill.assert_called_once_with(4242, 15)
+
+    def testAProcessOfAnotherUserCountsAsAliveNotAsAnError(self):
+        from unittest import mock
+        with mock.patch('script.install_fork.os.kill', side_effect=PermissionError):
+            self.assertTrue(NativeOperations.alive(1))
+        with mock.patch('script.install_fork.os.kill', side_effect=ProcessLookupError):
+            self.assertFalse(NativeOperations.alive(1))
 
     def testRelaunchKeepsTheRunningConfig(self):
         ops = NativeOperations()
