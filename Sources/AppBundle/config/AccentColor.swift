@@ -11,3 +11,16 @@ var winMuxAccentColor: NSColor {
     }
     return NSColor.currentControlTint == .graphiteControlTint ? .systemBlue : .controlAccentColor
 }
+
+    
+/// The shared emphasis palette used by WinMuxX borders and StripMuxX overlays.
+/// Respect the border's configured active color (including its alpha); the
+/// `accent` option resolves the same custom/system accent as WinMuxX.
+@MainActor
+var winMuxEmphasisColor: NSColor {
+    let rgba = windowBorderRGBA(config.windowBorders.activeColor)
+    return NSColor(srgbRed: CGFloat((rgba >> 24) & 255) / 255,
+                   green: CGFloat((rgba >> 16) & 255) / 255,
+                   blue: CGFloat((rgba >> 8) & 255) / 255,
+                   alpha: CGFloat(rgba & 255) / 255)
+}
