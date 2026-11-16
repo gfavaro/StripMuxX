@@ -36,6 +36,19 @@ on-mode-changed = []
 # New windows become a column right of the focused one; false leaves them floating.
 automatically-tile-new-windows = true
 
+# Set a shared UI accent colour, or omit to follow the system accent.
+# accent-color = '#5E9EFF'
+
+# Original WinMuxX native window borders: 8-patch WindowServer renderer,
+# with a click-through AppKit fallback when the native API is unavailable.
+[borders]
+    enabled = true
+    width = 4
+    active-color = 'accent'
+    inactive-color = '#00000000'
+    order = 'below'
+    exclude-apps = []
+
 [key-mapping]
     preset = 'qwerty'
 

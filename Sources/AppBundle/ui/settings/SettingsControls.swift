@@ -442,11 +442,6 @@ struct SettingsFieldFeedback: ViewModifier {
     }
 }
 
-func normalizedWindowBorderColor(_ raw: String) -> String? {
-    guard raw.hasPrefix("#"), [7, 9].contains(raw.count), UInt32(raw.dropFirst(), radix: 16) != nil else { return nil }
-    return raw.uppercased()
-}
-
 func normalizedWorkspaceSidebarColorHex(_ raw: String) -> String? {
     guard raw.hasPrefix("#"), raw.count == 7, UInt32(raw.dropFirst(), radix: 16) != nil else { return nil }
     return raw.uppercased()
