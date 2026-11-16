@@ -23,16 +23,18 @@ let scrollingMinimapDesktopRowHeight: CGFloat = 32
 struct ScrollingMinimapDesktop: Equatable {
     let number: Int
     let isCurrent: Bool
+    let apps: ScrollingMinimapApps
 }
 
 /// The desktops the minimap offers: those of the display `current` is on, numbered as everywhere
 /// else. A display with one desktop has nothing to switch to, so it gets no row.
 @MainActor
-func scrollingMinimapDesktops(_ desktops: [(number: Int, workspace: Workspace)], showing current: Workspace) -> [ScrollingMinimapDesktop] {
+func scrollingMinimapDesktops(_ desktops: [(number: Int, workspace: Workspace)], showing current: Workspace,
+                              apps: (Workspace) -> ScrollingMinimapApps = { _ in .none }) -> [ScrollingMinimapDesktop] {
     let display = current.workspaceMonitor.rect.topLeftCorner
     let siblings = desktops.filter { $0.workspace.workspaceMonitor.rect.topLeftCorner == display }
     guard siblings.count > 1 else { return [] }
-    return siblings.map { ScrollingMinimapDesktop(number: $0.number, isCurrent: $0.workspace === current) }
+    return siblings.map { ScrollingMinimapDesktop(number: $0.number, isCurrent: $0.workspace === current, apps: apps($0.workspace)) }
 }
 
 /// Insertion index relative to tiles other than the tile currently dragged.
@@ -52,9 +54,13 @@ final class ScrollingMinimapView: NSView {
     /// A floating window's chip clicked: its window ID.
     var floatingSelected: ((UInt32) -> Void)?
     var desktopSelected: ((Int) -> Void)?
+    var displaySelected: ((Int) -> Void)?
     private var floatingChips: [ScrollingMinimapFloatingChip] = []
     private var desktopChips: [ScrollingMinimapDesktopChip] = []
     private var desktopLabelVisible = false
+    private var displayButtons: [ScrollingMinimapDisplayButton] = []
+    private var displayLabelVisible = false
+    private var displayRowHeight: CGFloat = 0
     private var tracking: NSTrackingArea?
     private var buttons: [ScrollingMinimapButton] = []
     private var pinnedButton: ScrollingMinimapButton?
@@ -110,6 +116,7 @@ final class ScrollingMinimapView: NSView {
 
     func update(workspaceName: String, models: [ScrollingMinimapTile], pinned: ScrollingMinimapTile? = nil,
                 floating: [ScrollingMinimapFloatingWindow] = [], desktops: [ScrollingMinimapDesktop] = [],
+                displays: [ScrollingMinimapDisplay] = [],
                 icons: [Int32: NSImage], metrics: ScrollingWorkspaceMetrics, offset: CGFloat, focused: ObjectIdentifier?) {
         heading = workspaceName
         subheading = "\(models.count) \(models.count == 1 ? "column" : "columns")" +
@@ -120,7 +127,9 @@ final class ScrollingMinimapView: NSView {
         let activeIndex = models.firstIndex { $0.id == focused }
         columnPosition = activeIndex.map { "\($0 + 1) of \(models.count)" } ?? ""
         updateFloatingChips(floating, icons: icons)
-        updateDesktopChips(desktops)
+        updateDesktopChips(desktops, icons: icons)
+        displayRowHeight = scrollingMinimapDisplayRowHeight(displays)
+        updateDisplayButtons(displays, icons: icons)
         let rowHeight = scrollingMinimapRowHeight(metrics: metrics)
         // A pinned column keeps its edge here too, beside the strip rather than on it.
         let pinnedWidth: CGFloat = pinned == nil ? 0 : min(max(rowHeight * 0.75, 32), 96)
@@ -211,7 +220,7 @@ final class ScrollingMinimapView: NSView {
     private var floatingLabelVisible = false
 
     /// A row above the floating windows' (or the footer when there are none): one button per desktop of this display.
-    private func updateDesktopChips(_ desktops: [ScrollingMinimapDesktop]) {
+    private func updateDesktopChips(_ desktops: [ScrollingMinimapDesktop], icons: [Int32: NSImage]) {
         if desktopChips.map(\.model.number) != desktops.map(\.number) {
             desktopChips.forEach { $0.removeFromSuperview() }
             desktopChips = desktops.map { model in
@@ -225,13 +234,46 @@ final class ScrollingMinimapView: NSView {
         var x: CGFloat = 80
         let y = desktopRowTop + 2
         for (chip, model) in zip(desktopChips, desktops) {
-            chip.configure(model)
-            chip.isHidden = x + 30 > bounds.width - 16
-            let target = CGRect(x: x, y: y, width: 30, height: 24)
+            chip.configure(model, icons: icons)
+            let width = chip.preferredWidth
+            chip.isHidden = x + width > bounds.width - 16
+            let target = CGRect(x: x, y: y, width: width, height: 24)
             if chip.frame != target { chip.frame = target }
-            x += 36
+            x += width + 6
         }
         desktopLabelVisible = !desktops.isEmpty
+    }
+
+    /// The arrangement of the displays, drawn to scale above the desktops row, one button per display.
+    private func updateDisplayButtons(_ displays: [ScrollingMinimapDisplay], icons: [Int32: NSImage]) {
+        if displayButtons.map(\.model.index) != displays.map(\.index) {
+            displayButtons.forEach { $0.removeFromSuperview() }
+            displayButtons = displays.map { model in
+                let button = ScrollingMinimapDisplayButton(model: model)
+                button.target = self
+                button.action = #selector(selectDisplay(_:))
+                addSubview(button)
+                return button
+            }
+        }
+        let area = CGSize(width: max(bounds.width - 80 - 16, 0), height: max(displayRowHeight - 8, 0))
+        let origin = CGPoint(x: 80, y: displayRowTop + 4)
+        for (button, (model, frame)) in zip(displayButtons, zip(displays, scrollingMinimapDisplayFrames(displays, in: area))) {
+            button.configure(model, icons: icons)
+            let target = frame.offsetBy(dx: origin.x, dy: origin.y)
+            if button.frame != target { button.frame = target }
+        }
+        displayLabelVisible = !displays.isEmpty
+    }
+
+    /// Top of the displays row: above the desktops row, which is above the floating windows' row.
+    private var displayRowTop: CGFloat {
+        bounds.height - 23 - (floatingLabelVisible ? scrollingMinimapFloatingRowHeight : 0)
+            - (desktopLabelVisible ? scrollingMinimapDesktopRowHeight : 0) - displayRowHeight
+    }
+
+    @objc private func selectDisplay(_ sender: ScrollingMinimapDisplayButton) {
+        displaySelected?(sender.model.index)
     }
 
     /// Top of the desktops row: it sits above the floating windows' row when there is one.
@@ -390,6 +432,10 @@ final class ScrollingMinimapView: NSView {
             NSBezierPath(roundedRect: pill, xRadius: 9, yRadius: 9).fill()
             drawMinimapText(columnPosition, in: pill.insetBy(dx: 8, dy: 2.5), font: font,
                             color: winMuxEmphasisColor, alignment: .center)
+        }
+        if displayLabelVisible {
+            drawMinimapText("Displays", in: CGRect(x: 16, y: displayRowTop + displayRowHeight / 2 - 3, width: 60, height: 14),
+                            font: .systemFont(ofSize: 10, weight: .semibold), color: .secondaryLabelColor)
         }
         if desktopLabelVisible {
             drawMinimapText("Desktops", in: CGRect(x: 16, y: desktopRowTop + 7, width: 60, height: 14),
@@ -608,11 +654,13 @@ struct ScrollingMinimapFloatingWindow: Equatable {
     var focused = false
 }
 
-/// A desktop's number as a small button; the desktop the minimap shows is drawn in the accent.
+/// A desktop as a small button: its number, then the icons of the apps that have windows there. The desktop
+/// the minimap shows is drawn in the accent.
 @MainActor
 final class ScrollingMinimapDesktopChip: NSButton {
     override var isFlipped: Bool { true }
     private(set) var model: ScrollingMinimapDesktop
+    private var icons: [Int32: NSImage] = [:]
 
     init(model: ScrollingMinimapDesktop) {
         self.model = model
@@ -624,16 +672,22 @@ final class ScrollingMinimapDesktopChip: NSButton {
     required init?(coder: NSCoder) { nil }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    func configure(_ model: ScrollingMinimapDesktop) {
-        guard self.model != model else { return }
+    /// Number, then up to three 14-point icons.
+    var preferredWidth: CGFloat { 30 + CGFloat(model.apps.pids.count) * 17 }
+
+    func configure(_ model: ScrollingMinimapDesktop, icons: [Int32: NSImage]) {
+        let sameIcons = model.apps.pids.allSatisfy { self.icons[$0] === icons[$0] }
+        guard self.model != model || !sameIcons else { return }
         self.model = model
+        self.icons = icons
         configureAccessibility()
         needsDisplay = true
     }
 
     private func configureAccessibility() {
-        toolTip = nativeDesktopDisplayName(model.number)
-        setAccessibilityLabel(nativeDesktopDisplayName(model.number))
+        let name = nativeDesktopDisplayName(model.number)
+        toolTip = model.apps.names.isEmpty ? name : "\(name) · \(model.apps.names.joined(separator: ", "))"
+        setAccessibilityLabel(model.apps.names.isEmpty ? name : "\(name), \(model.apps.names.joined(separator: ", "))")
         setAccessibilityValue(model.isCurrent ? "Current" : "")
         setAccessibilityHelp("Switch to this desktop")
     }
@@ -647,9 +701,13 @@ final class ScrollingMinimapDesktopChip: NSButton {
         (model.isCurrent ? winMuxEmphasisColor : NSColor.labelColor.withAlphaComponent(0.16)).setStroke()
         chip.lineWidth = model.isCurrent ? 1.5 : 1
         chip.stroke()
-        drawMinimapText(String(model.number), in: CGRect(x: 0, y: 5, width: bounds.width, height: 14),
+        drawMinimapText(String(model.number), in: CGRect(x: 8, y: 5, width: 14, height: 14),
                         font: .monospacedDigitSystemFont(ofSize: 11, weight: model.isCurrent ? .semibold : .regular),
-                        color: model.isCurrent ? winMuxEmphasisColor : .labelColor, alignment: .center)
+                        color: model.isCurrent ? winMuxEmphasisColor : .labelColor)
+        for (index, pid) in model.apps.pids.enumerated() {
+            guard let icon = icons[pid] else { continue }
+            drawMinimapIcon(icon, in: CGRect(x: 26 + CGFloat(index) * 17, y: 5, width: 14, height: 14), fraction: model.isCurrent ? 1 : 0.9)
+        }
     }
 }
 
@@ -713,8 +771,23 @@ private final class ScrollingMinimapViewport: NSView {
     }
 }
 
+/// Draws an app's icon, tinting a template (symbol) icon so it reads on both light and dark panels.
 @MainActor
-private func drawMinimapText(_ text: String, in rect: CGRect, font: NSFont, color: NSColor,
+func drawMinimapIcon(_ icon: NSImage, in rect: CGRect, fraction: CGFloat) {
+    let image: NSImage
+    if icon.isTemplate {
+        image = NSImage(size: rect.size, flipped: false) { drawRect in
+            icon.draw(in: drawRect)
+            NSColor.labelColor.setFill()
+            drawRect.fill(using: .sourceIn)
+            return true
+        }
+    } else { image = icon }
+    image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: fraction, respectFlipped: true, hints: nil)
+}
+
+@MainActor
+func drawMinimapText(_ text: String, in rect: CGRect, font: NSFont, color: NSColor,
                              alignment: NSTextAlignment = .left) {
     let style = NSMutableParagraphStyle()
     style.lineBreakMode = .byTruncatingTail

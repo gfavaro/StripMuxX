@@ -555,7 +555,7 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         let window = TestWindow.new(id: 96300, parent: workspace.rootTilingContainer)
         let metrics = workspace.scrollingMetrics
         let desktops = scrollingMinimapDesktops([(1, workspace), (2, other)], showing: workspace)
-        XCTAssertEqual(desktops, [.init(number: 1, isCurrent: true), .init(number: 2, isCurrent: false)])
+        XCTAssertEqual(desktops, [.init(number: 1, isCurrent: true, apps: .none), .init(number: 2, isCurrent: false, apps: .none)])
         XCTAssertEqual(scrollingMinimapDesktops([(1, workspace)], showing: workspace), [], "One desktop has nothing to switch to")
 
         let models = [ScrollingMinimapTile(id: ObjectIdentifier(window), title: "Window", applications: [], count: 1)]
@@ -605,6 +605,97 @@ final class ScrollingMinimapTest: WorkspaceTestCase {
         XCTAssertTrue(scrollingMinimapDesktopToFollow(shown: shown, active: next) === next, "It moves to the new desktop")
         XCTAssertNil(scrollingMinimapDesktopToFollow(shown: shown, active: shown), "and stays put while nothing changed")
         XCTAssertNil(scrollingMinimapDesktopToFollow(shown: shown, active: nil), "or while the display shows no ordinary desktop")
+    }
+
+    private func display(_ index: Int, _ frame: CGRect, desktop: Int? = 1, shown: Bool = false, windows: Bool = true,
+                         apps: ScrollingMinimapApps = .none) -> ScrollingMinimapDisplay {
+        ScrollingMinimapDisplay(index: index, name: "D\(index)", frame: frame, desktop: desktop, isShown: shown, hasWindows: windows, apps: apps)
+    }
+
+    func testDisplaysAreDrawnWhereTheyReallyAreAndNeverLeaveTheirBox() {
+        let area = CGSize(width: 240, height: 60)
+        let main = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        // Beside: a display to the right is drawn to the right, level with the first.
+        let beside = scrollingMinimapDisplayFrames([display(0, main), display(1, CGRect(x: 1920, y: 0, width: 1920, height: 1080))], in: area)
+        XCTAssertLessThan(beside[0].maxX, beside[1].minX)
+        XCTAssertEqual(beside[0].minY, beside[1].minY, accuracy: 0.001)
+        // Above: coordinates grow downward, so a display above has a negative y and is drawn above.
+        let above = scrollingMinimapDisplayFrames([display(0, CGRect(x: 0, y: -1080, width: 1920, height: 1080)), display(1, main)], in: area)
+        XCTAssertLessThan(above[0].maxY, above[1].minY)
+        XCTAssertEqual(above[0].minX, above[1].minX, accuracy: 0.001)
+        // One scale for all: same-size displays get same-size miniatures, whatever the arrangement.
+        XCTAssertEqual(above[0].width, above[1].width, accuracy: 0.001)
+        XCTAssertEqual(above[0].height, above[1].height, accuracy: 0.001)
+        // An L of three displays stays inside the box and keeps every relation.
+        let l = scrollingMinimapDisplayFrames([display(0, main), display(1, CGRect(x: 1920, y: 0, width: 1920, height: 1080)),
+                                               display(2, CGRect(x: 0, y: -1080, width: 1920, height: 1080))], in: area)
+        for frame in beside + above + l { XCTAssertTrue(CGRect(origin: .zero, size: area).contains(frame), "\(frame) is outside \(area)") }
+        XCTAssertLessThan(l[2].maxY, l[0].minY)
+        XCTAssertLessThan(l[0].maxX, l[1].minX)
+        XCTAssertTrue(scrollingMinimapDisplayFrames([], in: area).isEmpty)
+    }
+
+    func testTallArrangementsGetMoreRoomAndASingleDisplayGetsNone() {
+        let main = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        let side = [display(0, main), display(1, CGRect(x: 1920, y: 0, width: 1920, height: 1080))]
+        let stacked = [display(0, CGRect(x: 0, y: -1080, width: 1920, height: 1080)), display(1, main)]
+        XCTAssertEqual(scrollingMinimapDisplayRowHeight([display(0, main)]), 0, "Nothing to arrange")
+        XCTAssertGreaterThan(scrollingMinimapDisplayRowHeight(stacked), scrollingMinimapDisplayRowHeight(side),
+                             "A display above another needs height for its icons")
+    }
+
+    func testDisplayButtonsShowDesktopAndAppsAndOnlyAWindowedDisplayCanBeClicked() throws {
+        let workspace = focus.workspace
+        let window = TestWindow.new(id: 96320, parent: workspace.rootTilingContainer)
+        let metrics = workspace.scrollingMetrics
+        let models = [ScrollingMinimapTile(id: ObjectIdentifier(window), title: "Window", applications: [], count: 1)]
+        let top = CGRect(x: 0, y: -1080, width: 1920, height: 1080), bottom = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        let apps = ScrollingMinimapApps(pids: [7, 8], names: ["Terminal", "Rex"])
+        let displays = [display(0, top, desktop: 4, windows: true, apps: apps),
+                        display(1, bottom, desktop: 1, shown: true, apps: .none),
+                        display(2, CGRect(x: 1920, y: 0, width: 1920, height: 1080), desktop: 5, windows: false)]
+        let rowHeight = scrollingMinimapDisplayRowHeight(displays)
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 360, height: scrollingMinimapRowHeight(metrics: metrics) + 68 + rowHeight))
+        var clicked: Int?
+        view.displaySelected = { clicked = $0 }
+        view.update(workspaceName: "Desktop 1", models: models, displays: displays, icons: [:], metrics: metrics, offset: 0, focused: models[0].id)
+        let buttons = view.subviews.compactMap { $0 as? ScrollingMinimapDisplayButton }
+        XCTAssertEqual(buttons.map(\.model.index), [0, 1, 2])
+        XCTAssertEqual(buttons.map(\.isEnabled), [true, false, false], "The shown display and an empty one cannot be clicked")
+        XCTAssertEqual(buttons[0].toolTip, "D0 · Desktop 4 · Terminal, Rex", "The tooltip says which apps are there")
+        XCTAssertEqual(buttons[2].accessibilityValue() as? String, "No windows")
+        XCTAssertEqual(buttons[1].accessibilityValue() as? String, "Shown")
+        XCTAssertLessThan(buttons[0].frame.maxY, buttons[1].frame.minY, "The display above is drawn above")
+        buttons[0].performClick(nil)
+        XCTAssertEqual(clicked, 0)
+        buttons[2].performClick(nil)
+        XCTAssertEqual(clicked, 0, "An empty display does nothing")
+    }
+
+    func testDesktopButtonsNameTheAppsOnEachDesktop() throws {
+        let workspace = focus.workspace
+        let window = TestWindow.new(id: 96330, parent: workspace.rootTilingContainer)
+        let metrics = workspace.scrollingMetrics
+        let models = [ScrollingMinimapTile(id: ObjectIdentifier(window), title: "Window", applications: [], count: 1)]
+        let desktops = [ScrollingMinimapDesktop(number: 1, isCurrent: true, apps: ScrollingMinimapApps(pids: [1], names: ["Safari"])),
+                        ScrollingMinimapDesktop(number: 2, isCurrent: false, apps: ScrollingMinimapApps(pids: [2, 3], names: ["Teams", "Slack"]))]
+        let view = ScrollingMinimapView(frame: CGRect(x: 0, y: 0, width: 360, height: scrollingMinimapRowHeight(metrics: metrics) + 68 + scrollingMinimapDesktopRowHeight))
+        view.update(workspaceName: "Desktop 1", models: models, desktops: desktops, icons: [:], metrics: metrics, offset: 0, focused: models[0].id)
+        let chips = view.subviews.compactMap { $0 as? ScrollingMinimapDesktopChip }
+        XCTAssertEqual(chips.map(\.toolTip), ["Desktop 1 · Safari", "Desktop 2 · Teams, Slack"])
+        XCTAssertGreaterThan(chips[1].frame.width, chips[0].frame.width, "A chip grows with the icons it holds")
+        XCTAssertGreaterThanOrEqual(chips[1].frame.minX, chips[0].frame.maxX, "and chips do not overlap")
+    }
+
+    func testDisplaysCarryTheirDesktopNumberAndPositionFromTheRealArrangement() throws {
+        let layout = observeTestDesktops([(display: "display-a", desktops: 2, active: 0), (display: "display-b", desktops: 2, active: 1)])
+        _ = TestWindow.new(id: 96340, parent: layout[0][0].rootTilingContainer)
+        let displays = scrollingMinimapDisplays(sortedMonitors, showing: layout[0][0])
+        XCTAssertEqual(displays.map(\.desktop), [1, 4], "Numbers run across displays, as Control-N does")
+        XCTAssertEqual(displays.map(\.isShown), [true, false])
+        XCTAssertEqual(displays.map(\.hasWindows), [true, false])
+        XCTAssertLessThan(displays[0].frame.minX, displays[1].frame.minX, "Frames keep their real places")
+        XCTAssertTrue(scrollingMinimapDisplays([sortedMonitors[0]], showing: layout[0][0]).isEmpty, "One display has no arrangement to show")
     }
 }
 
