@@ -32,6 +32,21 @@ final class WorkspaceScrollingMinimap: NSObject {
     private var generation: UInt64 = 0
     private var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
+    /// While the minimap is up, a click in any other window dismisses it.
+    private var outsideClickMonitor: Any?
+
+    private func watchForOutsideClicks() {
+        guard outsideClickMonitor == nil, !isUnitTest else { return }
+        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
+            MainActor.assumeIsolated { self?.dismiss() }
+        }
+    }
+
+    private func stopWatchingForOutsideClicks() {
+        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
+        outsideClickMonitor = nil
+    }
+
     private var gestureShowTask: Task<Void, Never>?
     private weak var gestureShowWorkspace: Workspace?
 
@@ -66,6 +81,7 @@ final class WorkspaceScrollingMinimap: NSObject {
         render(workspace)
         guard self.workspace === workspace else { return false }
         panel?.alphaValue = 1
+        watchForOutsideClicks()
         if explicitly {
             panel?.makeKeyAndOrderFront(nil)
             view?.beginKeyboardNavigation()
@@ -108,6 +124,7 @@ final class WorkspaceScrollingMinimap: NSObject {
     }
 
     func dismiss() {
+        stopWatchingForOutsideClicks()
         generation &+= 1
         dismissTask?.cancel()
         dismissTask = nil
