@@ -47,6 +47,16 @@ private let persistentWorkspacesKey = "persistent-workspaces"
 // 2. Prefer commands and commands flags over toml options if possible
 private let configParser: [String: any ParserProtocol<Config>] = [
     "native-spaces": Parser(\.nativeSpaces, parseNativeSpaces),
+    "borders": Parser(\.windowBorders, parseWindowBorders),
+    "accent-color": Parser(\.accentColor) { raw, trace in
+        parseString(raw, trace).flatMap { color in
+            guard color.hasPrefix("#"), color.count == 7,
+                  UInt32(color.dropFirst(), radix: 16) != nil else {
+                return .failure(.semantic(trace, "Expected #RRGGBB"))
+            }
+            return .success(color.uppercased())
+        }
+    },
     "appearance": Parser(\.appearance) { raw, backtrace in
         parseString(raw, backtrace).flatMap {
             AppAppearance(rawValue: $0).orFailure(.semantic(backtrace, "Possible values: system, light, dark"))
