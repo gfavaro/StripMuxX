@@ -50,6 +50,35 @@ final class ConfigTest: XCTestCase {
                        defaultConfig.modes[mainModeId]?.bindings.count)
     }
 
+    func testBothConfigsBindDisplayFocusPreviousWindowFirstColumnAndHeight() throws {
+        let expected: [String: [(String, String)]] = [
+            "resources/default-config.toml": [
+                ("alt-0", "scrolling-focus first"), ("alt-tab", "focus-back-and-forth"),
+                ("alt-leftSquareBracket", "focus-monitor left"), ("alt-rightSquareBracket", "focus-monitor right"),
+                ("alt-shift-leftSquareBracket", "move-node-to-monitor left"),
+                ("alt-shift-rightSquareBracket", "move-node-to-monitor right"),
+                ("alt-shift-minus", "resize height -50"), ("alt-shift-equal", "resize height +50"),
+            ],
+            "resources/shortcut-presets/ergonomic-default.toml": [
+                ("ctrl-alt-0", "scrolling-focus first"), ("ctrl-alt-tab", "focus-back-and-forth"),
+                ("ctrl-alt-left", "focus-monitor left"), ("ctrl-alt-right", "focus-monitor right"),
+                ("ctrl-alt-shift-left", "move-node-to-monitor left"),
+                ("ctrl-alt-shift-right", "move-node-to-monitor right"),
+                ("ctrl-alt-shift-minus", "resize height -50"), ("ctrl-alt-shift-equal", "resize height +50"),
+            ],
+        ]
+        for (path, bindings) in expected {
+            let text = try String(contentsOf: projectRoot.appending(component: path), encoding: .utf8)
+            let parsed = parseConfig(text)
+            XCTAssertTrue(parsed.errors.isEmpty, "\(parsed.errors)")
+            let actions = parsed.config.modes[mainModeId]?.bindings.values.map { $0.descriptionWithKeyNotation + " " + $0.commands.map { $0.args.description }.joined() } ?? []
+            for (key, command) in bindings {
+                XCTAssertTrue(text.contains("\(key) = '\(command)'"), "\(path) lacks \(key)")
+                XCTAssertTrue(actions.contains { $0.hasSuffix(command) }, "\(path): \(command) did not parse as a binding")
+            }
+        }
+    }
+
     func testParseDefaultConfig() throws {
         let toml = try String(contentsOf: projectRoot.appending(component: "resources/default-config.toml"), encoding: .utf8)
         let (config, errors) = parseConfig(toml)

@@ -10,7 +10,7 @@ PRESET = ROOT / "resources/shortcut-presets/ergonomic-default.toml"
 def bindings(path):
     text = path.read_text()
     section = text.split("[mode.main.binding]", 1)[1].split("\n[", 1)[0]
-    return dict(re.findall(r"^\s+([a-z0-9-]+)\s*=\s*'([^']+)'", section, flags=re.M))
+    return dict(re.findall(r"^\s+([A-Za-z0-9-]+)\s*=\s*'([^']+)'", section, flags=re.M))
 
 
 class ErgonomicShortcutPresetTest(unittest.TestCase):

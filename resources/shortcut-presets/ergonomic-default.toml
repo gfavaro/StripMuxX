@@ -113,6 +113,13 @@ automatically-tile-new-windows = true
     ctrl-alt-7 = 'scrolling-focus 7'
     ctrl-alt-8 = 'scrolling-focus 8'
     ctrl-alt-9 = 'scrolling-focus last'
+    ctrl-alt-0 = 'scrolling-focus first'
+    # The previously focused window, and the neighbouring display.
+    ctrl-alt-tab = 'focus-back-and-forth'
+    ctrl-alt-left = 'focus-monitor left'
+    ctrl-alt-right = 'focus-monitor right'
+    ctrl-alt-shift-left = 'move-node-to-monitor left'
+    ctrl-alt-shift-right = 'move-node-to-monitor right'
     # Move a column along the strip; left/right out of a stack makes it a column.
     ctrl-alt-shift-h = 'move left'
     ctrl-alt-shift-j = 'move down'
@@ -134,6 +141,8 @@ automatically-tile-new-windows = true
     ctrl-alt-b = 'scrolling-pan focus'
     ctrl-alt-minus = 'resize width -50'
     ctrl-alt-equal = 'resize width +50'
+    ctrl-alt-shift-minus = 'resize height -50'
+    ctrl-alt-shift-equal = 'resize height +50'
     ctrl-alt-i = 'balance-sizes'
     ctrl-alt-t = 'layout floating tiling'
     ctrl-alt-v = 'focus floating'

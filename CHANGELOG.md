@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Default keys for the previous window (`focus-back-and-forth`), focusing and moving a window to the neighbouring display, the first column, and window height ±50, in the default config and the ergonomic preset.
 - Floating windows stay floating and are easy to find: the minimap lists them under the strip (click to focus), and `focus floating` (Alt-Shift-V) steps through them, then back to the strip window you left.
 - `shortcuts` (Alt-Shift-/) shows the current mode's shortcuts, grouped, in macOS notation.
 - Window rules can set a new window's column width: `scrolling-width <share>` (0.1 to 1) and `scrolling-width-pixels`. `scrolling-width <share>` also works as a shortcut.
