@@ -303,3 +303,55 @@ lift, so nothing scrolls; closing it would mean changing the idle timer.
 Three-finger Dock swipes (no reliable synthesis), quit and `enable off` on the live
 desktop (would move work windows; covered by the regression test), multiple desktops
 and displays (one of each), Atlas VM runs.
+
+---
+
+# Features and borders pass — 2026-11-15 (evening)
+
+Tested at `ffc7cca1` (installed as build 74) on one built-in display, one desktop.
+`make check`: **571 XCTest, 59 Python, 0 failures.** CI green on every push since
+`1b22c573`; the two earlier failures were commits pushed without `make check`
+(`AGENTS.md` now forbids that).
+
+## Shipped since the gesture audit
+
+Floating windows stay floating and are findable (minimap row, `focus floating`);
+the auto-join experiment was reverted. Minimap redesign and compact sizing.
+`shortcuts` cheat sheet. Per-app column width in `on-window-detected`
+(`scrolling-width <share>`, `scrolling-width-pixels`). Finder managed (no AppKit
+launch date). Commit hash linked into the binaries. WinMuxX borders port (another
+session) with the fixes below.
+
+## Fixes found in this pass
+
+| Defect | Evidence | Fix |
+| --- | --- | --- |
+| Borders trailed a panning window by up to 100 pt and stayed 33 pt off at the strip end | WindowServer frames sampled every 15–30 ms during synthetic pans | `6f2454ba`: follow real frames every display frame from the first scroll step |
+| Every border blinked after each pan | Border missing in 3–4 samples per pan; doctor: every read hid them as a "desktop change" | `16a054ac`: compare with the desktops last seen; ignore reads without a snapshot |
+| `focus floating` returned to the strip's most recent window, not the one it left | From Safari it came back to ZapFast | `ffc7cca1`: remember the strip window it left |
+
+WindowServer move notifications (806) were tried for the borders and measured no
+better than per-frame following; removed. A following border trails by one display
+frame, so `borders.hide-while-scrolling` (off by default) hides them during a gesture.
+
+## Physical (executed on this Mac)
+
+| Check | Result |
+| --- | --- |
+| Option pan, borders following (4 pans, 2 speeds) | 0 missing samples; trailing one display frame (20–40 ms) |
+| Option pan, `hide-while-scrolling = true` | Hidden from the first step; back once, about 150 ms after the strip stops |
+| `focus left/right`, `scrolling-focus first/last` | Border exact or one sample late; one 20 ms gap as focus moves across the strip |
+| Floating fixture window | Listed in the minimap's floating row ("5 columns · 1 floating") |
+| `focus floating` from Safari, twice | Floating window, then Safari |
+| Minimap | 48 pt row, compact tiles, panel sized to the strip |
+| Cheat sheet | Your bindings in Focus / Move / Columns / Desktops, three columns |
+| Installs 61–74 | Installer validated window assignments after each restart, except where focus changed during validation |
+
+## Not executed
+
+- `focus floating` from other windows: results were inconsistent because focus was
+  changing during the run (the Mac was in use); re-test with the Mac idle.
+- Per-app width rules with a real app (needs a rule in your config).
+- Three-finger Dock swipes with borders or `hide-while-scrolling` (cannot be synthesised).
+- Desktop switches with borders (not permitted), multiple displays, restart
+  restoration of floating windows after the other session's persistence changes.
